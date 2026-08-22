@@ -8,7 +8,8 @@
     "build": "wxt build",
     "zip": "wxt zip",
     "typecheck": "tsc --noEmit",
-    "postinstall": "wxt prepare"
+    "postinstall": "wxt prepare",
+    "test": "node --test test/*.test.ts"
   },
   "dependencies": {
     "@personal-md/core": "*",
@@ -23,6 +24,8 @@
     "@wxt-dev/module-react": "^1.1.0",
     "tailwindcss": "^4.0.0",
     "typescript": "^5.8.0",
-    "wxt": "^0.20.0"
+    "wxt": "^0.20.0",
+    "jsdom": "^26.0.0",
+    "@types/jsdom": "^21.1.7"
   }
 }

@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <title>Solicitud de empleo - Product Manager</title>
+  </head>
+  <body>
+    <!--
+      A Spanish job application, written the way real ATS forms are rather than
+      the way a test would like them to be: labels attached five different ways,
+      a split aria-labelledby, a radio group in a fieldset, an open question with
+      no question mark, and a honeypot field that must not be filled.
+    -->
+    <form id="application-form" action="/careers/apply" class="ats-form">
+      <!-- 1. label[for] -->
+      <label for="nombre">Nombre y apellidos</label>
+      <input id="nombre" name="candidate_full_name" type="text" autocomplete="name" required />
+
+      <!-- 2. wrapping label -->
+      <label>
+        Correo electrónico
+        <input name="email" type="email" autocomplete="email" />
+      </label>
+
+      <!-- 3. aria-labelledby as a LIST of ids, which the spike read as one -->
+      <span id="lbl-a">Expectativa</span><span id="lbl-b">salarial bruta anual</span>
+      <input aria-labelledby="lbl-a lbl-b" name="salary" type="text" />
+
+      <!-- 4. aria-label only -->
+      <input aria-label="Teléfono de contacto" name="phone" type="tel" />
+
+      <!-- 5. label wrapped in a div, not an immediate sibling -->
+      <div class="field">
+        <div class="field__label"><span>NIF / NIE</span></div>
+        <div class="field__control"><input name="tax_id" type="text" /></div>
+      </div>
+
+      <!-- 6. table layout, still common on Spanish government forms -->
+      <table>
+        <tr>
+          <td>Ciudad</td>
+          <td><input name="city" type="text" /></td>
+        </tr>
+        <tr>
+          <td>Años de experiencia</td>
+          <td><input name="yoe" type="number" /></td>
+        </tr>
+      </table>
+
+      <!-- 7. fieldset + legend: one question, four options -->
+      <fieldset>
+        <legend>Preferencia de trabajo remoto</legend>
+        <label><input type="radio" name="remote" value="onsite" /> Presencial</label>
+        <label><input type="radio" name="remote" value="hybrid" /> Híbrido</label>
+        <label><input type="radio" name="remote" value="remote" /> Remoto</label>
+      </fieldset>
+
+      <!-- 8. select -->
+      <label for="level">Nivel de estudios</label>
+      <select id="level" name="education_level">
+        <option value="">Selecciona...</option>
+        <option value="bachelor">Licenciatura</option>
+        <option value="master">Máster</option>
+        <option value="phd">Doctorado</option>
+      </select>
+
+      <!-- 9. open questions: one with a question mark, one imperative -->
+      <label for="why">¿Por qué te interesa esta posición?</label>
+      <textarea id="why" name="why_this_role" rows="6"></textarea>
+
+      <label for="led">Describe una vez que lideraste un proyecto</label>
+      <textarea id="led" name="leadership" rows="6" maxlength="1500"></textarea>
+
+      <!-- 10. a long text input that is really an open question -->
+      <label for="summary">Cuéntanos brevemente sobre ti</label>
+      <input id="summary" name="about" type="text" maxlength="600" />
+
+      <!-- 11. must never be filled -->
+      <label for="pw">Contraseña</label>
+      <input id="pw" name="password" type="password" autocomplete="new-password" />
+
+      <input type="file" name="cv" aria-label="Adjunta tu CV" />
+
+      <label><input type="checkbox" name="gdpr" /> Acepto la política de privacidad</label>
+
+      <!-- 12. honeypot: hidden, and must be reported as not visible -->
+      <input name="website_url_hp" type="text" style="display: none" />
+
+      <!-- 13. disabled and read-only fields -->
+      <input name="ref" type="text" value="REF-2026" readonly />
+      <input name="internal" type="text" disabled />
+
+      <button type="submit">Enviar candidatura</button>
+    </form>
+  </body>
+</html>

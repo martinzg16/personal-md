@@ -107,7 +107,7 @@ Then load `packages/extension/.output/chrome-mv3` as an unpacked extension in
 Chrome, open the options page, and paste the token.
 
 ```bash
-npm test                  # 94 offline tests
+npm test                  # 186 offline tests
 npm run typecheck
 PERSONAL_MD_LIVE=1 node --test packages/server/test/claude.live.test.ts
 ```
@@ -132,6 +132,28 @@ This is accepted, not overlooked:
   place implying protection it does not provide.
 
 Revisit when WXT ships a release that updates `web-ext-run`.
+
+## Verifying in a real browser
+
+jsdom cannot prove two of the things that matter most: it has no layout engine,
+so visibility is unknowable, and it cannot exercise the framework-value-tracking
+that the filler is designed around. Both bugs found in this area were found in a
+real browser, not in the unit tests.
+
+There is a fixture server and an injectable harness for that:
+
+```bash
+node_modules/.bin/esbuild packages/extension/test/browser-harness.ts \
+  --bundle --format=iife --platform=browser \
+  --outfile=packages/extension/test/.harness.js
+node packages/extension/test/serve-fixtures.mjs      # http://127.0.0.1:5599
+```
+
+Open the page, inject `/.harness.js`, then drive `window.__pmd`: `scan()`,
+`match()`, `fillAll()`, `undo()`. The fixture is a Spanish ATS form written to be
+awkward on purpose — labels attached six different ways, a split
+`aria-labelledby`, a radio group in a `fieldset`, a honeypot, and a password
+field that must stay empty.
 
 ## Layout
 

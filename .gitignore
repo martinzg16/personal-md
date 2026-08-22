@@ -10,3 +10,6 @@ dist/
 PERSONAL.md
 secrets.json
 *.personal.md
+
+# Bundled browser-verification harness, rebuilt on demand.
+.harness.js
