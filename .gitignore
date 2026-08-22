@@ -13,3 +13,9 @@ secrets.json
 
 # Bundled browser-verification harness, rebuilt on demand.
 .harness.js
+
+# Generated visual-harness artifacts. Rebuilt on demand:
+#   esbuild packages/extension/test/widget-preview.tsx --bundle ...
+#   cp packages/extension/.output/chrome-mv3/content-scripts/content.css packages/extension/test/widget.css
+packages/extension/test/widget-preview.js
+packages/extension/test/widget.css

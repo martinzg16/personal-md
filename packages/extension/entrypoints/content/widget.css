@@ -1,0 +1,128 @@
+@import "tailwindcss";
+
+/*
+ * Shadow-root base.
+ *
+ * Tailwind's preflight targets html and body, neither of which exists inside a
+ * shadow root, so the reset the panel needs is declared here.
+ *
+ * The reset lives inside `@layer base`, and that is load-bearing rather than
+ * tidy. Two attempts failed first:
+ *
+ *   1. `.pmd-root * { padding: 0 }` - same specificity as `.px-4`, later in the
+ *      sheet, so it beat every padding utility and the panel rendered flat.
+ *   2. The same rules wrapped in `:where()` for zero specificity - still won,
+ *      because specificity never entered into it. Tailwind v4 emits utilities
+ *      into `@layer utilities`, and unlayered CSS outranks *any* layered CSS.
+ *
+ * Declaring the reset in `base` puts it in a layer Tailwind orders before
+ * `utilities`, so a utility always wins. :where() is kept as well, so the reset
+ * also loses to anything the component sets directly.
+ */
+@layer base {
+  .pmd-root :where(*, *::before, *::after) {
+    box-sizing: border-box;
+  }
+
+  .pmd-root :where(p, h1, h2, h3, h4, ul, ol, li, figure, blockquote, pre) {
+    margin: 0;
+    padding: 0;
+  }
+
+  .pmd-root :where(ul, ol) {
+    list-style: none;
+  }
+
+  .pmd-root :where(button, input, textarea, select) {
+    font: inherit;
+    color: inherit;
+    letter-spacing: inherit;
+    background: none;
+    border: 0;
+    appearance: none;
+  }
+
+  .pmd-root :where(button) {
+    cursor: pointer;
+  }
+
+  .pmd-root :where(textarea) {
+    font-family: inherit;
+  }
+}
+
+.pmd-root {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  /* Above almost everything, but deliberately not at the 32-bit ceiling: a
+     page's own modal deserves to win sometimes, and a fight for the top is
+     unwinnable anyway. */
+  z-index: 2147480000;
+  display: flex;
+  justify-content: flex-end;
+
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 14px;
+  line-height: 1.45;
+  font-weight: 400;
+  text-align: left;
+  letter-spacing: normal;
+  text-transform: none;
+  color-scheme: dark;
+
+  /* The panel is the only interactive thing; the overlay around it is not. */
+  pointer-events: none;
+}
+
+/*
+ * The scrolling list's bottom edge.
+ *
+ * Without this the list hard-clips a row mid-chip and the draft editor sits
+ * behind an unsignalled fold: the panel counts eight rows and shows four with no
+ * indication there are more. A mask fades the last few pixels so the cut reads as
+ * "continues" rather than "ends".
+ */
+.pmd-fade {
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 18px), transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 18px), transparent 100%);
+}
+
+.pmd-mono {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+}
+
+/*
+ * The one authored moment: the panel arriving.
+ *
+ * Exponential ease-out, and `both` from an already-correct resting state, so a
+ * client that never runs the animation still shows a properly placed panel
+ * rather than an invisible one.
+ */
+@keyframes pmd-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.985);
+  }
+}
+
+.pmd-enter {
+  animation: pmd-enter 260ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes pmd-pulse {
+  50% {
+    opacity: 0.25;
+  }
+}
+
+.pmd-pulse {
+  animation: pmd-pulse 1.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pmd-enter,
+  .pmd-pulse {
+    animation: none;
+  }
+}

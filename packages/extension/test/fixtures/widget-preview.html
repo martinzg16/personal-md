@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>personal-md widget states</title>
+    <link rel="stylesheet" href="/widget.css" />
+    <style>
+      body { margin: 0; background: #e2e8f0; font-family: ui-sans-serif, system-ui, sans-serif; }
+      /* The real widget is position:fixed bottom-right. The harness lays the
+         states out inline so several can be compared in one screenshot. */
+      .pmd-preview { position: static; right: auto; bottom: auto; z-index: auto; }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/widget-preview.js"></script>
+  </body>
+</html>
