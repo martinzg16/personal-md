@@ -151,6 +151,30 @@ export const server = {
       body: JSON.stringify({ facts }),
     }),
 
+  /**
+   * Save a confirmed batch of facts and answers as one write.
+   *
+   * Not putFacts followed by putAnswer. The user confirmed a set in one click,
+   * and the server route exists so that set lands atomically - a failure partway
+   * must not leave half of it on disk with no way to tell which half.
+   */
+  learn: (batch: {
+    facts: { key: string; label: string; value: string }[];
+    answers: {
+      canonicalKey: string;
+      question: string;
+      text: string;
+      language: Answer["language"];
+      genre: Answer["genre"];
+    }[];
+  }) =>
+    request<{
+      ok: true;
+      learned: { facts: number; answers: number };
+      factCount: number;
+      answerCount: number;
+    }>("/learn", { method: "POST", body: JSON.stringify(batch) }),
+
   putAnswer: (input: {
     canonicalKey: string;
     question: string;

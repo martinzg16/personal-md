@@ -84,7 +84,9 @@ Measured, not assumed:
 The extension's options page and popup establish the incumbent visual world:
 Tailwind's slate neutrals, a restrained utilitarian register, white cards on a
 plain ground, one accent per state (emerald connected, amber degraded, rose
-rejected, sky setup). The widget inherits this system.
+rejected, sky setup). The widget inherits this system and adds a fifth: orange
+for a caution that is neither a failure nor a degradation - the guard against
+overwriting something the page already holds.
 
 Confirmed for the in-page widget:
 
@@ -92,7 +94,9 @@ Confirmed for the in-page widget:
   You should always know whether you are looking at your own data or the
   employer's form — the ambiguity is the wrong property for a panel showing a NIF.
 - **It never opens itself.** A collapsed pill with a count; the panel opens on
-  click. It never takes focus and never covers content uninvited.
+  click. It never covers content uninvited, and it takes focus only when you
+  open it - opening unmounts the pill that held focus, so the panel hands it to
+  the collapse control rather than dropping the keyboard user on the host body.
 - **The failure to design against is silently filling something wrong.**
 
 ## Accessibility & Inclusion

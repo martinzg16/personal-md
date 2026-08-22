@@ -123,6 +123,13 @@ async function handle(request: Request): Promise<unknown> {
       return draft;
     }
 
+    case "learnBatch": {
+      const result = await server.learn({ facts: request.facts, answers: request.answers });
+      // Write-through: the panel that just saved these should stop offering them.
+      await refreshQuietly();
+      return result;
+    }
+
     case "saveAnswer": {
       const result = await server.putAnswer({
         canonicalKey: request.canonicalKey,

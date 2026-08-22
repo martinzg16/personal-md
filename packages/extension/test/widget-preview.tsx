@@ -12,6 +12,7 @@
 import { createRoot } from "react-dom/client";
 
 import Widget, { type Row } from "../components/widget/Widget.tsx";
+import type { PendingBatch } from "../lib/learn/pending.ts";
 import type { AnswerSuggestion, FieldSuggestion } from "../lib/match/deterministic.ts";
 import type { DraftResponse } from "../lib/server-client.ts";
 
@@ -167,6 +168,22 @@ const ROWS: Row[] = [
   },
 ];
 
+const BATCH: PendingBatch = {
+  facts: [
+    { fieldId: "f20", key: "personal.city", label: "Ciudad", value: "Barcelona", replaces: "Madrid" },
+    { fieldId: "f21", key: "logistics.availability", label: "Disponibilidad", value: "2 semanas" },
+    { fieldId: "f22", key: "personal.first_name", label: "Nombre", value: "MARTIN" },
+  ],
+  answers: [
+    {
+      fieldId: "f23",
+      canonicalKey: "experience.leadership_story",
+      question: "Describe una vez que lideraste un proyecto",
+      text: "Lideré la migración del flujo de inversores. El flujo antiguo pedía documentos que ya teníamos, así que un tercio abandonaba antes de terminar.",
+    },
+  ],
+};
+
 const noop = () => {};
 
 function Slot({
@@ -268,6 +285,52 @@ if (el) {
           undoCount={0}
           serverUp
           initialOpen
+          onFill={noop}
+          onDraft={noop}
+          onInsertDraft={noop}
+          onUndo={noop}
+          onDismissSite={noop}
+        />
+      </Slot>
+
+      {/*
+        The one decision at the end of a long form. Nothing above it was saved
+        while it was being filled.
+      */}
+      <Slot title="Confirm to learn, after a submit" ground="#ffffff">
+        <Widget
+          lang="es"
+          domain="careers.example.com"
+          rows={ROWS}
+          undoCount={0}
+          serverUp
+          initialOpen
+          pending={BATCH}
+          submitAttempted
+          onSaveBatch={async () => true}
+          onDeclineItem={noop}
+          onEditItem={noop}
+          onFill={noop}
+          onDraft={noop}
+          onInsertDraft={noop}
+          onUndo={noop}
+          onDismissSite={noop}
+        />
+      </Slot>
+
+      {/* The same batch offered from inside the ledger, before any submit. */}
+      <Slot title="The review strip, mid-form" ground="#ffffff">
+        <Widget
+          lang="en"
+          domain="jobs.example.org"
+          rows={ROWS.slice(0, 3)}
+          undoCount={0}
+          serverUp
+          initialOpen
+          pending={BATCH}
+          onSaveBatch={async () => true}
+          onDeclineItem={noop}
+          onEditItem={noop}
           onFill={noop}
           onDraft={noop}
           onInsertDraft={noop}

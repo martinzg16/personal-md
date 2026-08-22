@@ -62,6 +62,22 @@ const factMapOf = (profile: Profile): Map<string, Fact> =>
 export const questionTextOf = (field: ScannedField): string =>
   (field.label || field.ariaLabel || field.placeholder || "").trim();
 
+/**
+ * How much of a host field's value the panel may quote.
+ *
+ * The caution chip quotes what is already in the field so the user can decide
+ * whether to overwrite it, which means untrusted page content renders inside the
+ * tool's own chrome. Unclamped, one long field value pushed the rest of the
+ * ledger out of the panel - the page deciding how much of the tool you get to
+ * see. Page content is data, and data gets a fixed allowance.
+ */
+const HOST_QUOTE_MAX = 40;
+
+export function clampHostQuote(value: string): string {
+  const flat = value.replace(/\s+/g, " ").trim();
+  return flat.length <= HOST_QUOTE_MAX ? flat : `${flat.slice(0, HOST_QUOTE_MAX - 1)}…`;
+}
+
 export function matchFields(
   fields: readonly ScannedField[],
   profile: Profile,
@@ -123,7 +139,7 @@ export function matchFields(
       localOnly:
         withheld.has(candidate.sourceKey) ||
         facts.get(candidate.sourceKey)?.egress === "never",
-      currentValue: field.value,
+      currentValue: clampHostQuote(field.value),
     };
     if (candidate.derivedFrom !== undefined) suggestion.derivedFrom = candidate.derivedFrom;
 

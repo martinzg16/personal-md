@@ -1,6 +1,27 @@
 @import "tailwindcss";
 
 /*
+ * Spacing and radii in absolute units, not rem.
+ *
+ * A shadow root isolates styles; it does not isolate `rem`, which resolves
+ * against the *host* document's root font-size no matter how deeply nested we
+ * are. Tailwind's default scales are rem-based, so a host page carrying
+ * `html { font-size: 10px }` - a real and not-rare technique - silently shrank
+ * every padding, gap and corner in the panel to 62.5%, on the one surface whose
+ * whole premise is that the host page cannot reach it.
+ *
+ * Overriding the scale's base makes every derived spacing and radius utility
+ * absolute. Type is already px throughout for the same reason.
+ */
+@theme {
+  --spacing: 4px;
+  --radius-sm: 3px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+}
+
+/*
  * Shadow-root base.
  *
  * Tailwind's preflight targets html and body, neither of which exists inside a
@@ -78,22 +99,21 @@
 /*
  * The scrolling list's bottom edge.
  *
- * Without this the list hard-clips a row mid-chip and the draft editor sits
- * behind an unsignalled fold: the panel counts eight rows and shows four with no
- * indication there are more. A mask softens the last few pixels so the cut reads
- * as "continues" rather than "ends".
+ * There is no fade here any more, and that is the point. A mask over the list
+ * eats the alpha of whatever it covers, and rows are not uniform: a light value
+ * chip extends lower than the text beside it, so the ramp greyed the chip while
+ * the "done" label next to it stayed at full strength, and at 390px it sliced
+ * horizontally through that label's glyphs. Softening the ramp and gating it on
+ * a measured overflow made it subtler without making it correct - the row that
+ * means "done" was still the row that looked broken.
  *
- * Two things this rule learned the hard way. It ramps to 0.4 alpha rather than
- * to transparent, and over 12px rather than 18: a full fade caught rows clipped
- * near the boundary and greyed their entire visible sliver, slicing horizontally
- * through the glyphs of an already-applied row so that "done" read as "broken".
- * And it is applied only when the list actually overflows (see pmd-fade in
- * Widget.tsx), because on a short list there is nothing below to signal and the
- * mask was quietly dimming the last row of every small form.
+ * So the signal moved off the content entirely. pmd-more is a small chevron
+ * pill, drawn on the panel's own ground, that overlays the bottom edge of the
+ * list when it overflows. It says "there is more below" without touching a
+ * single pixel of what is below.
  */
-.pmd-fade {
-  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 12px), rgba(0, 0, 0, 0.4) 100%);
-  mask-image: linear-gradient(to bottom, #000 calc(100% - 12px), rgba(0, 0, 0, 0.4) 100%);
+.pmd-more {
+  background: linear-gradient(to bottom, rgba(15, 23, 42, 0), rgba(15, 23, 42, 0.92) 60%);
 }
 
 .pmd-mono {

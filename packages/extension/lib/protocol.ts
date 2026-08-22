@@ -38,6 +38,15 @@ export type Request =
       registerHint: string;
       instruction?: string;
     }
+  /**
+   * Save a confirmed batch. One message, because it is one decision by the user
+   * and it has to be one write on disk.
+   */
+  | {
+      kind: "learnBatch";
+      facts: { key: string; label: string; value: string }[];
+      answers: { canonicalKey: string; question: string; text: string; language: Lang; genre: Genre }[];
+    }
   | {
       kind: "saveAnswer";
       canonicalKey: string;

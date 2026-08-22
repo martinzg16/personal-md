@@ -15,6 +15,12 @@ import { createElement } from "react";
 import { detectPageLanguage, genreForPurpose, registerHintFor, shouldRun } from "../../lib/policy.ts";
 import { beginBatch, fillField, pendingUndoCount, undoLastFill } from "../../lib/fill/apply.ts";
 import { matchFields, signatureOf, type MatchResult } from "../../lib/match/deterministic.ts";
+import {
+  collectPendingFacts,
+  emptyBatch,
+  reconcileFacts,
+  type PendingBatch,
+} from "../../lib/learn/pending.ts";
 import { buildScanResult, findByStamp, scanFields } from "../../lib/scan/scanner.ts";
 import type { ScannedField } from "../../lib/scan/types.ts";
 import { send } from "../../lib/protocol.ts";
@@ -106,11 +112,42 @@ export default defineContentScript({
       }
 
       rows = next;
-      render();
+      await recomputePending(mirror.profile);
+      renderAndMount();
     }
 
     /** The row whose fill is currently at the top of the undo stack. */
     let lastAppliedRowId: string | null = null;
+
+    /*
+     * What this form has offered that the file does not hold.
+     *
+     * Three pieces of state, because a confirmation the user has started
+     * interacting with must survive a re-scan: what they declined (never offer
+     * it again on this page), what they corrected (their version wins over the
+     * page's), and whether a submit has been attempted.
+     */
+    let batch: PendingBatch = emptyBatch();
+    const declined = new Set<string>();
+    const edited = new Map<string, string>();
+    let submitAttempted = false;
+
+    // Restore anything this domain noticed before a navigation tore us down.
+    const restored = await settings.getPending(domain);
+    if (restored) batch = restored;
+
+    async function recomputePending(profile: Parameters<typeof collectPendingFacts>[2]): Promise<void> {
+      const fresh = collectPendingFacts(fields, doc, profile);
+      batch = {
+        facts: reconcileFacts(batch.facts, fresh, declined, edited),
+        answers: batch.answers,
+      };
+      if (batch.facts.length === 0 && batch.answers.length === 0) {
+        await settings.clearPending(domain);
+      } else {
+        await settings.setPending(domain, batch);
+      }
+    }
 
     const copy = {
       en: {
@@ -269,6 +306,57 @@ export default defineContentScript({
               onDismissSite: () => {
                 void settings.dismissSite(domain).then(() => ui.remove());
               },
+              pending: batch,
+              submitAttempted,
+              onSaveBatch: async (confirmed) => {
+                try {
+                  await send({
+                    kind: "learnBatch",
+                    facts: confirmed.facts.map((f) => ({
+                      key: f.key,
+                      label: f.label,
+                      value: f.value,
+                    })),
+                    answers: confirmed.answers.map((a) => ({
+                      canonicalKey: a.canonicalKey,
+                      question: a.question,
+                      text: a.text,
+                      language: lang,
+                      genre: genreForPurpose(buildScanResult(fields, doc).purpose),
+                    })),
+                  });
+                  // Saved. Clear the batch rather than leaving it to be offered
+                  // again - it is in the file now, so the next recompute would
+                  // find nothing anyway, and a stale strip saying "3 to save"
+                  // after a successful save is the panel lying about the file.
+                  batch = emptyBatch();
+                  edited.clear();
+                  submitAttempted = false;
+                  await settings.clearPending(domain);
+                  render();
+                  return true;
+                } catch {
+                  // The batch is deliberately left intact: the file did not
+                  // change, so neither should what the panel is offering.
+                  return false;
+                }
+              },
+              onDeclineItem: (key: string) => {
+                declined.add(key);
+                edited.delete(key);
+                batch = { ...batch, facts: batch.facts.filter((f) => f.key !== key) };
+                void settings.setPending(domain, batch);
+                render();
+              },
+              onEditItem: (key: string, value: string) => {
+                edited.set(key, value);
+                batch = {
+                  ...batch,
+                  facts: batch.facts.map((f) => (f.key === key ? { ...f, value } : f)),
+                };
+                void settings.setPending(domain, batch);
+                render();
+              },
             }),
           );
         };
@@ -279,12 +367,80 @@ export default defineContentScript({
       },
     });
 
-    await recompute();
+    /*
+     * Mount only once there is something to say, and re-check on every
+     * recompute rather than once at startup.
+     *
+     * The early version returned outright when the first scan found nothing
+     * fillable, which was right for the fill ledger and wrong the moment the
+     * panel also had to notice what you typed: a form asking for things the file
+     * has never held produces no rows at all, so the widget never mounted, the
+     * listeners below were never attached, and everything the user typed was
+     * silently unnoticed. The observers now always run; only the UI is
+     * conditional.
+     */
+    let mounted = false;
+    const mountIfWorthIt = () => {
+      if (mounted) return;
+      if (rows.length === 0 && batch.facts.length === 0 && batch.answers.length === 0) return;
+      mounted = true;
+      ui.mount();
+    };
 
-    // Only mount once there is something to say. A page with nothing fillable
-    // gets no widget at all, which is most pages.
-    if (rows.length === 0) return;
-    ui.mount();
+    const renderAndMount = () => {
+      mountIfWorthIt();
+      if (mounted) render();
+    };
+
+    await recompute();
+    mountIfWorthIt();
+
+    /*
+     * Noticing what the user typed.
+     *
+     * Debounced, and on the whole document rather than per field, because fields
+     * appear and disappear as a multi-step form advances. This only reads values
+     * and diffs them against the file - nothing is written anywhere until the
+     * user confirms the batch.
+     */
+    let typeTimer: ReturnType<typeof setTimeout> | undefined;
+    const onEdit = () => {
+      clearTimeout(typeTimer);
+      typeTimer = setTimeout(() => void recompute(), 900);
+    };
+    doc.addEventListener("input", onEdit, true);
+    doc.addEventListener("change", onEdit, true);
+
+    /*
+     * A submit was attempted.
+     *
+     * Not a hook to block on: the page is entitled to navigate, and it usually
+     * will. The batch is already persisted per domain by this point, so the
+     * decision survives the teardown and the panel offers it again on the way
+     * back. Listening for a click on a submit control as well as for the `submit`
+     * event, because plenty of forms are a button and a fetch with no form
+     * element in sight.
+     */
+    const noteSubmit = () => {
+      submitAttempted = true;
+      void settings.setPending(domain, batch);
+      renderAndMount();
+    };
+    doc.addEventListener("submit", noteSubmit, true);
+    doc.addEventListener(
+      "click",
+      (e) => {
+        const target = e.target as HTMLElement | null;
+        const control = target?.closest?.("button, input[type=submit], [role=button]");
+        if (!control) return;
+        const type = (control.getAttribute("type") ?? "").toLowerCase();
+        const text = (control.textContent ?? "").trim().toLowerCase();
+        const submitish =
+          type === "submit" || /\b(enviar|submit|apply|solicitar|continuar|finish|send)\b/.test(text);
+        if (submitish) noteSubmit();
+      },
+      true,
+    );
 
     // Single-page apps swap forms without a navigation. Re-scan on a settled DOM
     // rather than on every mutation.
@@ -297,6 +453,10 @@ export default defineContentScript({
     ctx.onInvalidated(() => {
       observer.disconnect();
       clearTimeout(timer);
+      clearTimeout(typeTimer);
+      doc.removeEventListener("input", onEdit, true);
+      doc.removeEventListener("change", onEdit, true);
+      doc.removeEventListener("submit", noteSubmit, true);
     });
   },
 });

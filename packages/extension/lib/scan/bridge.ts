@@ -135,5 +135,24 @@ export function findFillValue(
   return null;
 }
 
+/**
+ * The key a value typed into this kind of field should be *learned* under.
+ *
+ * Not the same question as factKeyFor, which asks what would fill the field.
+ * Filling derives a first name from a stored full name, so DIRECT has no entry
+ * for it - but a first name the user actually typed is worth keeping under its
+ * own key rather than being reverse-engineered into a full name.
+ *
+ * Everything canFill refuses is refused here too; that check is the caller's,
+ * and it is not optional.
+ */
+const LEARN_ONLY: Partial<Record<FieldCategory, string>> = {
+  "personal.name.first": "personal.first_name",
+  "personal.name.last": "personal.last_name",
+};
+
+export const learnKeyFor = (category: FieldCategory): string | null =>
+  DIRECT[category] ?? LEARN_ONLY[category] ?? null;
+
 /** For the options page and the widget: what key would fill this category. */
 export const factKeyFor = (category: FieldCategory): string | null => DIRECT[category] ?? null;

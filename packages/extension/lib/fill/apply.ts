@@ -166,6 +166,50 @@ function setToggle(el: HTMLInputElement, value: string): FillOutcome {
   return { ok: true, applied: String(el.checked), truncated: false };
 }
 
+/**
+ * Read what is in a field now.
+ *
+ * Lives beside the writer rather than in the scanner because it needs the same
+ * two things the writer needs: the refusal list, and realm-safe element checks.
+ * Confirm-to-learn reads the page to find out what the user typed, and a reader
+ * that would hand back a password or a card number is the same defect as a
+ * writer that would fill one.
+ *
+ * A select returns its selected option's visible text, not its value: "ES" is
+ * what the page stores, "España" is what the user chose and what belongs in a
+ * file they read.
+ */
+export function readFieldValue(el: HTMLElement): string {
+  if (isForbidden(el)) return "";
+
+  if (isSelect(el)) {
+    const select = el as HTMLSelectElement;
+    const option = select.selectedOptions?.[0] ?? select.options[select.selectedIndex];
+    if (!option) return "";
+    // A placeholder option is not an answer.
+    if (!option.value && !option.textContent?.trim()) return "";
+    return (option.textContent ?? option.value ?? "").trim();
+  }
+
+  if (isToggle(el)) {
+    const input = el as HTMLInputElement;
+    if ((el.getAttribute("type") ?? "").toLowerCase() === "radio") {
+      const name = el.getAttribute("name");
+      if (!name) return input.checked ? input.value : "";
+      const checked = radiosIn(input, name).find((r) => r.checked);
+      if (!checked) return "";
+      return (checked.labels?.[0]?.textContent ?? checked.value ?? "").trim();
+    }
+    // A lone checkbox carries no value worth storing as a fact - its meaning is
+    // in its label, and consent checkboxes are refused upstream anyway.
+    return "";
+  }
+
+  const tag = tagNameOf(el);
+  if (tag !== "input" && tag !== "textarea") return "";
+  return ((el as HTMLInputElement).value ?? "").trim();
+}
+
 /** Write one value, recording a snapshot so it can be undone. */
 export function fillField(el: HTMLElement, value: string): FillOutcome {
   if (isForbidden(el)) return { ok: false, reason: "refused" };
