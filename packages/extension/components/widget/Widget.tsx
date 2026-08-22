@@ -799,11 +799,11 @@ export default function Widget(props: WidgetProps) {
             <p className="mt-1 text-[11px] leading-relaxed text-slate-400">{c.confirmNote}</p>
           </div>
 
-          <div className="relative min-h-0">
+          <div className="relative flex min-h-0 flex-1 flex-col">
           <ul
             ref={listRef}
             onScroll={measureOverflow}
-            className="divide-y divide-slate-700/50 overflow-y-auto"
+            className="min-h-0 flex-1 divide-y divide-slate-700/50 overflow-y-auto overscroll-contain"
           >
             {batch.facts.map((item) => (
               <PendingFactRow
@@ -894,11 +894,11 @@ export default function Widget(props: WidgetProps) {
           </p>
         </div>
       ) : (
-        <div className="relative min-h-0">
+        <div className="relative flex min-h-0 flex-1 flex-col">
         <ul
           ref={listRef}
           onScroll={measureOverflow}
-          className="divide-y divide-slate-700/50 overflow-y-auto"
+          className="min-h-0 flex-1 divide-y divide-slate-700/50 overflow-y-auto overscroll-contain"
         >
           {rows.map((row) =>
             row.kind === "fact" ? (
