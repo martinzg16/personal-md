@@ -25,7 +25,7 @@ import { buildScanResult, findByStamp, scanFields } from "../../lib/scan/scanner
 import type { ScannedField } from "../../lib/scan/types.ts";
 import { send } from "../../lib/protocol.ts";
 import type { DraftResponse, MirrorPayload } from "../../lib/protocol.ts";
-import { settings } from "../../lib/settings.ts";
+import { settings, storageKeys } from "../../lib/settings.ts";
 import Widget, { type Row } from "../../components/widget/Widget.tsx";
 import "./widget.css";
 
@@ -442,6 +442,22 @@ export default defineContentScript({
       true,
     );
 
+    /*
+     * The profile changed somewhere else.
+     *
+     * Rows are computed on load, and a page with nothing to offer does not
+     * mount. That left a hole: run the interview, or save a batch, in another
+     * tab, and every already-open form kept showing nothing - the panel was
+     * right when it decided and never learned otherwise. A form open in the
+     * background is the normal case, not the edge one, so waiting for the user
+     * to reload was the tool failing quietly.
+     */
+    const onMirrorChanged = (changes: Record<string, chrome.storage.StorageChange>): void => {
+      if (!(storageKeys.mirror in changes)) return;
+      void recompute();
+    };
+    chrome.storage.onChanged.addListener(onMirrorChanged);
+
     // Single-page apps swap forms without a navigation. Re-scan on a settled DOM
     // rather than on every mutation.
     let timer: ReturnType<typeof setTimeout> | undefined;
@@ -457,6 +473,7 @@ export default defineContentScript({
       doc.removeEventListener("input", onEdit, true);
       doc.removeEventListener("change", onEdit, true);
       doc.removeEventListener("submit", noteSubmit, true);
+      chrome.storage.onChanged.removeListener(onMirrorChanged);
     });
   },
 });

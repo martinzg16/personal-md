@@ -334,7 +334,7 @@ function FactRow({
   const hidden = s.localOnly && !shown;
 
   return (
-    <li className="px-4 py-3">
+    <li className="px-4 py-2.5">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           {/*
@@ -416,7 +416,7 @@ function AnswerRow({
   const long = s.text.length > 130;
 
   return (
-    <li className="px-4 py-3">
+    <li className="px-4 py-2.5">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <Quoted lead>{open || !long ? s.text : `${s.text.slice(0, 127)}...`}</Quoted>
@@ -489,7 +489,7 @@ function UnansweredRow({
   }, [row.draft?.draft, row.state]);
 
   return (
-    <li className="px-4 py-3">
+    <li className="px-4 py-2.5">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           {/*
@@ -753,7 +753,7 @@ export default function Widget(props: WidgetProps) {
     <div
       role="region"
       aria-label={c.region(domain)}
-      className="pmd-enter pointer-events-auto flex max-h-[min(70vh,560px)] w-[min(380px,calc(100vw-2rem))] flex-col overflow-hidden rounded-lg bg-slate-900 shadow-[0_16px_48px_-12px_rgba(15,23,42,0.6)] ring-1 ring-slate-700/80"
+      className="pmd-enter pointer-events-auto flex max-h-[min(84vh,760px)] w-[min(420px,calc(100vw-2rem))] flex-col overflow-hidden rounded-lg bg-slate-900 shadow-[0_16px_48px_-12px_rgba(15,23,42,0.6)] ring-1 ring-slate-700/80"
     >
       <header className="flex items-start justify-between gap-3 border-b border-slate-700/70 px-4 py-3">
         <div className="flex min-w-0 items-center gap-2">
