@@ -146,3 +146,72 @@ describe("cors", () => {
     assert.equal(res.status, 204);
   });
 });
+
+describe("POST /learn", () => {
+  it("saves a confirmed batch of facts and answers in one request", async () => {
+    const res = await fetch(
+      `${base}/learn`,
+      auth({
+        method: "POST",
+        body: JSON.stringify({
+          facts: [{ key: "logistics.availability", label: "Availability", value: "2 weeks" }],
+          answers: [
+            {
+              canonicalKey: "experience.leadership_story",
+              question: "Describe a time you led a project",
+              text: "I led the migration of our investor flow.",
+              language: "en",
+              genre: "job_application",
+            },
+          ],
+        }),
+      }),
+    );
+
+    assert.equal(res.status, 200);
+    const body = (await res.json()) as { learned: { facts: number; answers: number } };
+    assert.deepEqual(body.learned, { facts: 1, answers: 1 });
+
+    const profile = (await (await fetch(`${base}/profile`, auth())).json()) as {
+      profile: { facts: { key: string }[]; answers: { canonicalKey: string }[] };
+    };
+    assert.ok(profile.profile.facts.some((f) => f.key === "logistics.availability"));
+    assert.ok(
+      profile.profile.answers.some((a) => a.canonicalKey === "experience.leadership_story"),
+    );
+  });
+
+  it("rejects the whole batch when one answer is malformed", async () => {
+    // Dropping the bad item and saving the rest would be the quiet, helpful
+    // thing to do, and it is exactly wrong: the user confirmed a set, and
+    // saving a subset of it without saying so is the failure this tool is
+    // built to avoid.
+    const before = (await (await fetch(`${base}/profile`, auth())).json()) as {
+      profile: { facts: { key: string }[] };
+    };
+
+    const res = await fetch(
+      `${base}/learn`,
+      auth({
+        method: "POST",
+        body: JSON.stringify({
+          facts: [{ key: "education.field", label: "Field", value: "Economics" }],
+          answers: [{ question: "no canonical key here", text: "x", language: "en" }],
+        }),
+      }),
+    );
+
+    assert.equal(res.status, 400);
+    const after = (await (await fetch(`${base}/profile`, auth())).json()) as {
+      profile: { facts: { key: string }[] };
+    };
+    // The good fact in the same batch was not saved either.
+    assert.ok(!after.profile.facts.some((f) => f.key === "education.field"));
+    assert.equal(after.profile.facts.length, before.profile.facts.length);
+  });
+
+  it("refuses an empty batch rather than reporting a successful no-op", async () => {
+    const res = await fetch(`${base}/learn`, auth({ method: "POST", body: JSON.stringify({}) }));
+    assert.equal(res.status, 400);
+  });
+});
