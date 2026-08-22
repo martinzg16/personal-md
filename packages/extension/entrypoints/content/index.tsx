@@ -392,8 +392,45 @@ export default defineContentScript({
       if (mounted) render();
     };
 
+    /*
+     * Watch before looking.
+     *
+     * The observer used to be attached *after* the first recompute, and that
+     * first recompute awaits a message round-trip to the background worker. On a
+     * client-rendered page - Greenhouse, Workday, any React ATS - the form can be
+     * rendered entirely inside that await window, so the observer was attached
+     * too late to ever see a mutation and nothing triggered a second look. The
+     * result was a page with twenty-seven fields and no widget, permanently,
+     * until some unrelated DOM change happened to wake it up.
+     */
+    let settle: ReturnType<typeof setTimeout> | undefined;
+    const observer = new MutationObserver(() => {
+      clearTimeout(settle);
+      settle = setTimeout(() => void recompute(), 700);
+    });
+    observer.observe(doc.body, { childList: true, subtree: true });
+
     await recompute();
     mountIfWorthIt();
+
+    /*
+     * A bounded backstop, for the case the observer cannot cover.
+     *
+     * A single-shot render that completes before observe() is called produces no
+     * mutation at all, so there is nothing for the observer to react to. These
+     * re-scans stop as soon as there is something to show, and stop regardless
+     * after the last one - a widget that keeps polling a page forever is a
+     * battery cost with no upside.
+     */
+    const backstops: ReturnType<typeof setTimeout>[] = [];
+    for (const delay of [600, 1800, 4000]) {
+      backstops.push(
+        setTimeout(() => {
+          if (mounted) return;
+          void recompute();
+        }, delay),
+      );
+    }
 
     /*
      * Noticing what the user typed.
@@ -458,17 +495,10 @@ export default defineContentScript({
     };
     chrome.storage.onChanged.addListener(onMirrorChanged);
 
-    // Single-page apps swap forms without a navigation. Re-scan on a settled DOM
-    // rather than on every mutation.
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const observer = new MutationObserver(() => {
-      clearTimeout(timer);
-      timer = setTimeout(() => void recompute(), 700);
-    });
-    observer.observe(doc.body, { childList: true, subtree: true });
     ctx.onInvalidated(() => {
       observer.disconnect();
-      clearTimeout(timer);
+      clearTimeout(settle);
+      for (const t of backstops) clearTimeout(t);
       clearTimeout(typeTimer);
       doc.removeEventListener("input", onEdit, true);
       doc.removeEventListener("change", onEdit, true);
