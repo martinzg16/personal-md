@@ -215,3 +215,127 @@ describe("token", () => {
     assert.equal(tokenMatches(first, first + "x"), false);
   });
 });
+
+describe("learning a confirmed batch", () => {
+  it("saves facts and answers together", async () => {
+    const store = await freshStore();
+    const { profile } = await store.learn({
+      facts: [
+        { key: "personal.city", label: "Ciudad", value: "Madrid", updatedAt: "" },
+        { key: "work.current_role", label: "Puesto", value: "Product Manager", updatedAt: "" },
+      ],
+      answers: [
+        {
+          canonicalKey: "motivation.why_this_company",
+          question: "¿Por qué te interesa esta posición?",
+          text: "Porque llevo seis años decidiendo qué problemas fiscales merece la pena resolver.",
+          language: "es",
+          genre: "job_application",
+        },
+      ],
+    });
+
+    assert.equal(profile.facts.length, 2);
+    assert.equal(profile.answers.length, 1);
+
+    // Everything is on disk after that one call.
+    const reread = await store.load();
+    assert.equal(reread.profile.facts.find((f) => f.key === "personal.city")?.value, "Madrid");
+    assert.equal(reread.profile.answers[0]?.canonicalKey, "motivation.why_this_company");
+    assert.deepEqual(reread.profile.answers[0]?.askedAs, ["¿Por qué te interesa esta posición?"]);
+  });
+
+  it("writes nothing at all if any item in the batch fails", async () => {
+    // The reason learn() exists. The user confirmed the batch as one decision,
+    // so a failure partway must not leave half of it on disk with no way to
+    // tell which half. Writes happen after the whole mutation, so a throw
+    // inside it leaves the file exactly as it was.
+    const store = await freshStore();
+    await store.learn({
+      facts: [{ key: "personal.city", label: "Ciudad", value: "Madrid", updatedAt: "" }],
+    });
+    const before = await readFile(paths.profile, "utf8");
+
+    const exploding = {
+      canonicalKey: "motivation.why_this_company",
+      question: "¿Por qué te interesa esta posición?",
+      get text(): string {
+        throw new Error("boom");
+      },
+      language: "es" as const,
+      genre: "job_application" as const,
+    };
+
+    await assert.rejects(() =>
+      store.learn({
+        facts: [{ key: "personal.country", label: "País", value: "España", updatedAt: "" }],
+        answers: [exploding],
+      }),
+    );
+
+    // Not the country, not a partial answer, nothing.
+    assert.equal(await readFile(paths.profile, "utf8"), before);
+    const { profile } = await store.load();
+    assert.equal(profile.facts.length, 1);
+    assert.equal(profile.answers.length, 0);
+  });
+
+  it("merges into what is already there rather than replacing it", async () => {
+    const store = await freshStore();
+    await store.learn({
+      facts: [{ key: "personal.city", label: "Ciudad", value: "Madrid", updatedAt: "" }],
+      answers: [
+        {
+          canonicalKey: "motivation.why_this_company",
+          question: "¿Por qué te interesa esta posición?",
+          text: "Primera versión.",
+          language: "es",
+          genre: "job_application",
+        },
+      ],
+    });
+
+    // A second batch naming the same question in English must accumulate the
+    // surface form, not start a second answer - that accumulation is what makes
+    // the question free to recognise next time, in either language.
+    await store.learn({
+      facts: [{ key: "personal.country", label: "País", value: "España", updatedAt: "" }],
+      answers: [
+        {
+          canonicalKey: "motivation.why_this_company",
+          question: "Why do you want to work here?",
+          text: "Segunda versión.",
+          language: "es",
+          genre: "job_application",
+        },
+      ],
+    });
+
+    const { profile } = await store.load();
+    assert.deepEqual(
+      profile.facts.map((f) => f.key).sort(),
+      ["personal.city", "personal.country"],
+    );
+    assert.equal(profile.answers.length, 1);
+    assert.equal(profile.answers[0]?.text, "Segunda versión.");
+    assert.equal(profile.answers[0]?.askedAs.length, 2);
+  });
+
+  it("still withholds a sensitive key learned through a batch", async () => {
+    // The batch path must not be a way around the egress allowlist. A NIF
+    // confirmed here is as withheld as one entered in the editor.
+    const store = await freshStore();
+    await store.learn({
+      facts: [{ key: "personal.nif", label: "NIF", value: "12345678Z", updatedAt: "" }],
+    });
+
+    const { profile } = await store.load();
+    const nif = profile.facts.find((f) => f.key === "personal.nif");
+    assert.equal(nif?.egress, "never");
+    // Usable locally...
+    assert.equal(nif?.value, "12345678Z");
+    // ...but never written into the shareable file.
+    const onDisk = await readFile(paths.profile, "utf8");
+    assert.ok(!onDisk.includes("12345678Z"), "the NIF must not appear in PERSONAL.md");
+  });
+});

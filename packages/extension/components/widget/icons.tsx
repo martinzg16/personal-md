@@ -66,12 +66,6 @@ export const Withheld = ({ className }: IconProps) => (
   </svg>
 );
 
-export const Close = ({ className }: IconProps) => (
-  <svg {...base} className={className}>
-    <path d="M4 4l8 8M12 4l-8 8" />
-  </svg>
-);
-
 export const Check = ({ className }: IconProps) => (
   <svg {...base} className={className}>
     <path d="M3 8.5 6.5 12 13 4.5" />

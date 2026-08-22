@@ -1,6 +1,6 @@
 /**
  * The HTTP surface. Node's http module only, no framework: the whole API is
- * six routes and the dependency budget is better spent elsewhere.
+ * a handful of routes and the dependency budget is better spent elsewhere.
  *
  * Two things guard it. It binds to 127.0.0.1 explicitly, and every route except
  * /health requires the shared token. Loopback alone is not a boundary - any
@@ -11,6 +11,7 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 
 import { bearerFrom, loadOrCreateToken, tokenMatches } from "./auth.ts";
+import type { AnswerInput } from "./store.ts";
 import { handleDraft, type DraftRequest } from "./draft-route.ts";
 import { handleMatch, type MatchRequest } from "./match-route.ts";
 import { Store } from "./store.ts";
@@ -109,6 +110,59 @@ const routes: Record<string, Handler> = {
     });
     const saved = profile.answers.find((a) => a.canonicalKey === canonicalKey);
     json(res, 200, { ok: true, answer: saved });
+  },
+
+  /**
+   * Save a batch the user has confirmed, as one write.
+   *
+   * The confirm-to-learn panel asks once, about everything at once, so the yes
+   * has to be honoured atomically. Anything the request does not name is left
+   * alone - this is not a replace.
+   */
+  "POST /learn": async (_req, res, { store, body }) => {
+    const o = (body ?? {}) as Record<string, unknown>;
+    const rawFacts = Array.isArray(o["facts"]) ? (o["facts"] as unknown[]) : [];
+    const rawAnswers = Array.isArray(o["answers"]) ? (o["answers"] as unknown[]) : [];
+    if (rawFacts.length === 0 && rawAnswers.length === 0) {
+      return json(res, 400, { error: "expected { facts: [...] } or { answers: [...] }" });
+    }
+
+    const facts = rawFacts
+      .map((f) => {
+        const r = f as Record<string, unknown>;
+        return {
+          key: asString(r["key"]).trim(),
+          label: asString(r["label"]),
+          value: asString(r["value"]),
+          updatedAt: asString(r["updatedAt"]),
+        };
+      })
+      .filter((f) => f.key);
+
+    const answers: AnswerInput[] = [];
+    for (const a of rawAnswers) {
+      const r = a as Record<string, unknown>;
+      const canonicalKey = asString(r["canonicalKey"]).trim();
+      // A batch is all-or-nothing, so a malformed item fails the request rather
+      // than being dropped: silently saving three of four confirmed items is
+      // exactly the kind of quiet wrongness this tool refuses elsewhere.
+      if (!canonicalKey) return json(res, 400, { error: "every answer needs a canonicalKey" });
+      answers.push({
+        canonicalKey,
+        question: asString(r["question"]),
+        text: asString(r["text"]),
+        language: r["language"] === "es" ? "es" : "en",
+        genre: asString(r["genre"], "other") as AnswerInput["genre"],
+      });
+    }
+
+    const { profile } = await store.learn({ facts, answers });
+    json(res, 200, {
+      ok: true,
+      learned: { facts: facts.length, answers: answers.length },
+      factCount: profile.facts.length,
+      answerCount: profile.answers.length,
+    });
   },
 
   "POST /site-memory": async (_req, res, { store, body }) => {

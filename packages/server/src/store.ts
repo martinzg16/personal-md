@@ -47,6 +47,15 @@ const emptyIndex = (): IndexFile => ({
   updatedAt: "",
 });
 
+/** One answer, as confirmed by the user rather than as stored. */
+export interface AnswerInput {
+  canonicalKey: string;
+  question: string;
+  text: string;
+  language: Answer["language"];
+  genre: Answer["genre"];
+}
+
 export interface LoadedProfile {
   profile: Profile;
   warnings: string[];
@@ -138,24 +147,32 @@ export class Store {
 
   // ------------------------------------------------------------- mutations
 
-  async upsertFacts(incoming: readonly Omit<Fact, "egress">[]): Promise<LoadedProfile> {
+  /**
+   * Apply facts to a profile in memory. No write.
+   *
+   * Separated from upsertFacts so a confirmed batch of facts *and* answers can
+   * share a single write - see learn().
+   */
+  private applyFacts(profile: Profile, incoming: readonly Omit<Fact, "egress">[]): void {
     const now = new Date().toISOString().slice(0, 10);
-    return this.update((profile) => {
-      for (const raw of incoming) {
-        const key = raw.key.trim();
-        if (!key) continue;
-        const existing = profile.facts.find((f) => f.key === key);
-        const fact: Fact = {
-          key,
-          label: raw.label || existing?.label || key,
-          value: raw.value,
-          egress: classifyEgress(key),
-          updatedAt: raw.updatedAt || now,
-        };
-        if (existing) Object.assign(existing, fact);
-        else profile.facts.push(fact);
-      }
-    });
+    for (const raw of incoming) {
+      const key = raw.key.trim();
+      if (!key) continue;
+      const existing = profile.facts.find((f) => f.key === key);
+      const fact: Fact = {
+        key,
+        label: raw.label || existing?.label || key,
+        value: raw.value,
+        egress: classifyEgress(key),
+        updatedAt: raw.updatedAt || now,
+      };
+      if (existing) Object.assign(existing, fact);
+      else profile.facts.push(fact);
+    }
+  }
+
+  async upsertFacts(incoming: readonly Omit<Fact, "egress">[]): Promise<LoadedProfile> {
+    return this.update((profile) => this.applyFacts(profile, incoming));
   }
 
   /**
@@ -165,39 +182,57 @@ export class Store {
    * question free to recognise next time, in either language, so a surface form
    * seen once is never thrown away.
    */
-  async recordAnswer(input: {
-    canonicalKey: string;
-    question: string;
-    text: string;
-    language: Answer["language"];
-    genre: Answer["genre"];
+  async recordAnswer(input: AnswerInput): Promise<LoadedProfile> {
+    return this.update((profile) => this.applyAnswer(profile, input));
+  }
+
+  /** Apply one answer to a profile in memory. No write. */
+  private applyAnswer(profile: Profile, input: AnswerInput): void {
+    const text = normaliseAnswerText(input.text);
+    const existing = profile.answers.find((a) => a.canonicalKey === input.canonicalKey);
+    const surface = input.question.trim();
+
+    if (existing) {
+      const seen = new Set(existing.askedAs.map(normaliseQuestion));
+      if (surface && !seen.has(normaliseQuestion(surface))) existing.askedAs.push(surface);
+      if (text) {
+        existing.text = text;
+        existing.writtenAt = new Date().toISOString().slice(0, 10);
+      }
+      existing.useCount += 1;
+      return;
+    }
+
+    profile.answers.push({
+      id: randomBytes(4).toString("hex"),
+      canonicalKey: input.canonicalKey,
+      askedAs: surface ? [surface] : [],
+      text,
+      language: input.language,
+      genre: input.genre,
+      writtenAt: new Date().toISOString().slice(0, 10),
+      useCount: 1,
+    });
+  }
+
+  /**
+   * Save a batch of confirmed items in one write.
+   *
+   * This is what "nothing is stored silently" needs on the server. The widget
+   * collects new values quietly while a long form is filled and asks once, at
+   * the end, about all of them together - so the answer to that one question has
+   * to land as one write. Calling upsertFacts and then recordAnswer would
+   * re-read and re-serialise PERSONAL.md per item, and a failure partway through
+   * would leave some of a batch the user confirmed as a whole on disk and the
+   * rest gone, with no way for them to tell which.
+   */
+  async learn(batch: {
+    facts?: readonly Omit<Fact, "egress">[];
+    answers?: readonly AnswerInput[];
   }): Promise<LoadedProfile> {
     return this.update((profile) => {
-      const text = normaliseAnswerText(input.text);
-      const existing = profile.answers.find((a) => a.canonicalKey === input.canonicalKey);
-      const surface = input.question.trim();
-
-      if (existing) {
-        const seen = new Set(existing.askedAs.map(normaliseQuestion));
-        if (surface && !seen.has(normaliseQuestion(surface))) existing.askedAs.push(surface);
-        if (text) {
-          existing.text = text;
-          existing.writtenAt = new Date().toISOString().slice(0, 10);
-        }
-        existing.useCount += 1;
-        return;
-      }
-
-      profile.answers.push({
-        id: randomBytes(4).toString("hex"),
-        canonicalKey: input.canonicalKey,
-        askedAs: surface ? [surface] : [],
-        text,
-        language: input.language,
-        genre: input.genre,
-        writtenAt: new Date().toISOString().slice(0, 10),
-        useCount: 1,
-      });
+      if (batch.facts?.length) this.applyFacts(profile, batch.facts);
+      for (const answer of batch.answers ?? []) this.applyAnswer(profile, answer);
     });
   }
 

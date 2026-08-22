@@ -19,7 +19,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import type { DraftResponse } from "../../lib/protocol.ts";
 import type { AnswerSuggestion, FieldSuggestion } from "../../lib/match/deterministic.ts";
-import { Arrow, Check, Chevron, Close, Draft, Gap, Insert, Mark, Reveal, Undo, Withheld } from "./icons.tsx";
+import { Arrow, Check, Chevron, Draft, Gap, Insert, Mark, Reveal, Undo, Withheld } from "./icons.tsx";
 
 export type Lang = "es" | "en";
 
@@ -97,10 +97,10 @@ const t = {
     ungrounded: "a figure here is in nothing you have written",
     basedOn: "Based on",
     serverDown: "Drafting needs the server running. Everything below still works.",
-    empty: "Your file could not be read.",
+    empty: "Nothing in your file yet.",
     emptyHelp: "The companion server answered, but the profile came back empty. Check it is pointing at the right ~/.personal-md.",
     tellIt: "Tell it what to change",
-    checkFirst: "This field already has a value",
+    checkFirst: "This field already holds",
     fillFailed: "That field is no longer on the page. Reload and try again.",
     draftFailed: "Could not draft this.",
   },
@@ -135,10 +135,10 @@ const t = {
     ungrounded: "hay una cifra que no está en nada que hayas escrito",
     basedOn: "A partir de",
     serverDown: "Redactar necesita el servidor. Lo de abajo sigue funcionando.",
-    empty: "No se pudo leer tu fichero.",
+    empty: "Tu fichero aún está vacío.",
     emptyHelp: "El servidor respondió, pero el perfil vino vacío. Comprueba que apunta al ~/.personal-md correcto.",
     tellIt: "Dile qué cambiar",
-    checkFirst: "Este campo ya tiene un valor",
+    checkFirst: "Este campo ya tiene",
     fillFailed: "Ese campo ya no está en la página. Recarga e inténtalo otra vez.",
     draftFailed: "No se pudo redactar.",
   },
@@ -197,16 +197,23 @@ function Action({
 /**
  * The guard against inserting over something.
  *
- * Amber belongs to degradation (the server banner), so this gets its own
- * treatment and a readable size: it is the guard against the failure this whole
- * design was pointed at, and it was previously the smallest text in the panel
- * wearing a status colour.
+ * Distinguished from the server-stopped banner by content first, not by hue.
+ * Both were warm, and measured against each other their fills were the same
+ * colour and their text 18 degrees apart in the same family - so a colour-only
+ * distinction was never going to carry it. This one quotes what is already in
+ * the field, which the banner never can, and which is the fact the user
+ * actually needs to decide whether to overwrite.
  */
-function Caution({ children }: { children: React.ReactNode }) {
+function Caution({ children, quote }: { children: React.ReactNode; quote?: string }) {
   return (
-    <span className="inline-flex items-center gap-1 rounded border border-orange-400/40 bg-orange-400/10 px-1.5 py-0.5 text-[11px] font-medium text-orange-200">
-      <Gap className="h-3 w-3 shrink-0" />
-      {children}
+    <span className="inline-flex max-w-full flex-wrap items-center gap-x-1.5 gap-y-0.5 rounded border border-orange-400/50 bg-orange-950/60 px-2 py-1 text-[12px] font-medium leading-snug text-orange-100">
+      <Gap className="h-3.5 w-3.5 shrink-0" />
+      <span>{children}</span>
+      {quote && (
+        <span className="pmd-mono rounded bg-orange-400/15 px-1 text-[11px] text-orange-50">
+          {quote}
+        </span>
+      )}
     </span>
   );
 }
@@ -230,9 +237,16 @@ function Failure({ children }: { children: React.ReactNode }) {
  */
 function Destination({ label, lang }: { label: string; lang: Lang }) {
   return (
-    <span className="pmd-mono inline-flex min-w-0 items-center gap-1 text-[10px] tracking-[0.06em] text-slate-300">
-      <Arrow className="h-3 w-3 shrink-0 text-slate-500" />
-      <span className="truncate">{label}</span>
+    <span className="pmd-mono inline-flex min-w-0 items-start gap-1 text-[10px] leading-relaxed tracking-[0.06em] text-slate-300">
+      <Arrow className="mt-[3px] h-3 w-3 shrink-0 text-slate-500" />
+      {/*
+        Wraps; never truncates. At 390px a truncating destination clipped the
+        very thing the user has to read before committing - "en Expectativa
+        salarial bruta anu..." and, worse, the question a long-form answer was
+        about to be inserted into. A second line costs nothing next to
+        confirming the wrong destination.
+      */}
+      <span className="min-w-0 break-words">{label}</span>
       <span className="sr-only"> {t[lang].into}</span>
     </span>
   );
@@ -277,12 +291,29 @@ function FactRow({
     <li className="px-4 py-3">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <Quoted lead>{hidden ? mask(s.value) : s.value}</Quoted>
+          {/*
+            Value-first applies to values you can read. While a sensitive value
+            is masked, the loudest element on the row would be a row of dots -
+            so the field's own identity leads instead, and the mask sits where
+            the provenance does. Revealing it swaps them back.
+          */}
+          {hidden ? (
+            <>
+              <p className="text-[13px] font-medium leading-snug text-slate-100">
+                {s.label || s.category}
+              </p>
+              <p className="pmd-mono mt-1 text-[11px] tracking-[0.08em] text-slate-300">
+                {mask(s.value)}
+              </p>
+            </>
+          ) : (
+            <Quoted lead>{s.value}</Quoted>
+          )}
           <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
-            <span className="pmd-mono max-w-full truncate text-[10px] tracking-[0.06em] text-slate-400">
+            <span className="pmd-mono max-w-full break-words text-[10px] leading-relaxed tracking-[0.06em] text-slate-400">
               {s.derivedFrom ? `${c.derivedFrom} ${s.derivedFrom}` : `${c.from} ${s.sourceKey}`}
             </span>
-            <Destination label={s.label || s.category} lang={lang} />
+            {!hidden && <Destination label={s.label || s.category} lang={lang} />}
             {s.localOnly && (
               <span className="inline-flex items-center gap-1 rounded bg-slate-700/70 px-1.5 py-0.5 text-[10px] text-slate-200">
                 <Withheld className="h-3 w-3" />
@@ -302,7 +333,7 @@ function FactRow({
           </div>
           {s.currentValue && (
             <p className="mt-1.5">
-              <Caution>{c.checkFirst}</Caution>
+              <Caution quote={s.currentValue}>{c.checkFirst}</Caution>
             </p>
           )}
           {row.fillError && <Failure>{row.fillError}</Failure>}
@@ -415,7 +446,15 @@ function UnansweredRow({
     <li className="px-4 py-3">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <p className="text-[13px] font-medium leading-snug text-slate-100">{row.question}</p>
+          {/*
+            This row kind genuinely leads with the question: there is no stored
+            value to put first, and the question is what the user reads to judge
+            whether a draft is on target. But at 13px semibold it tied the panel
+            title for dominance, so the same panel demoted the host field on
+            three row kinds and promoted it on this one. Subordinate to the
+            title, still the subject of its own row.
+          */}
+          <p className="text-[12px] font-medium leading-snug text-slate-200">{row.question}</p>
           {/*
             Only while idle. This line explains why the row offers Draft instead
             of Fill - but rendered unconditionally it sat directly above "based
@@ -559,6 +598,24 @@ export default function Widget(props: WidgetProps) {
     }
   }, [open]);
 
+  /*
+   * The edge fade is a lie on a list that fits, and it dims the last row of
+   * every small form for no reason. Measured rather than assumed, and remeasured
+   * on scroll so it disappears once you reach the bottom - at which point there
+   * is nothing below to signal.
+   */
+  const listRef = useRef<HTMLUListElement | null>(null);
+  const [overflowing, setOverflowing] = useState(false);
+
+  const measureOverflow = () => {
+    const el = listRef.current;
+    if (!el) return;
+    const more = el.scrollHeight - el.clientHeight - el.scrollTop > 2;
+    setOverflowing(more);
+  };
+
+  useEffect(measureOverflow, [rows, open]);
+
   if (!open) {
     return (
       <button
@@ -601,7 +658,12 @@ export default function Widget(props: WidgetProps) {
           title={c.collapse}
           className={`-mr-1 -mt-1 rounded p-1 text-slate-400 transition-colors hover:bg-slate-700/60 hover:text-slate-100 ${FOCUS}`}
         >
-          <Close className="h-4 w-4" />
+          {/*
+            A chevron, pointing down at the pill it collapses into. A bare X
+            reads as "dismiss this", and dismissal is the footer's job - which
+            is a different, remembered decision.
+          */}
+          <Chevron className="h-4 w-4 rotate-90" />
         </button>
       </header>
 
@@ -619,7 +681,11 @@ export default function Widget(props: WidgetProps) {
           </p>
         </div>
       ) : (
-        <ul className="divide-y divide-slate-700/50 overflow-y-auto pmd-fade">
+        <ul
+          ref={listRef}
+          onScroll={measureOverflow}
+          className={`divide-y divide-slate-700/50 overflow-y-auto ${overflowing ? "pmd-fade" : ""}`}
+        >
           {rows.map((row) =>
             row.kind === "fact" ? (
               <FactRow key={row.id} row={row} lang={lang} onFill={() => props.onFill(row)} />

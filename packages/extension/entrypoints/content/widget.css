@@ -80,12 +80,20 @@
  *
  * Without this the list hard-clips a row mid-chip and the draft editor sits
  * behind an unsignalled fold: the panel counts eight rows and shows four with no
- * indication there are more. A mask fades the last few pixels so the cut reads as
- * "continues" rather than "ends".
+ * indication there are more. A mask softens the last few pixels so the cut reads
+ * as "continues" rather than "ends".
+ *
+ * Two things this rule learned the hard way. It ramps to 0.4 alpha rather than
+ * to transparent, and over 12px rather than 18: a full fade caught rows clipped
+ * near the boundary and greyed their entire visible sliver, slicing horizontally
+ * through the glyphs of an already-applied row so that "done" read as "broken".
+ * And it is applied only when the list actually overflows (see pmd-fade in
+ * Widget.tsx), because on a short list there is nothing below to signal and the
+ * mask was quietly dimming the last row of every small form.
  */
 .pmd-fade {
-  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 18px), transparent 100%);
-  mask-image: linear-gradient(to bottom, #000 calc(100% - 18px), transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 12px), rgba(0, 0, 0, 0.4) 100%);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 12px), rgba(0, 0, 0, 0.4) 100%);
 }
 
 .pmd-mono {
