@@ -1,0 +1,13 @@
+{
+  "name": "personal-md",
+  "private": true,
+  "version": "0.1.0",
+  "description": "A second brain for filling out forms. Learns your answers, drafts new ones in your voice, keeps it all in a PERSONAL.md you own.",
+  "workspaces": ["packages/core", "packages/server", "packages/extension"],
+  "scripts": {
+    "test": "npm run test --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "start": "npm start --workspace @personal-md/server"
+  },
+  "engines": { "node": ">=20" }
+}

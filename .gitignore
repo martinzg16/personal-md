@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.output/
+.wxt/
+*.tsbuildinfo
+.DS_Store
+
+# Never commit real personal data. The live file lives in ~/.personal-md/,
+# but be paranoid: a stray copy here must not be committable.
+PERSONAL.md
+secrets.json
+*.personal.md
