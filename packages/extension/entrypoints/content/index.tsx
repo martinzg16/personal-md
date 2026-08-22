@@ -119,6 +119,16 @@ export default defineContentScript({
     /** The row whose fill is currently at the top of the undo stack. */
     let lastAppliedRowId: string | null = null;
 
+    /**
+     * Every row filled by the last bulk action.
+     *
+     * Undo is batch-wide, so a single Undo after "fill all" reverses every field
+     * it wrote. Clearing only the last row's flag would leave seven rows saying
+     * "Filled" over fields that are now empty again - the panel lying about the
+     * page, which is the one thing this design exists to prevent.
+     */
+    let bulkApplied: string[] = [];
+
     /*
      * What this form has offered that the file does not hold.
      *
@@ -209,6 +219,10 @@ export default defineContentScript({
       const outcome = fillField(el, value);
       if (outcome.ok) {
         lastAppliedRowId = rowId;
+        // A single fill starts its own undo batch, so any previous bulk set is
+        // no longer what Undo would reverse. Leaving it would make Undo clear
+        // the flags of rows it did not touch.
+        bulkApplied = [];
         markApplied(rowId);
       } else {
         setRowError(rowId, reasonText(outcome.reason));
@@ -281,6 +295,43 @@ export default defineContentScript({
                   apply(row.suggestion.fieldId, row.suggestion.text, row.id);
                 }
               },
+              onFillAll: (batchRows: Row[]) => {
+                /*
+                 * One beginBatch for the whole set, so one Undo puts every one
+                 * of them back. Filling them as separate batches would leave the
+                 * user undoing eight times to reverse one click, which is the
+                 * kind of asymmetry that makes a bulk action feel unsafe.
+                 *
+                 * Each fill still goes through the same path as a single one, so
+                 * a field that has gone from the page, or that the last line of
+                 * defence in apply.ts refuses, reports its own failure on its own
+                 * row rather than failing the batch silently.
+                 */
+                beginBatch();
+                let last: string | null = null;
+                for (const row of batchRows) {
+                  if (row.kind !== "fact") continue;
+                  const el = findByStamp(row.suggestion.fieldId, doc);
+                  if (!el) {
+                    setRowError(row.id, translate("fillFailed"));
+                    continue;
+                  }
+                  const outcome = fillField(el, row.suggestion.value);
+                  if (outcome.ok) {
+                    last = row.id;
+                    rows = rows.map((r) =>
+                      r.id === row.id ? { ...r, applied: true, fillError: undefined } : r,
+                    );
+                  } else {
+                    setRowError(row.id, reasonText(outcome.reason));
+                  }
+                }
+                // Undo is batch-wide, but the row flag has to be cleared for the
+                // whole set - so remember the batch, not just the last row.
+                lastAppliedRowId = last;
+                bulkApplied = batchRows.filter((r) => r.kind === "fact").map((r) => r.id);
+                render();
+              },
               onDraft: (row: Row, instruction?: string) => void draft(row, instruction),
               onInsertDraft: (row: Row, text: string) => {
                 if (row.kind !== "unanswered") return;
@@ -296,10 +347,17 @@ export default defineContentScript({
                 // re-offer Fill on them - the panel's own state lying about the
                 // page, which is the failure this design exists to prevent.
                 const undone = undoLastFill();
-                if (undone > 0 && lastAppliedRowId) {
-                  const id = lastAppliedRowId;
-                  rows = rows.map((r) => (r.id === id ? { ...r, applied: false } : r));
+                if (undone > 0) {
+                  const ids = new Set(
+                    bulkApplied.length > 0
+                      ? bulkApplied
+                      : lastAppliedRowId
+                        ? [lastAppliedRowId]
+                        : [],
+                  );
+                  rows = rows.map((r) => (ids.has(r.id) ? { ...r, applied: false } : r));
                   lastAppliedRowId = null;
+                  bulkApplied = [];
                 }
                 render();
               },

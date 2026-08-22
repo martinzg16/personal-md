@@ -62,6 +62,11 @@ export interface WidgetProps {
   onUndo: () => void;
   onDismissSite: () => void;
   /**
+   * Fill every row that can be filled without a judgement call, as one
+   * undoable batch. Given the rows to fill, already filtered by the panel.
+   */
+  onFillAll?: (rows: Row[]) => void;
+  /**
    * What this form has offered that the file does not already hold, noticed
    * quietly while it was filled. Null when there is nothing to ask about.
    */
@@ -136,6 +141,11 @@ const t = {
     saved: "Saved to your file",
     saveFailed: "Could not save. Your file is unchanged.",
     answerFor: "your answer to",
+    fillAll: (n: number) => `Fill ${n} from your file`,
+    fillAllGuard: (n: number) =>
+      `${n} left for you: already filled, or worked out rather than stored`,
+    fillAllDone: (n: number) => `Filled ${n}`,
+    fillAllNote: "Drafts are never included - those need reading first.",
   },
   es: {
     pill: (n: number) => `${n} de tu fichero`,
@@ -187,6 +197,11 @@ const t = {
     saved: "Guardado en tu fichero",
     saveFailed: "No se pudo guardar. Tu fichero no ha cambiado.",
     answerFor: "tu respuesta a",
+    fillAll: (n: number) => `Rellenar ${n} de tu fichero`,
+    fillAllGuard: (n: number) =>
+      `${n} se quedan para ti: ya rellenos, o deducidos y no guardados`,
+    fillAllDone: (n: number) => `Rellenados ${n}`,
+    fillAllNote: "Las redacciones nunca se incluyen: esas hay que leerlas.",
   },
 } as const;
 
@@ -676,6 +691,50 @@ export default function Widget(props: WidgetProps) {
 
   const unapplied = useMemo(() => rows.filter((r) => !r.applied).length, [rows]);
 
+  /*
+   * What "fill all" is allowed to touch: only values actually stored, verbatim.
+   *
+   * Deliberately narrow, because a bulk action is where a wrong value stops
+   * being reviewed - it gets submitted. Five things are excluded, and each stays
+   * available as a per-row decision:
+   *
+   *  - anything derived rather than stored. A first name split out of a full
+   *    name is a heuristic, and the Spanish two-surname split especially so, so
+   *    it is not something to write into eight fields unread.
+   *  - anything below full confidence, for the same reason.
+   *  - a field that already holds a value, because overwriting is a choice.
+   *  - a draft or a stored answer, because those have to be read first.
+   *  - a row whose last fill failed, because the reason is still on screen.
+   */
+  const bulk = useMemo(
+    () =>
+      rows.filter(
+        (r): r is Extract<Row, { kind: "fact" }> =>
+          r.kind === "fact" &&
+          !r.applied &&
+          !r.fillError &&
+          !r.suggestion.currentValue &&
+          r.suggestion.derivedFrom === undefined &&
+          r.suggestion.confidence >= 1,
+      ),
+    [rows],
+  );
+
+  /** Fact rows the bulk action deliberately will not touch. */
+  const guarded = useMemo(
+    () =>
+      rows.filter(
+        (r) =>
+          r.kind === "fact" &&
+          !r.applied &&
+          !r.fillError &&
+          (!!r.suggestion.currentValue ||
+            r.suggestion.derivedFrom !== undefined ||
+            r.suggestion.confidence < 1),
+      ).length,
+    [rows],
+  );
+
   const batch = props.pending ?? null;
   const toSave = batch ? batchSize(batch) : 0;
   const [view, setView] = useState<"ledger" | "confirm">("ledger");
@@ -788,6 +847,20 @@ export default function Widget(props: WidgetProps) {
         <p className="flex items-center gap-2 border-b border-amber-500/20 bg-amber-500/10 px-4 py-2 text-[11px] text-amber-200">
           {c.serverDown}
         </p>
+      )}
+
+      {view === "ledger" && bulk.length >= 2 && props.onFillAll && (
+        <div className="flex items-center justify-between gap-3 border-b border-slate-700/70 bg-slate-800/40 px-4 py-2">
+          <div className="min-w-0">
+            <p className="text-[11px] leading-snug text-slate-300">
+              {guarded > 0 ? c.fillAllGuard(guarded) : c.fillAllNote}
+            </p>
+          </div>
+          <Action onClick={() => props.onFillAll?.(bulk)}>
+            <Insert className="h-3.5 w-3.5" />
+            {c.fillAll(bulk.length)}
+          </Action>
+        </div>
       )}
 
       {view === "confirm" && batch ? (
