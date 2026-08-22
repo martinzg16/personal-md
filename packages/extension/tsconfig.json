@@ -1,0 +1,13 @@
+{
+  "extends": "./.wxt/tsconfig.json",
+  "compilerOptions": {
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "jsx": "react-jsx",
+    "noEmit": true,
+    "skipLibCheck": true,
+    "allowImportingTsExtensions": true,
+    "paths": { "@personal-md/core": ["../core/src/index.ts"] }
+  },
+  "include": ["entrypoints", "lib", "wxt.config.ts", ".wxt/**/*"]
+}
