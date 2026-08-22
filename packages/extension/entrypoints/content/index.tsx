@@ -24,7 +24,13 @@ import {
 import { buildScanResult, findByStamp, scanFields } from "../../lib/scan/scanner.ts";
 import type { ScannedField } from "../../lib/scan/types.ts";
 import { send } from "../../lib/protocol.ts";
-import type { DraftResponse, MirrorPayload } from "../../lib/protocol.ts";
+import {
+  extractLinkedInProfile,
+  isEmptyProfile,
+  isOwnProfile,
+  isProfilePage,
+} from "../../lib/linkedin/extract.ts";
+import type { DraftResponse, ImportProposal, MirrorPayload } from "../../lib/protocol.ts";
 import { settings, storageKeys } from "../../lib/settings.ts";
 import Widget, { type Row } from "../../components/widget/Widget.tsx";
 import "./widget.css";
@@ -57,12 +63,16 @@ export default defineContentScript({
       byId.clear();
       for (const f of fields) byId.set(f.id, f);
 
+      refreshImportOffer();
+
       const payload = await send<MirrorPayload>({ kind: "getMirror" }).catch(() => null);
       serverUp = payload?.connection.kind === "ok";
       const mirror = payload?.mirror;
       if (!mirror) {
+        // No profile yet is the case importing exists for, so this must still be
+        // able to mount rather than only render into an already-mounted panel.
         rows = [];
-        render();
+        renderAndMount();
         return;
       }
 
@@ -137,6 +147,21 @@ export default defineContentScript({
      * it again on this page), what they corrected (their version wins over the
      * page's), and whether a submit has been attempted.
      */
+    /*
+     * Importing this page as the user's own profile.
+     *
+     * Offered only on their own LinkedIn profile, and only as an offer. The read
+     * happens on a click, in their own logged-in session, over rendered DOM -
+     * there is no request to LinkedIn that this extension initiates and no
+     * credential anywhere. A profile that is not theirs is refused outright:
+     * "it was on screen" is not consent to file someone else's history.
+     */
+    let importOffer: {
+      state: "idle" | "reading" | "error";
+      error?: string;
+      unreadable?: number;
+    } | null = null;
+
     let batch: PendingBatch = emptyBatch();
     const declined = new Set<string>();
     const edited = new Map<string, string>();
@@ -145,6 +170,71 @@ export default defineContentScript({
     // Restore anything this domain noticed before a navigation tore us down.
     const restored = await settings.getPending(domain);
     if (restored) batch = restored;
+
+    /** Re-decide whether this page can offer an import. */
+    function refreshImportOffer(): void {
+      if (!isProfilePage(location.href)) {
+        importOffer = null;
+        return;
+      }
+      // Keep an error or an in-flight read on screen rather than resetting it
+      // every time the SPA mutates the DOM underneath us.
+      if (importOffer && importOffer.state !== "idle") return;
+      importOffer = isOwnProfile(doc) ? { state: "idle" } : null;
+    }
+
+    async function readThisProfile(): Promise<void> {
+      if (!isOwnProfile(doc)) {
+        importOffer = { state: "error", error: copy[lang].notYours };
+        render();
+        return;
+      }
+      const raw = extractLinkedInProfile(doc, location.href);
+      if (isEmptyProfile(raw)) {
+        importOffer = { state: "error", error: copy[lang].importEmpty };
+        render();
+        return;
+      }
+
+      importOffer = { state: "reading" };
+      render();
+      try {
+        const { proposal } = await send<{ proposal: ImportProposal }>({
+          kind: "importProfile",
+          profile: { ...raw, profileUrl: location.href },
+        });
+
+        // The proposal becomes a pending batch, so an import is reviewed and
+        // edited in the same panel as anything else new. Nothing is written by
+        // reading a page.
+        batch = {
+          facts: proposal.facts.map((f) => ({
+            fieldId: `import:${f.key}`,
+            key: f.key,
+            label: f.label,
+            value: f.value,
+          })),
+          answers: proposal.answers.map((a) => ({
+            fieldId: `import:${a.canonicalKey}`,
+            canonicalKey: a.canonicalKey,
+            question: a.question,
+            text: a.text,
+          })),
+        };
+        await settings.setPending(domain, batch);
+        importOffer = raw.warnings.length > 0
+          ? { state: "idle", unreadable: raw.warnings.length }
+          : { state: "idle" };
+        submitAttempted = true; // open straight into the review
+        renderAndMount();
+      } catch (err) {
+        importOffer = {
+          state: "error",
+          error: err instanceof Error ? err.message : copy[lang].importFailed,
+        };
+        render();
+      }
+    }
 
     async function recomputePending(profile: Parameters<typeof collectPendingFacts>[2]): Promise<void> {
       const fresh = collectPendingFacts(fields, doc, profile);
@@ -161,6 +251,9 @@ export default defineContentScript({
 
     const copy = {
       en: {
+        notYours: "This is someone else's profile. Only your own is imported.",
+        importEmpty: "Nothing readable on this page. Try scrolling it fully first.",
+        importFailed: "Could not read this profile.",
         fillFailed: "That field is no longer on the page. Reload and try again.",
         refused: "This kind of field is never filled.",
         noOption: "None of that field's options match your stored value.",
@@ -168,6 +261,9 @@ export default defineContentScript({
         notFillable: "That field cannot be filled.",
       },
       es: {
+        notYours: "Este perfil es de otra persona. Solo se importa el tuyo.",
+        importEmpty: "No hay nada legible en esta página. Prueba a bajar hasta el final primero.",
+        importFailed: "No se pudo leer este perfil.",
         fillFailed: "Ese campo ya no está en la página. Recarga e inténtalo otra vez.",
         refused: "Este tipo de campo nunca se rellena.",
         noOption: "Ninguna opción de ese campo coincide con tu valor guardado.",
@@ -365,6 +461,8 @@ export default defineContentScript({
                 void settings.dismissSite(domain).then(() => ui.remove());
               },
               pending: batch,
+              importOffer,
+              onImport: () => void readThisProfile(),
               submitAttempted,
               onSaveBatch: async (confirmed) => {
                 try {
@@ -440,7 +538,17 @@ export default defineContentScript({
     let mounted = false;
     const mountIfWorthIt = () => {
       if (mounted) return;
-      if (rows.length === 0 && batch.facts.length === 0 && batch.answers.length === 0) return;
+      // An offer to read this profile is reason enough to appear: a LinkedIn
+      // profile has no fillable fields at all, so waiting for rows would mean
+      // the import could never be offered.
+      if (
+        rows.length === 0 &&
+        batch.facts.length === 0 &&
+        batch.answers.length === 0 &&
+        !importOffer
+      ) {
+        return;
+      }
       mounted = true;
       ui.mount();
     };

@@ -301,6 +301,25 @@ if (el) {
         Fill-all. The bar names what it will skip, because the fields it refuses
         to touch are the whole reason it is safe to press.
       */}
+      {/* On the user's own LinkedIn profile. An offer, never automatic. */}
+      <Slot title="On your own LinkedIn profile" ground="#ffffff">
+        <Widget
+          lang="es"
+          domain="www.linkedin.com"
+          rows={[]}
+          undoCount={0}
+          serverUp
+          initialOpen
+          importOffer={{ state: "idle", unreadable: 2 }}
+          onImport={noop}
+          onFill={noop}
+          onDraft={noop}
+          onInsertDraft={noop}
+          onUndo={noop}
+          onDismissSite={noop}
+        />
+      </Slot>
+
       <Slot title="Fill all, with one field guarded" ground="#ffffff">
         <Widget
           lang="es"

@@ -98,6 +98,16 @@ export interface MatchQuestionResponse {
   notes: string[];
 }
 
+export interface ImportProposal {
+  facts: { key: string; label: string; value: string }[];
+  answers: { canonicalKey: string; question: string; text: string; language: "es" | "en"; genre: string }[];
+  skills: string[];
+  injectionSuspected: boolean;
+  notes: string[];
+  warnings: string[];
+  rejected: string[];
+}
+
 export interface DraftResponse {
   draft: string;
   language: Lang;
@@ -174,6 +184,13 @@ export const server = {
       factCount: number;
       answerCount: number;
     }>("/learn", { method: "POST", body: JSON.stringify(batch) }),
+
+  /** Map a profile onto a proposal. Writes nothing on the server. */
+  importProfile: (profile: unknown) =>
+    request<{ ok: true; proposal: ImportProposal; model: string }>("/import", {
+      method: "POST",
+      body: JSON.stringify({ profile }),
+    }),
 
   putAnswer: (input: {
     canonicalKey: string;

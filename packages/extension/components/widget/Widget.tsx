@@ -67,6 +67,18 @@ export interface WidgetProps {
    */
   onFillAll?: (rows: Row[]) => void;
   /**
+   * Offer to read this page as the user's own profile.
+   *
+   * Present only on their own LinkedIn profile, and only ever as an offer - the
+   * panel does not read a page because it recognised it.
+   */
+  importOffer?: {
+    state: "idle" | "reading" | "error";
+    error?: string;
+    unreadable?: number;
+  } | null;
+  onImport?: () => void;
+  /**
    * What this form has offered that the file does not already hold, noticed
    * quietly while it was filled. Null when there is nothing to ask about.
    */
@@ -141,6 +153,14 @@ const t = {
     saved: "Saved to your file",
     saveFailed: "Could not save. Your file is unchanged.",
     answerFor: "your answer to",
+    importTitle: "This is your LinkedIn profile",
+    importBody: "Read what is on this page and turn it into facts and answers you can review.",
+    importAction: "Read this profile",
+    importReading: "Reading",
+    importFailed: "Could not read this profile.",
+    importNotYours: "This is someone else's profile. Only your own is imported.",
+    importEmpty: "Nothing readable on this page. Try scrolling it fully first.",
+    importPartial: (n: number) => `${n} ${n === 1 ? "thing" : "things"} could not be read`,
     fillAll: (n: number) => `Fill ${n} from your file`,
     fillAllGuard: (n: number) =>
       `${n} left for you: already filled, or worked out rather than stored`,
@@ -197,6 +217,14 @@ const t = {
     saved: "Guardado en tu fichero",
     saveFailed: "No se pudo guardar. Tu fichero no ha cambiado.",
     answerFor: "tu respuesta a",
+    importTitle: "Este es tu perfil de LinkedIn",
+    importBody: "Lee lo que hay en esta página y conviértelo en datos y respuestas que puedas revisar.",
+    importAction: "Leer este perfil",
+    importReading: "Leyendo",
+    importFailed: "No se pudo leer este perfil.",
+    importNotYours: "Este perfil es de otra persona. Solo se importa el tuyo.",
+    importEmpty: "No hay nada legible en esta página. Prueba a bajar hasta el final primero.",
+    importPartial: (n: number) => `${n} ${n === 1 ? "cosa" : "cosas"} no se pudieron leer`,
     fillAll: (n: number) => `Rellenar ${n} de tu fichero`,
     fillAllGuard: (n: number) =>
       `${n} se quedan para ti: ya rellenos, o deducidos y no guardados`,
@@ -847,6 +875,37 @@ export default function Widget(props: WidgetProps) {
         <p className="flex items-center gap-2 border-b border-amber-500/20 bg-amber-500/10 px-4 py-2 text-[11px] text-amber-200">
           {c.serverDown}
         </p>
+      )}
+
+      {view === "ledger" && props.importOffer && props.onImport && (
+        <div className="border-b border-slate-700/70 bg-slate-800/40 px-4 py-3">
+          <p className="text-[12px] font-medium leading-snug text-slate-100">{c.importTitle}</p>
+          <p className="mt-1 text-[11px] leading-relaxed text-slate-400">{c.importBody}</p>
+          {props.importOffer.state === "error" && (
+            <div className="mt-2">
+              <Failure>{props.importOffer.error ?? c.importFailed}</Failure>
+            </div>
+          )}
+          {props.importOffer.unreadable ? (
+            <p className="mt-2">
+              <Caution>{c.importPartial(props.importOffer.unreadable)}</Caution>
+            </p>
+          ) : null}
+          <div className="mt-2 flex justify-end">
+            {props.importOffer.state === "reading" ? (
+              <span className="inline-flex items-center gap-2 text-xs text-slate-300">
+                <span className="pmd-pulse h-1.5 w-1.5 rounded-full bg-sky-400" />
+                {c.importReading}
+                <span className="text-slate-400">- {c.draftingNote}</span>
+              </span>
+            ) : (
+              <Action onClick={() => props.onImport?.()}>
+                <Mark className="h-3.5 w-3.5" />
+                {c.importAction}
+              </Action>
+            )}
+          </div>
+        </div>
       )}
 
       {view === "ledger" && bulk.length >= 2 && props.onFillAll && (
