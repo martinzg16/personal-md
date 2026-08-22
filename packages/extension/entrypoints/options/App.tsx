@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 
+import Interview from "./Interview.tsx";
 import { groupFacts, send } from "../../lib/protocol.ts";
 import type { MirrorPayload } from "../../lib/protocol.ts";
 import { DEFAULT_PORT, settings } from "../../lib/settings.ts";
@@ -76,6 +77,7 @@ export default function App() {
   const [port, setPort] = useState(DEFAULT_PORT);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState("");
+  const [tab, setTab] = useState<"profile" | "interview">("profile");
 
   const load = useCallback(async () => {
     setBusy(true);
@@ -153,7 +155,32 @@ export default function App() {
         </div>
       </section>
 
-      <section>
+      <nav className="mb-5 flex gap-1 border-b border-slate-200">
+        {(["profile", "interview"] as const).map((id) => (
+          <button
+            key={id}
+            onClick={() => setTab(id)}
+            className={
+              "-mb-px border-b-2 px-3 py-2 text-sm " +
+              (tab === id
+                ? "border-slate-800 font-medium text-slate-900"
+                : "border-transparent text-slate-500 hover:text-slate-700")
+            }
+          >
+            {id === "profile" ? "Your profile" : "Interview"}
+          </button>
+        ))}
+      </nav>
+
+      {tab === "interview" && (
+        <Interview
+          profile={profile ?? null}
+          withheldKeys={payload?.mirror?.withheldKeys ?? []}
+          onChanged={load}
+        />
+      )}
+
+      <section hidden={tab !== "profile"}>
         <div className="mb-3 flex items-baseline justify-between">
           <h2 className="text-lg font-medium">Your profile</h2>
           <button onClick={() => void load()} disabled={busy} className="text-sm underline">
@@ -171,7 +198,12 @@ export default function App() {
               fastest way to fix that - it asks the facts and the eight or so open questions every
               application asks, once.
             </p>
-            <p className="mt-2 text-xs text-slate-500">Interview mode lands in the next step.</p>
+            <button
+              onClick={() => setTab("interview")}
+              className="mt-3 rounded bg-slate-800 px-3 py-1.5 text-sm text-white hover:bg-slate-700"
+            >
+              Start the interview
+            </button>
           </div>
         )}
 

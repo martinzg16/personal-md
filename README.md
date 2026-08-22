@@ -77,10 +77,14 @@ local matcher, which makes no model call at all.
 
 Egress is fail-closed in three layers:
 
-1. Every fact carries an `egress` classification derived **from its key**, and
-   unknown keys default to `never`. Both `parse` and `serialise` recompute it and
-   never trust the stored field, so a hand-edited file cannot promote a NIF to
-   sendable and a mis-constructed record cannot leak into the file.
+1. Every fact carries an `egress` classification derived **from its key** by a
+   genuine **allowlist** — `SENDABLE_KEYS`. The membership test is narrow: does
+   drafting *prose* need this value? A role, a seniority and a salary expectation
+   do. A phone number, an email and a national ID never do, because they are
+   filled verbatim by the deterministic matcher, so they stay out and nothing is
+   lost. Anything nobody has thought about yet is withheld by default. Both
+   `parse` and `serialise` recompute from the key and never trust the stored
+   field, so a hand-edited file cannot promote a NIF to sendable.
 2. The fully assembled payload is scanned immediately before spawning `claude` —
    including page-supplied question text and your own stored answers, which may
    contain a NIF you typed years ago. On a hit it **throws** rather than
@@ -103,7 +107,7 @@ Then load `packages/extension/.output/chrome-mv3` as an unpacked extension in
 Chrome, open the options page, and paste the token.
 
 ```bash
-npm test                  # 76 offline tests
+npm test                  # 94 offline tests
 npm run typecheck
 PERSONAL_MD_LIVE=1 node --test packages/server/test/claude.live.test.ts
 ```

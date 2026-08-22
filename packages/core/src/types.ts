@@ -86,35 +86,60 @@ export function emptyProfile(): Profile {
   return { version: 1, facts: [], answers: [], index: { aliases: {}, siteMemory: {} } };
 }
 
-/** Fact keys whose values must never be sent to a model. */
-export const NEVER_SEND_KEYS: readonly string[] = [
-  "personal.nif",
-  "personal.nie",
-  "personal.dni",
-  "personal.passport",
-  "personal.nuss",
-  "personal.social_security",
-  "personal.date_of_birth",
-  "personal.address_exact",
-  "financial.iban",
-  "financial.card_number",
-  "financial.card_cvv",
-  "financial.account_number",
-  "health.conditions",
+/**
+ * The only fact keys whose values may appear in a prompt.
+ *
+ * This is an allowlist, not a denylist, and the distinction is the point. An
+ * earlier version allowlisted the `personal.*` prefix, which made
+ * `personal.phone` and `personal.email` sendable by accident, and would have
+ * made any future `personal.<something sensitive>` sendable by default too.
+ * Fail-closed means a key nobody has thought about yet is withheld.
+ *
+ * The membership test is narrow: does drafting *prose* need this value? A role,
+ * a seniority, a language level and a salary expectation all shape an answer. A
+ * phone number, an email and a national ID never do - they are filled verbatim
+ * by the deterministic matcher, which makes no model call at all. So they stay
+ * out, and nothing is lost by it.
+ */
+export const SENDABLE_KEYS: readonly string[] = [
+  "personal.full_name",
+  "personal.city",
+  "personal.country",
+  "personal.nationality",
+  "personal.pronouns",
+  "personal.summary",
+  "work.current_role",
+  "work.current_employer",
+  "work.years_experience",
+  "work.seniority",
+  "work.domain",
+  "work.notice_period",
+  "education.highest_level",
+  "education.field",
+  "education.institution",
+  "logistics.salary_expectation",
+  "logistics.availability",
+  "logistics.work_authorisation",
+  "logistics.remote_preference",
 ];
 
+/** Families of keys that are sendable wholesale. */
+const SENDABLE_PREFIXES: readonly string[] = ["work.skill.", "languages.", "motivation."];
+
+/** Credential-shaped leaves never ride a sendable prefix. */
+const CREDENTIAL_SHAPED = /(nif|nie|dni|passport|nuss|iban|cvv|card|password|token|secret)/;
+
 /**
- * Classify a fact key's egress. Unknown keys are "never" on purpose: a new
- * sensitive key added later is withheld by default, not leaked by default.
+ * Classify a fact key's egress.
+ *
+ * Anything not explicitly allowlisted is "never". Callers must not trust a
+ * stored egress field: both `parse` and `serialise` recompute from the key, so a
+ * hand-edited file cannot promote a NIF to sendable.
  */
 export function classifyEgress(key: string): Egress {
-  const k = key.toLowerCase();
-  if (NEVER_SEND_KEYS.includes(k)) return "never";
-  if (/(^|[._])(nif|nie|dni|passport|nuss|iban|cvv|card|password|token|secret)([._]|$)/.test(k)) {
-    return "never";
-  }
-  if (/^(personal|work|education|logistics|languages|contact|motivation)\./.test(k)) {
-    return "sendable";
-  }
+  const k = key.trim().toLowerCase();
+  if (CREDENTIAL_SHAPED.test(k)) return "never";
+  if (SENDABLE_KEYS.includes(k)) return "sendable";
+  if (SENDABLE_PREFIXES.some((prefix) => k.startsWith(prefix))) return "sendable";
   return "never";
 }
