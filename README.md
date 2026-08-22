@@ -57,6 +57,39 @@ Two consequences worth knowing:
 `--bare` would cut overhead further but forces `ANTHROPIC_API_KEY` auth and never
 reads OAuth or the keychain, so it cannot be used here.
 
+## Matching a question you have answered before
+
+Cross-lingual matching without a vector database, by canonicalising at *write*
+time rather than read time. Three stages, cheapest first:
+
+| Stage | Mechanism | Cost | Catches |
+|---|---|---|---|
+| A | Normalised alias lookup | free, offline | Any question seen before, in any language |
+| B | Site memory, keyed on field attributes | free, offline | A reworded label on a site you have used |
+| C | `claude -p --model claude-haiku-4-5` classify into a taxonomy | ~10s, ~$0.02 | Everything genuinely new |
+
+Stage C's result is **written back as an alias immediately**, so each question is
+paid for at most once, ever. Measured on a real run:
+
+```
+first:  via=model  key=motivation.why_this_company  cost=$0.0197
+second: via=alias                                   cost=$0
+```
+
+Verified live: `¿Por qué te gustaría formar parte de nuestro equipo?` resolves to
+the same key as `Why do you want to work here?` — two questions sharing almost no
+tokens, so no lexical scoring reaches it. Scope is preserved rather than
+collapsed: `un proyecto que salió mal` goes to `conflict_or_failure`, not
+`leadership_story`.
+
+**Whether a stored answer may be reused unchanged is decided in code, not by the
+prompt.** The model contributes a judgement it is good at (does this text name a
+specific employer?); TypeScript makes the decision. Reuse is refused for a
+different language, text that will not fit the field's limit, text with unfilled
+`[[NEED:]]` markers, and text naming another company — the last because a company
+name from form A appearing in form B is a real and embarrassing failure. The text
+is still returned when reuse is refused, so drafting can adapt it.
+
 ## Your data
 
 `~/.personal-md/`, mode 700, outside any git repo — because the file holds a NIF,
@@ -107,7 +140,7 @@ Then load `packages/extension/.output/chrome-mv3` as an unpacked extension in
 Chrome, open the options page, and paste the token.
 
 ```bash
-npm test                  # 186 offline tests
+npm test                  # 206 offline tests
 npm run typecheck
 PERSONAL_MD_LIVE=1 node --test packages/server/test/claude.live.test.ts
 ```

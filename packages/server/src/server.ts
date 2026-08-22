@@ -11,6 +11,7 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 
 import { bearerFrom, loadOrCreateToken, tokenMatches } from "./auth.ts";
+import { handleMatch, type MatchRequest } from "./match-route.ts";
 import { Store } from "./store.ts";
 import { paths } from "./paths.ts";
 
@@ -119,6 +120,37 @@ const routes: Record<string, Handler> = {
     }
     await store.rememberSite(domain, signature, canonicalKey);
     json(res, 200, { ok: true });
+  },
+
+  /**
+   * Stages A to C of question matching. The extension only calls this after its
+   * own free local lookups have failed, so reaching here usually means a model
+   * call - and the result is written back so it never happens for this question
+   * again.
+   */
+  "POST /match": async (_req, res, { store, body }) => {
+    const o = (body ?? {}) as Record<string, unknown>;
+    const question = asString(o["question"]).trim();
+    if (!question) return json(res, 400, { error: "question is required" });
+
+    const maxLengthRaw = o["maxLength"];
+    const request: MatchRequest = {
+      question,
+      genre: asString(o["genre"], "other") as MatchRequest["genre"],
+      language: o["language"] === "es" ? "es" : "en",
+      maxLength: typeof maxLengthRaw === "number" && maxLengthRaw > 0 ? maxLengthRaw : null,
+      domain: asString(o["domain"]),
+      signature: asString(o["signature"]),
+    };
+
+    try {
+      json(res, 200, await handleMatch(store, request));
+    } catch (err) {
+      // A model failure is a normal outcome here, not a server fault: the
+      // extension still has its local matches and can fall back to drafting.
+      const message = err instanceof Error ? err.message : "unknown error";
+      json(res, 502, { error: message, stage: "classify" });
+    }
   },
 
   "GET /ledger": async (_req, res, { store }) => {

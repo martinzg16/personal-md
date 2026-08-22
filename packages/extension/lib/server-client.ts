@@ -8,7 +8,7 @@
  * wrong" is what makes a local-companion design feel broken.
  */
 
-import type { Answer, Profile } from "@personal-md/core";
+import type { Answer, Genre, Lang, Profile } from "@personal-md/core";
 
 import { settings } from "./settings.ts";
 
@@ -84,6 +84,20 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   return (await res.json()) as T;
 }
 
+export type MatchVia = "alias" | "site-memory" | "model" | "none";
+
+export interface MatchQuestionResponse {
+  canonicalKey: string | null;
+  via: MatchVia;
+  confidence: "exact" | "paraphrase" | "related" | "none";
+  answer: { text: string; language: Lang; writtenAt: string; askedAs: string[] } | null;
+  reuse: { ok: boolean; reason?: string };
+  isNewKey: boolean;
+  injectionSuspected: boolean;
+  spent: { calls: number; inputTokens: number; outputTokens: number; costUsd: number } | null;
+  notes: string[];
+}
+
 export interface ProfileResponse {
   profile: Profile;
   warnings: string[];
@@ -128,6 +142,24 @@ export const server = {
       method: "POST",
       body: JSON.stringify(input),
     }),
+
+  /**
+   * Stages A to C of question matching.
+   *
+   * Only called after the extension's own free local lookups have failed, so
+   * this usually means a model call: roughly 10 seconds and about two cents for
+   * a question never seen before. The server writes the surface form back, so
+   * the same question - in either language - is free from then on.
+   */
+  matchQuestion: (req: {
+    question: string;
+    genre: Genre;
+    language: Lang;
+    maxLength: number | null;
+    domain: string;
+    signature: string;
+  }) =>
+    request<MatchQuestionResponse>("/match", { method: "POST", body: JSON.stringify(req) }),
 
   rememberSite: (domain: string, signature: string, canonicalKey: string) =>
     request<{ ok: true }>("/site-memory", {

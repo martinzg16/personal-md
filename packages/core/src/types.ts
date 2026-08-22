@@ -19,12 +19,20 @@ export type Lang = "es" | "en";
  * a Spanish government survey answer is the wrong voice model for an
  * English startup application, however well it matches on topic.
  */
-export type Genre = "job_application" | "gov_survey" | "personal_info" | "other";
+export type Genre =
+  | "job_application"
+  | "gov_survey"
+  | "personal_info"
+  | "survey"
+  | "profile"
+  | "other";
 
 export const GENRES: readonly Genre[] = [
   "job_application",
   "gov_survey",
   "personal_info",
+  "survey",
+  "profile",
   "other",
 ];
 

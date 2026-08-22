@@ -201,6 +201,42 @@ export class Store {
     });
   }
 
+  /**
+   * Remember that a question was asked this way, without touching the answer.
+   *
+   * Distinct from recordAnswer on purpose. This runs when stage C classifies a
+   * never-seen question, which happens *before* the person has done anything
+   * with the result - so bumping useCount would count a match as a use. The
+   * point is only that the surface form is now known, making this question free
+   * to recognise from here on.
+   */
+  async learnAlias(canonicalKey: string, surfaceForm: string): Promise<LoadedProfile> {
+    const surface = surfaceForm.trim();
+    return this.update((profile) => {
+      if (!surface) return;
+      const existing = profile.answers.find((a) => a.canonicalKey === canonicalKey);
+
+      if (existing) {
+        const seen = new Set(existing.askedAs.map(normaliseQuestion));
+        if (!seen.has(normaliseQuestion(surface))) existing.askedAs.push(surface);
+        return;
+      }
+
+      // No answer yet for this key. Record the question anyway, with empty text,
+      // so the alias exists and drafting has somewhere to put its result.
+      profile.answers.push({
+        id: randomBytes(4).toString("hex"),
+        canonicalKey,
+        askedAs: [surface],
+        text: "",
+        language: "en",
+        genre: "other",
+        writtenAt: new Date().toISOString().slice(0, 10),
+        useCount: 0,
+      });
+    });
+  }
+
   async rememberSite(domain: string, signature: string, canonicalKey: string): Promise<void> {
     await this.update((_p, index) => {
       index.siteMemory[`${domain}\t${signature}`] = canonicalKey;

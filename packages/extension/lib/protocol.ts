@@ -7,8 +7,8 @@
  * so every surface reads one consistent copy.
  */
 
-import type { Fact, Profile } from "@personal-md/core";
-import type { ConnectionState } from "./server-client.ts";
+import type { Fact, Genre, Lang, Profile } from "@personal-md/core";
+import type { ConnectionState, MatchQuestionResponse } from "./server-client.ts";
 import type { ProfileMirror } from "./settings.ts";
 
 export type Request =
@@ -19,15 +19,26 @@ export type Request =
   | { kind: "getConnection" }
   | { kind: "saveFacts"; facts: { key: string; label: string; value: string }[] }
   | {
+      kind: "matchQuestion";
+      question: string;
+      genre: Genre;
+      language: Lang;
+      maxLength: number | null;
+      domain: string;
+      signature: string;
+    }
+  | {
       kind: "saveAnswer";
       canonicalKey: string;
       question: string;
       text: string;
-      language: "es" | "en";
-      genre: "job_application" | "gov_survey" | "personal_info" | "other";
+      language: Lang;
+      genre: Genre;
     };
 
 export type Response<T = unknown> = { ok: true; data: T } | { ok: false; error: string };
+
+export type { MatchQuestionResponse };
 
 export interface MirrorPayload {
   mirror: ProfileMirror | null;

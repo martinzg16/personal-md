@@ -10,6 +10,8 @@
  * the mirror in chrome.storage.local.
  */
 
+import { normaliseQuestion } from "@personal-md/core";
+
 import { server, type ConnectionState } from "../lib/server-client.ts";
 import { settings, type ProfileMirror } from "../lib/settings.ts";
 import type { Request, Response } from "../lib/protocol.ts";
@@ -39,6 +41,46 @@ async function refreshQuietly(): Promise<void> {
   }
 }
 
+/**
+ * In-flight classifications, keyed by normalised question.
+ *
+ * A page with the same question in two places - or a widget that re-renders
+ * mid-request - would otherwise fire stage C twice and pay twice for an
+ * identical answer. Collapsing them onto one promise is the cheapest possible
+ * guard. Deliberately not a persistent cache: once the server writes the alias
+ * back, the *local* lookup handles every later encounter for free, so there is
+ * nothing left for a cache here to earn.
+ */
+const inFlight = new Map<string, Promise<unknown>>();
+
+async function classifyOnce(
+  request: Extract<Request, { kind: "matchQuestion" }>,
+): Promise<unknown> {
+  const key = `${request.domain}\t${normaliseQuestion(request.question)}`;
+  const running = inFlight.get(key);
+  if (running) return running;
+
+  const promise = server
+    .matchQuestion({
+      question: request.question,
+      genre: request.genre,
+      language: request.language,
+      maxLength: request.maxLength,
+      domain: request.domain,
+      signature: request.signature,
+    })
+    .then(async (result) => {
+      // A classification usually changes the profile (a new alias, sometimes a
+      // placeholder row), so the mirror is now stale.
+      if (result.via === "model") await refreshQuietly();
+      return result;
+    })
+    .finally(() => inFlight.delete(key));
+
+  inFlight.set(key, promise);
+  return promise;
+}
+
 async function handle(request: Request): Promise<unknown> {
   switch (request.kind) {
     case "refresh":
@@ -61,6 +103,9 @@ async function handle(request: Request): Promise<unknown> {
       await refreshQuietly();
       return result;
     }
+
+    case "matchQuestion":
+      return classifyOnce(request);
 
     case "saveAnswer": {
       const result = await server.putAnswer({
