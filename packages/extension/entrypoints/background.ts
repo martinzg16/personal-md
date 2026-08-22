@@ -107,6 +107,22 @@ async function handle(request: Request): Promise<unknown> {
     case "matchQuestion":
       return classifyOnce(request);
 
+    case "draftAnswer": {
+      const draft = await server.draftAnswer({
+        question: request.question,
+        canonicalKey: request.canonicalKey,
+        language: request.language,
+        genre: request.genre,
+        maxWords: request.maxWords,
+        maxChars: request.maxChars,
+        registerHint: request.registerHint,
+        ...(request.instruction ? { instruction: request.instruction } : {}),
+      });
+      // Drafting does not change the profile - nothing is saved until the user
+      // accepts - so the mirror is deliberately left alone here.
+      return draft;
+    }
+
     case "saveAnswer": {
       const result = await server.putAnswer({
         canonicalKey: request.canonicalKey,

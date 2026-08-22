@@ -11,6 +11,7 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 
 import { bearerFrom, loadOrCreateToken, tokenMatches } from "./auth.ts";
+import { handleDraft, type DraftRequest } from "./draft-route.ts";
 import { handleMatch, type MatchRequest } from "./match-route.ts";
 import { Store } from "./store.ts";
 import { paths } from "./paths.ts";
@@ -150,6 +151,47 @@ const routes: Record<string, Handler> = {
       // extension still has its local matches and can fall back to drafting.
       const message = err instanceof Error ? err.message : "unknown error";
       json(res, 502, { error: message, stage: "classify" });
+    }
+  },
+
+  /**
+   * Draft an answer to an open question. The only route that uses Opus, because
+   * writing a paragraph in someone else's voice is the one job here where the
+   * model tier is the product rather than an implementation detail.
+   */
+  "POST /draft": async (_req, res, { store, body }) => {
+    const o = (body ?? {}) as Record<string, unknown>;
+    const question = asString(o["question"]).trim();
+    if (!question) return json(res, 400, { error: "question is required" });
+
+    const num = (v: unknown): number | null =>
+      typeof v === "number" && Number.isFinite(v) && v > 0 ? Math.floor(v) : null;
+    const canonicalKey = asString(o["canonicalKey"]).trim();
+
+    const request: DraftRequest = {
+      question,
+      canonicalKey: canonicalKey || null,
+      language: o["language"] === "es" ? "es" : "en",
+      genre: asString(o["genre"], "other") as DraftRequest["genre"],
+      maxWords: num(o["maxWords"]),
+      maxChars: num(o["maxChars"]),
+      registerHint: asString(o["registerHint"], "a web form"),
+    };
+    const instruction = asString(o["instruction"]).trim();
+    if (instruction) request.instruction = instruction;
+
+    try {
+      json(res, 200, await handleDraft(store, request));
+    } catch (err) {
+      // Distinguish "we refused to send this" from "the model failed", because
+      // they need completely different things from the user.
+      const message = err instanceof Error ? err.message : "unknown error";
+      const blocked = err instanceof Error && err.name === "EgressBlockedError";
+      json(res, blocked ? 422 : 502, {
+        error: message,
+        stage: blocked ? "egress-blocked" : "draft",
+        ...(blocked ? { hits: (err as { hits?: unknown }).hits } : {}),
+      });
     }
   },
 

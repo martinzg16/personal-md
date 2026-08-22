@@ -79,10 +79,23 @@ export class ClaudeError extends Error {
   }
 }
 
+export type Effort = "low" | "medium" | "high" | "xhigh" | "max";
+
 export interface AskOptions {
   system: string;
   prompt: string;
   model?: ModelAlias;
+  /**
+   * Thinking depth.
+   *
+   * Available, but measured to be counterproductive on this workload: setting it
+   * changes the request shape enough to invalidate the cached ~26k-token prefix,
+   * and the resulting cache write costs far more than the thinking tokens a
+   * lower effort saves. Drafting the same prompt came to $0.023 warm-cache with
+   * no effort flag and $0.380 with `--effort low`. Measure before reaching for
+   * this.
+   */
+  effort?: Effort;
   /** Generous by default: a long draft at higher effort can genuinely take a while. */
   timeoutMs?: number;
   /** Escape hatch for tests. Never set in production paths. */
@@ -148,6 +161,8 @@ export async function ask(opts: AskOptions): Promise<ClaudeResult> {
     "--output-format",
     "json",
   ];
+
+  if (opts.effort) args.push("--effort", opts.effort);
 
   const started = Date.now();
   let stdout: string;

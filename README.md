@@ -90,6 +90,47 @@ different language, text that will not fit the field's limit, text with unfilled
 name from form A appearing in form B is a real and embarrassing failure. The text
 is still returned when reuse is refused, so drafting can adapt it.
 
+## Drafting an answer you have not written yet
+
+The feature everything else is groundwork for. Opus, because writing a paragraph
+in someone else's voice is the one job here where the model tier *is* the product.
+
+Retrieval selects on **two axes**, not one:
+
+- **Content** — answers containing the facts and stories this question needs.
+  Topical, and requires real topical evidence: genre agreement alone does not
+  qualify something as material.
+- **Voice** — answers whose register matches: same language, same kind of form,
+  similar length. A brilliant topical match written in Spanish for a government
+  survey is the wrong voice model for an English startup application.
+
+An answer can serve both roles and is labelled accordingly, because the model
+needs to know whether it is being shown material or an example of how you write.
+No embeddings: with a few hundred answers, and the canonical key already
+resolving the common case exactly, lexical overlap plus language and genre
+filters is free, instant and offline.
+
+**Grounding is the load-bearing constraint.** Every concrete claim must come from
+the supplied material; anything missing becomes an explicit `[[NEED: ...]]`
+marker rather than a plausible invention. A fabricated employer or metric does
+not merely read badly — it gets submitted on a job application. Confidence is
+computed locally from structural signals (did the question resolve to something
+you had answered, were there exemplars in the right language, how many gaps were
+left), not taken from the model's self-report.
+
+Measured cost per draft, same prompt:
+
+| | |
+|---|---|
+| Cold cache (first draft of a session) | $0.163 |
+| **Warm cache (steady state)** | **$0.023** |
+| With `--effort low` | $0.380 |
+
+That last row is not a typo. Setting `--effort` changes the request shape enough
+to invalidate the cached ~26k-token prefix, and the resulting cache write costs
+far more than the thinking tokens a lower effort saves. The prompt cache is the
+entire cost story, for output as well as input.
+
 ## Your data
 
 `~/.personal-md/`, mode 700, outside any git repo — because the file holds a NIF,
@@ -140,7 +181,7 @@ Then load `packages/extension/.output/chrome-mv3` as an unpacked extension in
 Chrome, open the options page, and paste the token.
 
 ```bash
-npm test                  # 206 offline tests
+npm test                  # 225 offline tests
 npm run typecheck
 PERSONAL_MD_LIVE=1 node --test packages/server/test/claude.live.test.ts
 ```

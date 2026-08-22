@@ -8,7 +8,7 @@
  */
 
 import type { Fact, Genre, Lang, Profile } from "@personal-md/core";
-import type { ConnectionState, MatchQuestionResponse } from "./server-client.ts";
+import type { ConnectionState, DraftResponse, MatchQuestionResponse } from "./server-client.ts";
 import type { ProfileMirror } from "./settings.ts";
 
 export type Request =
@@ -28,6 +28,17 @@ export type Request =
       signature: string;
     }
   | {
+      kind: "draftAnswer";
+      question: string;
+      canonicalKey: string | null;
+      language: Lang;
+      genre: Genre;
+      maxWords: number | null;
+      maxChars: number | null;
+      registerHint: string;
+      instruction?: string;
+    }
+  | {
       kind: "saveAnswer";
       canonicalKey: string;
       question: string;
@@ -38,7 +49,7 @@ export type Request =
 
 export type Response<T = unknown> = { ok: true; data: T } | { ok: false; error: string };
 
-export type { MatchQuestionResponse };
+export type { DraftResponse, MatchQuestionResponse };
 
 export interface MirrorPayload {
   mirror: ProfileMirror | null;

@@ -98,6 +98,26 @@ export interface MatchQuestionResponse {
   notes: string[];
 }
 
+export interface DraftResponse {
+  draft: string;
+  language: Lang;
+  length: { words: number; chars: number; withinLimit: boolean; shortened: boolean };
+  confidence: { level: "high" | "medium" | "low"; score: number; reasons: string[] };
+  provenance: {
+    canonicalKey: string;
+    askedAs: string;
+    writtenAt: string;
+    role: string;
+    why: string;
+    used: boolean;
+    excerpt: string;
+  }[];
+  informationGaps: { missing: string; questionForUser: string }[];
+  flags: { injectionSuspected: boolean; thinRetrieval: boolean; ungroundedSuspicion: boolean };
+  spent: { calls: number; inputTokens: number; outputTokens: number; costUsd: number };
+  notes: string[];
+}
+
 export interface ProfileResponse {
   profile: Profile;
   warnings: string[];
@@ -160,6 +180,24 @@ export const server = {
     signature: string;
   }) =>
     request<MatchQuestionResponse>("/match", { method: "POST", body: JSON.stringify(req) }),
+
+  /**
+   * Draft an answer to an open question.
+   *
+   * The slow, expensive call: Opus, roughly ten seconds, and about two cents once
+   * the prompt cache is warm. Only ever reached for a question with no stored
+   * answer to reuse.
+   */
+  draftAnswer: (req: {
+    question: string;
+    canonicalKey: string | null;
+    language: Lang;
+    genre: Genre;
+    maxWords: number | null;
+    maxChars: number | null;
+    registerHint: string;
+    instruction?: string;
+  }) => request<DraftResponse>("/draft", { method: "POST", body: JSON.stringify(req) }),
 
   rememberSite: (domain: string, signature: string, canonicalKey: string) =>
     request<{ ok: true }>("/site-memory", {
