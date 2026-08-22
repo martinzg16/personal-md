@@ -2,6 +2,21 @@
 @import "./fonts.css";
 
 /*
+ * Sources, declared rather than detected.
+ *
+ * Tailwind v4 infers what to scan from the stylesheet's own directory, and this
+ * stylesheet lives four levels down inside one workspace package - so detection
+ * found nothing and every utility on the surface silently did not exist, which
+ * looks exactly like a broken grid rather than like a missing scan. Naming them
+ * is also correct for a monorepo: the extension's markup is the only markup that
+ * should be able to add a class to this sheet.
+ */
+@source "../../components";
+@source "../../entrypoints";
+@source "../../lib";
+@source "../../test/preview";
+
+/*
  * PERSONAL.md - the document.
  *
  * The world is a machine-readable personal document: a burgundy-black cover, and
@@ -172,6 +187,18 @@
     color: var(--color-intaglio-900);
   }
 
+  /*
+   * A value whose capitals mean something.
+   *
+   * `.pmd-data` sets everything in caps, which is right for a name or a city and
+   * wrong for a path: the repository line rendered as `~/.personal-md/personal.md`
+   * and the filename the whole product is named after lost its capitals on the one
+   * page that exists to state where the file is.
+   */
+  .pmd-data--verbatim {
+    text-transform: none;
+  }
+
   /* ------------------------------------------------------------------- PAGE */
 
   .pmd-page {
@@ -279,9 +306,27 @@
   /* ------------------------------------------------------------ THE PROSE */
 
   /*
-   * The one place a reading face appears. Everything machine-readable is in the
-   * mono; this is the person talking, so it is neither caps nor mono, and it is
-   * the only element on the laminate that is allowed to be comfortable.
+   * The tool's own voice: instructions, blurbs, endorsement text, everything the
+   * surface says rather than everything the holder said. Archivo, like every
+   * other label on the page.
+   *
+   * This class exists because the first build set both this and the holder's
+   * prose in Literata, which quietly broke the one typographic rule the surface
+   * has - that you can tell who wrote a string from the face it is set in. If the
+   * reading face also carries the tool talking, it marks nothing.
+   */
+  .pmd-note {
+    font-family: var(--font-sans);
+    font-size: 13.5px;
+    line-height: 1.6;
+    color: var(--color-intaglio-700);
+  }
+
+  /*
+   * The holder speaking, verbatim, and nowhere else on the surface: the answer
+   * they are typing, and that same answer printed back on the observations page.
+   * Everything machine-readable is in the mono, everything the tool says is in
+   * Archivo, and this is the one face that means a person is talking.
    */
   .pmd-prose {
     font-family: var(--font-serif);
@@ -341,9 +386,12 @@
     background: var(--color-intaglio-700);
   }
 
+  /* Disabled, not illegible. The first version put laminate-300 on
+     laminate-200, which measured under 1.5:1 - the label was gone, so the
+     control said nothing about what it would do once it was available. */
   .pmd-action--primary:disabled {
     background: var(--color-laminate-200);
-    color: var(--color-laminate-300);
+    color: var(--color-intaglio-500);
     cursor: not-allowed;
   }
 
@@ -357,7 +405,7 @@
   }
 
   .pmd-action--quiet:disabled {
-    color: var(--color-laminate-300);
+    color: var(--color-intaglio-400);
     cursor: not-allowed;
   }
 
@@ -391,6 +439,19 @@
     white-space: pre;
     color: var(--color-intaglio-900);
     tab-size: 1;
+    /* `max-content` plus a scrolling parent, rather than shrinking to fit. On a
+       375px viewport, fitting forty-four characters put the line at 8px, and a
+       machine-readable zone nobody can read is a worse outcome than one you
+       swipe - which is also how you read the real thing. */
+    min-width: max-content;
+  }
+
+  /* The scroller the line sits in. Never the page: only this block scrolls. */
+  .pmd-mrz-scroll {
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    padding-bottom: 2px;
   }
 
   /* Filler. Present, legible, and quiet: it is the honest report that a field is
@@ -475,10 +536,13 @@
   .pmd-stamp--violet { --stamp-ink: var(--color-stamp-violet); }
   .pmd-stamp--endorse { --stamp-ink: var(--color-endorse-600); }
 
-  /* The press. One overshoot, then it settles - the physical event of a stamp
-     hitting paper, which is a fast arrival and no bounce back up. */
+  /* The press: a fast arrival that stops dead.
+     This was an elastic curve first, which contradicted the comment right above
+     it - ink meeting paper decelerates hard and does not spring back, and an
+     overshoot on a stamp reads as a notification badge popping in. Same
+     ease-out-expo the panel and the rows arrive on. */
   .pmd-stamp--press {
-    animation: pmd-press 260ms cubic-bezier(0.2, 1.4, 0.4, 1) both;
+    animation: pmd-press 240ms cubic-bezier(0.16, 1, 0.3, 1) both;
   }
 
   /* ----------------------------------------------------------------- RAIL */
@@ -513,6 +577,48 @@
   .pmd-rail-item[aria-current="page"] {
     background: color-mix(in oklab, var(--color-cover-700) 74%, transparent);
     border-left-color: var(--color-foil-500);
+    color: var(--color-laminate-050);
+  }
+
+  /*
+   * The rail, narrow.
+   *
+   * Below the two-column breakpoint the vertical list was 719px tall on a 375px
+   * viewport - fourteen entries to scroll past before reaching a single field,
+   * which is the whole surface's first impression spent on a table of contents.
+   * So it becomes what a closed booklet actually shows edge-on: one row of folio
+   * numbers you swipe along, each carrying its own stamped-or-not mark.
+   */
+  .pmd-rail-strip {
+    display: flex;
+    gap: 2px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x proximity;
+    padding-bottom: 4px;
+  }
+
+  .pmd-rail-tab {
+    flex: none;
+    scroll-snap-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    min-width: 44px;
+    padding: 8px 9px 7px;
+    border-bottom: 2px solid transparent;
+    color: color-mix(in oklab, var(--color-laminate-200) 60%, transparent);
+    transition:
+      background-color 140ms ease,
+      color 140ms ease,
+      border-color 140ms ease;
+    cursor: pointer;
+  }
+
+  .pmd-rail-tab[aria-current="page"] {
+    background: color-mix(in oklab, var(--color-cover-700) 72%, transparent);
+    border-bottom-color: var(--color-foil-500);
     color: var(--color-laminate-050);
   }
 

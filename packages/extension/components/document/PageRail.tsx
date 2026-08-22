@@ -23,11 +23,18 @@ export interface RailPage {
 
 export default function PageRail({
   pages,
+  feature,
   current,
   onSelect,
   lang,
 }: {
   pages: RailPage[];
+  /**
+   * The issuance. It sits apart and carries the only foil on the surface outside
+   * the cover, because it is where onboarding ends and the one destination the
+   * rail should be recommending.
+   */
+  feature: RailPage;
   current: string;
   onSelect: (id: string) => void;
   lang: "es" | "en";
@@ -80,20 +87,100 @@ export default function PageRail({
     </li>
   );
 
+  // Edge-on: the folio number and its mark, and nothing else. A title does not
+  // fit in a 44px tab and it does not need to - every page prints its own title.
+  const tab = (page: RailPage) => (
+    <button
+      key={page.id}
+      className="pmd-rail-tab"
+      aria-current={page.id === current ? "page" : undefined}
+      aria-label={page.title[lang]}
+      title={page.title[lang]}
+      onClick={() => onSelect(page.id)}
+    >
+      <span className="pmd-legend tabular-nums" style={{ color: "inherit" }}>
+        {page.folio}
+      </span>
+      <span
+        className="font-mono text-[10px] leading-none"
+        style={{
+          color: page.aside
+            ? "transparent"
+            : page.stamped
+              ? "var(--color-iris-mint)"
+              : "color-mix(in oklab, var(--color-laminate-300) 52%, transparent)",
+        }}
+        aria-hidden="true"
+      >
+        {page.aside ? "·" : page.stamped ? "●" : "<"}
+      </span>
+    </button>
+  );
+
   return (
     <nav
       aria-label={lang === "es" ? "Páginas del documento" : "Document pages"}
       className="lg:sticky lg:top-8"
     >
-      <p className="pmd-legend pmd-legend--dark mb-2 px-3.5">
+      <p className="pmd-legend pmd-legend--dark mb-2 px-3.5 lg:px-3.5">
         Páginas · Pages
       </p>
+
+      {/* Narrow: the thumb edge. */}
+      <div className="pmd-rail-strip lg:hidden">
+        {record.map(tab)}
+        <span
+          className="mx-1 my-2 w-px flex-none"
+          style={{ background: "color-mix(in oklab, var(--color-cover-600) 70%, transparent)" }}
+          aria-hidden="true"
+        />
+        {aside.map(tab)}
+        {tab({ ...feature, aside: true })}
+      </div>
+
+      {/* Wide: the full stack. */}
+      <div className="hidden lg:block">
       <ul className="mb-5">{record.map(item)}</ul>
       <div
         className="mx-3.5 mb-3 h-px"
         style={{ background: "color-mix(in oklab, var(--color-cover-600) 60%, transparent)" }}
       />
       <ul>{aside.map(item)}</ul>
+
+      <button
+        className="pmd-rail-item mt-5"
+        aria-current={feature.id === current ? "page" : undefined}
+        onClick={() => onSelect(feature.id)}
+        style={{
+          borderLeftColor:
+            feature.id === current
+              ? "var(--color-foil-500)"
+              : "color-mix(in oklab, var(--color-foil-500) 45%, transparent)",
+        }}
+      >
+        <span
+          className="pmd-legend shrink-0 tabular-nums"
+          style={{ color: "var(--color-foil-500)", opacity: 0.85 }}
+          aria-hidden="true"
+        >
+          {feature.folio}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span
+            className="block font-sans text-[12px] font-semibold leading-tight"
+            style={{ color: "var(--color-foil-300)", fontStretch: "88%" }}
+          >
+            {feature.title.es}
+          </span>
+          <span
+            className="block font-sans text-[10.5px] leading-tight"
+            style={{ color: "var(--color-foil-300)", opacity: 0.62, fontStretch: "88%" }}
+          >
+            {feature.title.en}
+          </span>
+        </span>
+      </button>
+      </div>
     </nav>
   );
 }

@@ -40,8 +40,19 @@
 export const FILLER = "<";
 export const LINE_LENGTH = 44;
 
-/** The issuing authority. Unassigned in ISO 3166-1 alpha-3, deliberately. */
-export const AUTHORITY = "PMD";
+/**
+ * The issuing authority.
+ *
+ * `OWN`, and the choice is the thesis rather than a placeholder: nobody issues
+ * this document to the holder, so the authority field says who did. It is also
+ * unassigned in ISO 3166-1 alpha-3 and will stay that way, which is what keeps
+ * the line from resembling any real country's.
+ *
+ * It was `PMD` first. Printed, `PMPMD` read as one five-character blob that said
+ * nothing - the document code and the authority need to be legible as two fields,
+ * and the second one had a better job to do.
+ */
+export const AUTHORITY = "OWN";
 /** The document code. Not a passport's `P<`. */
 export const DOC_CODE = "PM";
 

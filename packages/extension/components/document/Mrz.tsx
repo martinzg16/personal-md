@@ -79,7 +79,10 @@ export default function Mrz({
 }) {
   return (
     <div
-      // The container the character size is measured against.
+      // The container the character size is measured against. `min-w-0` because
+      // the line inside declares `min-width: max-content`, and without it that
+      // contribution escapes upward and widens whatever grid track holds it.
+      className="min-w-0"
       style={{ containerType: "inline-size" }}
     >
       <div
@@ -96,10 +99,11 @@ export default function Mrz({
         </div>
 
         <div
+          className="pmd-mrz-scroll"
           style={{
-            // 44 characters, plus the tracking, across the container. The clamp
-            // is the readability floor and ceiling.
-            ["--mrz-size" as string]: "clamp(8px, 1.86cqw, 17px)",
+            // Forty-four characters plus tracking across the container, with a
+            // floor: below it the block scrolls rather than the type shrinking.
+            ["--mrz-size" as string]: "clamp(11px, 1.86cqw, 17px)",
           }}
         >
           <Line value={mrz.line1} line={1} highlight={highlight} />

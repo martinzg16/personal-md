@@ -133,8 +133,7 @@ export default function DataPage({
         </div>
 
         <p
-          className="pmd-prose mt-5 max-w-[58ch]"
-          style={{ fontSize: "14px", color: "var(--color-intaglio-700)" }}
+          className="pmd-note mt-5 max-w-[58ch]"
         >
           {section.blurb[lang]}
         </p>
