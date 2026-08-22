@@ -1,0 +1,194 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-22T00:00:00Z",
+  "title": "Design System: personal-md",
+  "extensions": {
+    "colorMeta": {
+      "slate-900": { "role": "primary", "displayName": "Tool Slate", "canonical": "oklch(20.8% 0.042 265.755)", "tonalRamp": ["oklch(15% 0.042 265.755)", "oklch(20.8% 0.042 265.755)", "oklch(27.9% 0.041 260.031)", "oklch(37.2% 0.044 257.287)", "oklch(55.4% 0.046 257.417)", "oklch(70.4% 0.04 256.788)", "oklch(86.9% 0.022 252.894)", "oklch(96.8% 0.007 247.896)"] },
+      "slate-50": { "role": "primary", "displayName": "Your Words", "canonical": "oklch(98.4% 0.003 247.858)", "tonalRamp": ["oklch(20.8% 0.003 247.858)", "oklch(37.2% 0.003 247.858)", "oklch(55.4% 0.003 247.858)", "oklch(70.4% 0.003 247.858)", "oklch(86.9% 0.003 247.858)", "oklch(92.9% 0.003 247.858)", "oklch(96.8% 0.003 247.858)", "oklch(98.4% 0.003 247.858)"] },
+      "sky-400": { "role": "secondary", "displayName": "Attention Sky", "canonical": "oklch(74.6% 0.16 232.661)", "tonalRamp": ["oklch(39.1% 0.09 240.876)", "oklch(44.3% 0.11 240.79)", "oklch(50% 0.134 242.749)", "oklch(68.5% 0.169 237.323)", "oklch(74.6% 0.16 232.661)", "oklch(82.8% 0.111 230.318)", "oklch(90.1% 0.058 230.902)", "oklch(97.7% 0.013 236.62)"] },
+      "emerald-300": { "role": "tertiary", "displayName": "Applied Emerald", "canonical": "oklch(84.5% 0.143 164.978)", "tonalRamp": ["oklch(37.8% 0.077 168.94)", "oklch(43.2% 0.095 166.913)", "oklch(50.8% 0.118 165.612)", "oklch(69.6% 0.17 162.48)", "oklch(76.5% 0.177 163.223)", "oklch(84.5% 0.143 164.978)", "oklch(90.5% 0.093 164.15)", "oklch(97.9% 0.021 166.113)"] },
+      "orange-950": { "role": "tertiary", "displayName": "Caution Ground", "canonical": "oklch(26.6% 0.079 36.259)", "tonalRamp": ["oklch(26.6% 0.079 36.259)", "oklch(40.8% 0.123 38.172)", "oklch(47% 0.157 37.304)", "oklch(55.3% 0.195 38.402)", "oklch(75% 0.183 55.934)", "oklch(83.7% 0.128 66.29)", "oklch(90.1% 0.076 70.697)", "oklch(98% 0.016 73.684)"] },
+      "orange-100": { "role": "tertiary", "displayName": "Caution Text", "canonical": "oklch(95.4% 0.038 75.164)", "tonalRamp": ["oklch(26.6% 0.079 36.259)", "oklch(40.8% 0.123 38.172)", "oklch(55.3% 0.195 38.402)", "oklch(70.5% 0.213 47.604)", "oklch(75% 0.183 55.934)", "oklch(83.7% 0.128 66.29)", "oklch(90.1% 0.076 70.697)", "oklch(95.4% 0.038 75.164)"] },
+      "amber-200": { "role": "tertiary", "displayName": "Degraded Amber", "canonical": "oklch(92.4% 0.12 95.746)", "tonalRamp": ["oklch(41.4% 0.112 45.904)", "oklch(47.3% 0.137 46.201)", "oklch(55.5% 0.163 48.998)", "oklch(76.9% 0.188 70.08)", "oklch(82.8% 0.189 84.429)", "oklch(87.9% 0.169 91.605)", "oklch(92.4% 0.12 95.746)", "oklch(98.7% 0.022 95.277)"] },
+      "rose-300": { "role": "tertiary", "displayName": "Failure Rose", "canonical": "oklch(81% 0.117 11.638)", "tonalRamp": ["oklch(41% 0.159 10.272)", "oklch(45.5% 0.188 13.697)", "oklch(51.4% 0.222 16.935)", "oklch(64.5% 0.246 16.439)", "oklch(71.2% 0.194 13.428)", "oklch(81% 0.117 11.638)", "oklch(89.2% 0.058 10.001)", "oklch(96.9% 0.015 12.422)"] },
+      "slate-400": { "role": "neutral", "displayName": "Support Slate", "canonical": "oklch(70.4% 0.04 256.788)", "tonalRamp": ["oklch(20.8% 0.042 265.755)", "oklch(27.9% 0.041 260.031)", "oklch(37.2% 0.044 257.287)", "oklch(55.4% 0.046 257.417)", "oklch(70.4% 0.04 256.788)", "oklch(86.9% 0.022 252.894)", "oklch(92.9% 0.013 255.508)", "oklch(98.4% 0.003 247.858)"] },
+      "slate-700": { "role": "neutral", "displayName": "Chrome Edge", "canonical": "oklch(37.2% 0.044 257.287)", "tonalRamp": ["oklch(20.8% 0.042 265.755)", "oklch(27.9% 0.041 260.031)", "oklch(37.2% 0.044 257.287)", "oklch(55.4% 0.046 257.417)", "oklch(70.4% 0.04 256.788)", "oklch(86.9% 0.022 252.894)", "oklch(92.9% 0.013 255.508)", "oklch(96.8% 0.007 247.896)"] }
+    },
+    "typographyMeta": {
+      "lead": { "displayName": "Lead", "purpose": "The quoted value or stored answer. The largest text in the panel is always something the user wrote." },
+      "title": { "displayName": "Title", "purpose": "The panel heading, and the masked fact row's field identity." },
+      "body": { "displayName": "Body", "purpose": "The draft editor and non-lead quoted text." },
+      "action": { "displayName": "Action", "purpose": "Button labels, the caution, and the unanswered question." },
+      "support": { "displayName": "Support", "purpose": "Subtitle, failure text, degradation banner, instruction field, footer, masked value." },
+      "label": { "displayName": "Label", "purpose": "Monospace. Provenance keys, destinations, word counts, metadata chips. Data and measurement, never costume." }
+    },
+    "shadows": [
+      { "name": "pill", "value": "0 6px 20px -4px rgba(15,23,42,0.5)", "purpose": "Lift on the collapsed pill. Always paired with ring-1 ring-slate-700/80." },
+      { "name": "panel", "value": "0 16px 48px -12px rgba(15,23,42,0.6)", "purpose": "Lift on the open panel. Tinted with the panel's own slate-900, never black." },
+      { "name": "ring", "value": "0 0 0 1px oklch(37.2% 0.044 257.287 / 0.8)", "purpose": "The edge that survives a dark host page when the shadow disappears." }
+    ],
+    "motion": [
+      { "name": "enter", "value": "260ms cubic-bezier(0.16, 1, 0.3, 1) both", "purpose": "The one authored moment: the panel arriving. Keyframe has a from-block only and runs with `both`, so a client that never animates still shows a correctly placed panel." },
+      { "name": "pulse", "value": "1.4s ease-in-out infinite", "purpose": "The drafting dot, for the ~10s wait." },
+      { "name": "state", "value": "colors 150ms", "purpose": "Hover and focus transitions on every interactive element." },
+      { "name": "reduced", "value": "animation: none", "purpose": "Both animations are cancelled under prefers-reduced-motion: reduce." }
+    ],
+    "masks": [
+      { "name": "edge-fade", "value": "linear-gradient(to bottom, #000 calc(100% - 12px), rgba(0,0,0,0.4) 100%)", "purpose": "Signals that the ledger continues. Applied only when measured overflow exists, and ramping to 0.4 alpha rather than transparent because a full fade sliced horizontally through the glyphs of a clipped row." }
+    ],
+    "layout": [
+      { "name": "anchor", "value": "position: fixed; right: 16px; bottom: 16px; z-index: 2147480000", "purpose": "High, deliberately not the 32-bit ceiling: a page's own modal deserves to win sometimes." },
+      { "name": "panel-box", "value": "w-[min(380px,calc(100vw-2rem))] max-h-[min(70vh,560px)]", "purpose": "Narrow enough to sit beside a form, capped so it never becomes the page." }
+    ]
+  },
+  "components": [
+    {
+      "name": "Pill",
+      "kind": "custom",
+      "refersTo": "pill",
+      "description": "The entire first viewport. A count and nothing else; it never opens itself.",
+      "html": "<button class=\"ds-pill\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M3.5 2.5h6l3 3v8h-9z\"/><path d=\"M9.5 2.5v3h3\"/><path d=\"M5.5 8.5h5\"/><path d=\"M5.5 11h3\"/></svg>3 from your file</button>",
+      "css": ".ds-pill { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; border-radius: 9999px; background: oklch(20.8% 0.042 265.755); padding: 8px 14px 8px 10px; font-size: 13px; font-weight: 500; color: oklch(96.8% 0.007 247.896); box-shadow: 0 6px 20px -4px rgba(15,23,42,0.5), 0 0 0 1px oklch(37.2% 0.044 257.287 / 0.8); transition: background-color 150ms; cursor: pointer; border: 0; } .ds-pill svg { color: oklch(70.4% 0.04 256.788); } .ds-pill:hover { background: oklch(27.9% 0.041 260.031); } .ds-pill:focus-visible { outline: none; box-shadow: 0 6px 20px -4px rgba(15,23,42,0.5), 0 0 0 2px oklch(20.8% 0.042 265.755), 0 0 0 4px oklch(74.6% 0.16 232.661); }"
+    },
+    {
+      "name": "Quoted value",
+      "kind": "custom",
+      "refersTo": "quoted",
+      "description": "Your own words on the one light surface inside the dark chrome. Leads every readable fact row.",
+      "html": "<p class=\"ds-quoted\">Martin Zulueta Perez</p>",
+      "css": ".ds-quoted { border-radius: 4px; border-left: 1px solid oklch(86.9% 0.022 252.894); background: oklch(98.4% 0.003 247.858); padding: 4px 8px; font-size: 14px; line-height: 1.375; color: oklch(20.8% 0.042 265.755); margin: 0; }"
+    },
+    {
+      "name": "Primary action",
+      "kind": "button",
+      "refersTo": "action-primary",
+      "description": "Fill or Insert. Light-on-dark, so the write action is the brightest thing in its row.",
+      "html": "<button class=\"ds-action\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M2 8h7\"/><path d=\"M6.5 5.5 9 8l-2.5 2.5\"/><path d=\"M11.5 3.5h2.5v9h-2.5\"/></svg>Fill</button>",
+      "css": ".ds-action { display: inline-flex; flex-shrink: 0; align-items: center; gap: 6px; border-radius: 4px; border: 0; padding: 4px 10px; font-size: 12px; font-weight: 500; background: oklch(96.8% 0.007 247.896); color: oklch(20.8% 0.042 265.755); transition: background-color 150ms; cursor: pointer; } .ds-action:hover { background: #fff; } .ds-action:disabled { background: oklch(37.2% 0.044 257.287); color: oklch(55.4% 0.046 257.417); cursor: not-allowed; } .ds-action:focus-visible { outline: none; box-shadow: 0 0 0 2px oklch(20.8% 0.042 265.755), 0 0 0 4px oklch(74.6% 0.16 232.661); }"
+    },
+    {
+      "name": "Quiet action",
+      "kind": "button",
+      "refersTo": "action-quiet",
+      "description": "Draft it, Redraft, Undo. Present but not competing with the write action.",
+      "html": "<button class=\"ds-action-quiet\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M11.5 2.5 13.5 4.5 6 12H4v-2z\"/><path d=\"M10 4l2 2\"/><path d=\"M3 14h10\"/></svg>Draft it</button>",
+      "css": ".ds-action-quiet { display: inline-flex; flex-shrink: 0; align-items: center; gap: 6px; border-radius: 4px; border: 0; background: none; padding: 4px 10px; font-size: 12px; font-weight: 500; color: oklch(86.9% 0.022 252.894); transition: color 150ms, background-color 150ms; cursor: pointer; } .ds-action-quiet:hover { color: #fff; background: oklch(37.2% 0.044 257.287 / 0.6); } .ds-action-quiet:disabled { color: oklch(44.6% 0.043 257.281); cursor: not-allowed; } .ds-action-quiet:focus-visible { outline: none; box-shadow: 0 0 0 2px oklch(20.8% 0.042 265.755), 0 0 0 4px oklch(74.6% 0.16 232.661); }"
+    },
+    {
+      "name": "Caution",
+      "kind": "chip",
+      "refersTo": "caution",
+      "description": "The guard against overwriting. Quotes the value already in the field, which is what the banner structurally cannot do and what the decision actually needs.",
+      "html": "<span class=\"ds-caution\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M8 2.5v2M8 11.5v2M2.5 8h2M11.5 8h2\"/><circle cx=\"8\" cy=\"8\" r=\"2.5\"/></svg><span>This field already holds</span><span class=\"ds-caution-quote\">Barcelona</span></span>",
+      "css": ".ds-caution { display: inline-flex; max-width: 100%; flex-wrap: wrap; align-items: center; gap: 2px 6px; border-radius: 4px; border: 1px solid oklch(75% 0.183 55.934 / 0.5); background: oklch(26.6% 0.079 36.259 / 0.6); padding: 4px 8px; font-size: 12px; font-weight: 500; line-height: 1.375; color: oklch(95.4% 0.038 75.164); } .ds-caution svg { flex-shrink: 0; } .ds-caution-quote { font-family: ui-monospace, SFMono-Regular, \"SF Mono\", Menlo, monospace; border-radius: 4px; background: oklch(75% 0.183 55.934 / 0.15); padding: 0 4px; font-size: 11px; color: oklch(98% 0.016 73.684); }"
+    },
+    {
+      "name": "Degradation banner",
+      "kind": "custom",
+      "refersTo": "degraded-banner",
+      "description": "Panel-level capability report: the companion server is stopped, so drafting is unavailable and everything else still works.",
+      "html": "<p class=\"ds-banner\">Drafting needs the server running. Everything below still works.</p>",
+      "css": ".ds-banner { display: flex; align-items: center; gap: 8px; border-bottom: 1px solid oklch(76.9% 0.188 70.08 / 0.2); background: oklch(76.9% 0.188 70.08 / 0.1); padding: 8px 16px; font-size: 11px; line-height: 1.25; color: oklch(92.4% 0.12 95.746); margin: 0; }"
+    },
+    {
+      "name": "Failure line",
+      "kind": "custom",
+      "refersTo": "failure",
+      "description": "Something was attempted and did not happen. Always names the recovery.",
+      "html": "<p class=\"ds-failure\"><svg width=\"12\" height=\"12\" viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M8 2.5v2M8 11.5v2M2.5 8h2M11.5 8h2\"/><circle cx=\"8\" cy=\"8\" r=\"2.5\"/></svg><span>That field is no longer on the page. Reload and try again.</span></p>",
+      "css": ".ds-failure { display: flex; align-items: flex-start; gap: 6px; margin: 6px 0 0; font-size: 11px; line-height: 1.35; color: oklch(81% 0.117 11.638); } .ds-failure svg { flex-shrink: 0; margin-top: 2px; }"
+    },
+    {
+      "name": "Destination",
+      "kind": "custom",
+      "refersTo": "chip-meta",
+      "description": "Where this row will write. Wraps; never truncates, because a clipped destination hides the thing being confirmed.",
+      "html": "<span class=\"ds-destination\"><svg width=\"12\" height=\"12\" viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M2.5 8h9\"/><path d=\"M8.5 5 11.5 8l-3 3\"/></svg><span>Expectativa salarial bruta anual</span></span>",
+      "css": ".ds-destination { font-family: ui-monospace, SFMono-Regular, \"SF Mono\", Menlo, monospace; display: inline-flex; min-width: 0; align-items: flex-start; gap: 4px; font-size: 10px; line-height: 1.625; letter-spacing: 0.06em; color: oklch(86.9% 0.022 252.894); } .ds-destination svg { flex-shrink: 0; margin-top: 3px; color: oklch(55.4% 0.046 257.417); } .ds-destination > span { min-width: 0; overflow-wrap: break-word; }"
+    },
+    {
+      "name": "Withheld chip",
+      "kind": "chip",
+      "refersTo": "chip-meta",
+      "description": "Marks a value the egress allowlist withholds from every prompt. Filled locally by the deterministic matcher, which makes no model call.",
+      "html": "<span class=\"ds-chip\"><svg width=\"12\" height=\"12\" viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"3.5\" y=\"7\" width=\"9\" height=\"6.5\" rx=\"1\"/><path d=\"M5.5 7V5a2.5 2.5 0 0 1 5 0v2\"/></svg>never sent to Claude</span>",
+      "css": ".ds-chip { display: inline-flex; align-items: center; gap: 4px; border-radius: 4px; background: oklch(37.2% 0.044 257.287 / 0.7); padding: 2px 6px; font-size: 10px; color: oklch(92.9% 0.013 255.508); }"
+    },
+    {
+      "name": "Draft editor",
+      "kind": "input",
+      "refersTo": "draft-editor",
+      "description": "The generated text, on the light surface, editable before it is inserted. Nothing is written to the page or saved to the file without a click.",
+      "html": "<textarea class=\"ds-editor\" rows=\"4\">I led the migration of our investor flow last year.</textarea>",
+      "css": ".ds-editor { width: 100%; resize: vertical; border-radius: 4px; border: 1px solid oklch(86.9% 0.022 252.894); background: oklch(98.4% 0.003 247.858); padding: 8px; font-family: inherit; font-size: 13px; line-height: 1.625; color: oklch(20.8% 0.042 265.755); } .ds-editor:focus-visible { outline: none; border-color: oklch(68.5% 0.169 237.323); box-shadow: 0 0 0 2px oklch(20.8% 0.042 265.755), 0 0 0 4px oklch(74.6% 0.16 232.661); }"
+    },
+    {
+      "name": "Instruction field",
+      "kind": "input",
+      "refersTo": "instruction-field",
+      "description": "The note that steers a redraft. Dark and recessed, so it is never mistaken for the text that will be submitted.",
+      "html": "<input class=\"ds-instruction\" placeholder=\"Tell it what to change\" />",
+      "css": ".ds-instruction { width: 100%; border-radius: 4px; border: 1px solid oklch(37.2% 0.044 257.287); background: oklch(27.9% 0.041 260.031 / 0.6); padding: 4px 8px; font-family: ui-monospace, SFMono-Regular, \"SF Mono\", Menlo, monospace; font-size: 11px; color: oklch(92.9% 0.013 255.508); } .ds-instruction::placeholder { color: oklch(70.4% 0.04 256.788); } .ds-instruction:focus-visible { outline: none; border-color: oklch(68.5% 0.169 237.323); box-shadow: 0 0 0 2px oklch(20.8% 0.042 265.755), 0 0 0 4px oklch(74.6% 0.16 232.661); }"
+    },
+    {
+      "name": "Applied state",
+      "kind": "custom",
+      "refersTo": "panel",
+      "description": "Replaces the action once a row has been written into the page. Emerald is only ever retrospective.",
+      "html": "<span class=\"ds-applied\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M3 8.5 6.5 12 13 4.5\"/></svg>Filled</span>",
+      "css": ".ds-applied { display: inline-flex; flex-shrink: 0; align-items: center; gap: 4px; padding: 4px 4px 0; font-size: 12px; color: oklch(84.5% 0.143 164.978); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Your File, Projected",
+    "overview": "This system governs one surface: the in-page widget that appears over third-party forms. Its thesis is written into the code it governs: this panel is your file, projected onto someone else's form. Rows lead with what you wrote and where it came from, naming the host field only as the destination - refusing the field-inventory list every autofill extension ships.\n\nThe visual world is inherited and then inverted. The extension's options page and popup are white cards on a plain ground with Tailwind slate neutrals and one accent per state. The widget takes the same palette and turns it over: dark slate chrome, because the panel does not live on a ground it controls. Inside that chrome, your own words are quoted on the one light surface. The light chips are your file; the dark frame is the tool holding it.\n\nNothing here is decorative. There is one authored animation, the panel arriving. There are ten hand-drawn icons on one 16px grid at one stroke weight. No gradient, no glass, no illustration, no colour that does not carry a state.",
+    "keyCharacteristics": [
+      "Source-first reading order: your value, then its provenance, then the destination.",
+      "Dark slate chrome on an uncontrolled ground; light chips for your own words.",
+      "Four states with four meanings, distinguished by content before hue.",
+      "Drawn icons on a single 1.5px stroke grid. No emoji, no glyph font.",
+      "Explicit over ambient: nothing opens, writes, submits, or closes itself."
+    ],
+    "rules": [
+      { "name": "The Content-Before-Hue Rule", "body": "Two warm states sit in the same panel - the row-level caution and the panel-level degradation banner - and the distinction between them is carried by what they say, not by their colour. Measured against each other their fills were the same colour and their text 18 degrees apart in the same family, so a colour-only distinction was never going to carry it. The fix was to give the caution something the banner structurally cannot have: the value already in the field, quoted. Hue reinforces the split; it is the second signal, not the first.", "section": "colors" },
+      { "name": "The Readable Guard Rule", "body": "The caution is the guard against the failure this whole design was pointed at, so it is never the smallest thing in the panel. It carries a border, a filled ground, a 14px icon and 12px text - up from an earlier 10px form that was the smallest text in the panel wearing a status colour.", "section": "colors" },
+      { "name": "The One Light Surface Rule", "body": "Inside the dark chrome, slate-50 is reserved for text you wrote or are about to send: the quoted value and the draft editor. Nothing structural, nothing chrome, nothing of the host page's gets a light ground. The light is the signal for \"this is yours\".", "section": "colors" },
+      { "name": "The Tinted Shadow Rule", "body": "Shadows use rgba(15,23,42,...) - the panel's own slate-900, not black. A pure-black shadow under a slate panel on a white form reads as a dropped sticker.", "section": "colors" },
+      { "name": "The Pixel Ramp Rule", "body": "Type sizes are declared in px, not in the rem-based scale. The shadow root isolates the cascade but not the root font size, and a panel that shrinks to 9px on a host page with html { font-size: 12px } is illegible through no fault of its own.", "section": "typography" },
+      { "name": "The Monospace Is Data Rule", "body": "Monospace marks provenance, destination and measurement only: source keys, field labels, word counts, the quoted existing value, the masked value, the instruction field. Never a heading, never a value you wrote, never body prose.", "section": "typography" },
+      { "name": "The Title Outranks The Page Rule", "body": "No text sourced from the host page is set at the panel title's weight and size. The unanswered question - the one row kind where a host-page string legitimately leads - sits at 12px slate-200, one step below the title.", "section": "typography" },
+      { "name": "The Nothing Truncates Rule", "body": "Inside a row, text wraps; it does not truncate. At 390px a truncating destination clipped the very thing the user has to read before committing, and worse, the question a long-form answer was about to be inserted into. A second line costs nothing next to confirming the wrong destination.", "section": "layout" },
+      { "name": "The Measured Fold Rule", "body": "The list's bottom mask is applied only when the list actually overflows, measured and re-measured on scroll. The edge fade is a lie on a list that fits, and it dims the last row of every small form for no reason.", "section": "layout" },
+      { "name": "The Winnable Ceiling Rule", "body": "z-index: 2147480000 - high, and deliberately not the 32-bit maximum. A page's own modal deserves to win sometimes, and a fight for the top is unwinnable anyway.", "section": "elevation" },
+      { "name": "The Flat Interior Rule", "body": "Nothing inside the panel casts a shadow. A row is separated from its neighbour by a slate-700/50 divider and nothing else.", "section": "elevation" },
+      { "name": "The Soft Cut Rule", "body": "The overflow mask ramps to rgba(0,0,0,0.4) over 12px, not to fully transparent over 18px. A full fade caught rows clipped near the boundary and greyed their entire visible sliver, slicing horizontally through the glyphs of an already-applied row so that \"done\" read as \"broken\".", "section": "elevation" },
+      { "name": "The Drawn Icon Rule", "body": "Every icon is inline SVG on the 16px grid at 1.5px stroke, inheriting currentColor. No emoji, no icon font, no <img>. Emoji and glyph fonts are both substitutable by the host environment, and a tool whose padlock renders as a tofu box on someone else's page has lost the argument it was making.", "section": "shapes" },
+      { "name": "The No Sparkle Rule", "body": "The drafting icon is a nib, not a sparkle - the sparkle is the category's tell. The panel does not advertise that a model is involved with the genre's stock glyph.", "section": "shapes" },
+      { "name": "The No X Rule", "body": "The header's control is a chevron rotated to point down at the pill it collapses into, not a cross. A bare X reads as \"dismiss this\", and dismissal is the footer's job - which is a different, remembered decision.", "section": "shapes" }
+    ],
+    "dos": [
+      "Do lead every row with the user's own content, and put the host page's field name in the destination slot. Depart from this only where there is no readable value to lead with, and say so in a comment.",
+      "Do give each state its own accent and its own content: emerald for written, orange for check this, amber for degraded, rose for failed.",
+      "Do quote the value already in a field when warning about overwriting it. That fact is what the decision needs, and it is what separates the caution from the banner.",
+      "Do name the recovery in every failure message. \"That field is no longer on the page. Reload and try again.\" is the pattern.",
+      "Do let row text wrap. Truncation inside a row hides the thing being confirmed.",
+      "Do declare type sizes in px inside the shadow root.",
+      "Do put every new icon on the 16px / 1.5px stroke grid in icons.tsx and let it inherit currentColor.",
+      "Do pair the 1px slate-700/80 ring with any shadow, so separation survives a dark host page.",
+      "Do define both language strings in the t table in the same edit as the component that uses them."
+    ],
+    "donts": [
+      "Don't distinguish two warm states by hue alone. Measure them against each other; if their fills land on the same colour, one of them needs different content.",
+      "Don't put a status colour on text smaller than 11px. The caution's earlier 10px form was a defect.",
+      "Don't add a second light surface inside the chrome. slate-50 means \"this is yours\".",
+      "Don't use slate-500 for text on slate-900: it measures 3.74:1, below the 4.5:1 floor. slate-500 survives only on disabled controls and on the decorative destination arrow.",
+      "Don't introduce emoji or an icon font.",
+      "Don't add an X. The collapse is a chevron; dismissal is a named footer action.",
+      "Don't raise z-index toward the 32-bit ceiling.",
+      "Don't add elevation inside the panel. Dividers and tone, not shadows.",
+      "Don't apply a decorative overlay unconditionally. The edge fade is measured and conditional for a reason.",
+      "Don't add a sparkle, a gradient, or a second animation. There is one authored motion moment and it is the panel arriving."
+    ]
+  }
+}

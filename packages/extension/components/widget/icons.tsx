@@ -101,3 +101,10 @@ export const Chevron = ({ className }: IconProps) => (
     <path d="M5.5 3.5 10 8l-4.5 4.5" />
   </svg>
 );
+
+/** Drop one item from the batch. A cross, which here really does mean "not this". */
+export const Dismiss = ({ className }: IconProps) => (
+  <svg {...base} className={className}>
+    <path d="M4 4l8 8M12 4l-8 8" />
+  </svg>
+);

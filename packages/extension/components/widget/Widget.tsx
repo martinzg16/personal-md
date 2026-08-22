@@ -8,7 +8,10 @@
  * STORY: you see what your file can do here, you see where each answer came from,
  *   you click to apply it, and you can always undo exactly what you applied.
  * FIRST VIEWPORT: a collapsed pill, bottom-right, naming a count. Nothing opens
- *   itself, nothing takes focus. The panel opens on click, above the pill.
+ *   itself and nothing takes focus until you open it - opening then hands focus
+ *   to the collapse control, because opening unmounts the pill that held it. The
+ *   panel replaces the pill rather than sitting above it: same corner, one thing
+ *   on screen at a time.
  * FORM: source-first ledger; candidate 6 of 7 on the resonance-ordered list;
  *   seed key a21341ab.
  * FINISH: unreviewed and undocumented is unfinished; this build ends with the
@@ -19,7 +22,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import type { DraftResponse } from "../../lib/protocol.ts";
 import type { AnswerSuggestion, FieldSuggestion } from "../../lib/match/deterministic.ts";
-import { Arrow, Check, Chevron, Draft, Gap, Insert, Mark, Reveal, Undo, Withheld } from "./icons.tsx";
+import { batchSize, type PendingBatch, type PendingFact } from "../../lib/learn/pending.ts";
+import { Arrow, Check, Chevron, Dismiss, Draft, Gap, Insert, Mark, Reveal, Undo, Withheld } from "./icons.tsx";
 
 export type Lang = "es" | "en";
 
@@ -58,6 +62,23 @@ export interface WidgetProps {
   onUndo: () => void;
   onDismissSite: () => void;
   /**
+   * What this form has offered that the file does not already hold, noticed
+   * quietly while it was filled. Null when there is nothing to ask about.
+   */
+  pending?: PendingBatch | null;
+  /** Save the batch as one write. Resolves false if the server refused it. */
+  onSaveBatch?: (batch: PendingBatch) => Promise<boolean>;
+  /** Drop one item from the batch, and do not offer it again on this page. */
+  onDeclineItem?: (key: string) => void;
+  /** The user corrected a value in the panel; the panel's version wins. */
+  onEditItem?: (key: string, value: string) => void;
+  /**
+   * A submit was attempted. Switches an already-open panel to the confirm view;
+   * a collapsed panel stays collapsed and says so on the pill instead, because
+   * nothing here opens itself.
+   */
+  submitAttempted?: boolean;
+  /**
    * Start expanded. Off by default and deliberately so: the panel never opens
    * itself on a page you may only be skimming. Used by the visual harness, and
    * by an explicit "open it" action from the popup.
@@ -68,6 +89,7 @@ export interface WidgetProps {
 const t = {
   en: {
     pill: (n: number) => `${n} from your file`,
+    pillSave: (n: number) => (n === 1 ? "1 thing to save" : `${n} things to save`),
     pillDone: "all applied",
     title: "Your file, here",
     subtitle: (d: string) => `applied to ${d}`,
@@ -98,14 +120,26 @@ const t = {
     basedOn: "Based on",
     serverDown: "Drafting needs the server running. Everything below still works.",
     empty: "Nothing in your file yet.",
-    emptyHelp: "The companion server answered, but the profile came back empty. Check it is pointing at the right ~/.personal-md.",
+    emptyHelp: "Run the interview from the extension's options to fill it, and this panel will start recognising these fields.",
     tellIt: "Tell it what to change",
     checkFirst: "This field already holds",
-    fillFailed: "That field is no longer on the page. Reload and try again.",
     draftFailed: "Could not draft this.",
+    reviewLead: (n: number) => `${n} new from this form`,
+    review: "Review",
+    confirmTitle: (n: number) => (n === 1 ? "Save 1 thing to your file?" : `Save ${n} things to your file?`),
+    confirmNote: "Nothing here is saved until you say so. Edit anything that is not right.",
+    replaces: "replaces",
+    save: "Save",
+    saveNone: "Save nothing",
+    back: "Back",
+    saving: "Saving",
+    saved: "Saved to your file",
+    saveFailed: "Could not save. Your file is unchanged.",
+    answerFor: "your answer to",
   },
   es: {
     pill: (n: number) => `${n} de tu fichero`,
+    pillSave: (n: number) => (n === 1 ? "1 cosa por guardar" : `${n} cosas por guardar`),
     pillDone: "todo aplicado",
     title: "Tu fichero, aquí",
     subtitle: (d: string) => `aplicado a ${d}`,
@@ -136,11 +170,23 @@ const t = {
     basedOn: "A partir de",
     serverDown: "Redactar necesita el servidor. Lo de abajo sigue funcionando.",
     empty: "Tu fichero aún está vacío.",
-    emptyHelp: "El servidor respondió, pero el perfil vino vacío. Comprueba que apunta al ~/.personal-md correcto.",
+    emptyHelp: "Haz la entrevista desde las opciones de la extensión y este panel empezará a reconocer estos campos.",
     tellIt: "Dile qué cambiar",
     checkFirst: "Este campo ya tiene",
-    fillFailed: "Ese campo ya no está en la página. Recarga e inténtalo otra vez.",
     draftFailed: "No se pudo redactar.",
+    reviewLead: (n: number) => `${n} cosas nuevas de este formulario`,
+    review: "Revisar",
+    confirmTitle: (n: number) =>
+      n === 1 ? "¿Guardar 1 cosa en tu fichero?" : `¿Guardar ${n} cosas en tu fichero?`,
+    confirmNote: "Nada de esto se guarda hasta que lo digas. Edita lo que no esté bien.",
+    replaces: "sustituye a",
+    save: "Guardar",
+    saveNone: "No guardar nada",
+    back: "Volver",
+    saving: "Guardando",
+    saved: "Guardado en tu fichero",
+    saveFailed: "No se pudo guardar. Tu fichero no ha cambiado.",
+    answerFor: "tu respuesta a",
   },
 } as const;
 
@@ -566,6 +612,61 @@ function UnansweredRow({
   );
 }
 
+/**
+ * One thing the form is offering to teach the file.
+ *
+ * The value is editable in place. The page is where it came from, not the
+ * authority on what it means - a form that made you type "MADRID" in caps should
+ * not put that in a file you read, and the fix has to be here rather than in an
+ * editor you open later.
+ */
+function PendingFactRow({
+  item,
+  lang,
+  onDecline,
+  onEdit,
+}: {
+  item: PendingFact;
+  lang: Lang;
+  onDecline: () => void;
+  onEdit: (value: string) => void;
+}) {
+  const c = t[lang];
+  return (
+    <li className="flex items-start gap-2 px-4 py-2.5">
+      <div className="min-w-0 flex-1">
+        <p className="text-[12px] font-medium leading-snug text-slate-200">{item.label}</p>
+        <input
+          value={item.value}
+          onChange={(e) => onEdit(e.target.value)}
+          aria-label={item.label}
+          className={`mt-1 w-full rounded-sm border border-slate-300 bg-slate-50 px-1.5 py-1 text-[13px] text-slate-900 ${FOCUS} focus-visible:border-sky-500`}
+        />
+        <p className="pmd-mono mt-1 text-[10px] tracking-[0.06em] text-slate-400">
+          {item.key}
+          {item.replaces && (
+            <>
+              {" · "}
+              <span className="text-orange-200">
+                {c.replaces} {item.replaces}
+              </span>
+            </>
+          )}
+        </p>
+      </div>
+      <button
+        type="button"
+        onClick={onDecline}
+        aria-label={`${c.saveNone}: ${item.label}`}
+        title={c.saveNone}
+        className={`mt-5 shrink-0 rounded p-1 text-slate-400 transition-colors duration-150 hover:bg-slate-700/60 hover:text-white ${FOCUS}`}
+      >
+        <Dismiss className="h-3.5 w-3.5" />
+      </button>
+    </li>
+  );
+}
+
 export default function Widget(props: WidgetProps) {
   const { lang, domain, rows, undoCount, serverUp } = props;
   const c = t[lang];
@@ -573,7 +674,25 @@ export default function Widget(props: WidgetProps) {
   const closeRef = useRef<HTMLButtonElement>(null);
   const justOpened = useRef(false);
 
-  const pending = useMemo(() => rows.filter((r) => !r.applied).length, [rows]);
+  const unapplied = useMemo(() => rows.filter((r) => !r.applied).length, [rows]);
+
+  const batch = props.pending ?? null;
+  const toSave = batch ? batchSize(batch) : 0;
+  const [view, setView] = useState<"ledger" | "confirm">("ledger");
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+
+  /*
+   * A submit was attempted. If the panel is already open, this is the moment the
+   * batch is worth showing - the user has finished typing. If it is collapsed it
+   * stays collapsed: the panel does not open itself, and the pill carries the
+   * count instead. Submitting usually navigates, which is why the batch is
+   * persisted rather than held here.
+   */
+  useEffect(() => {
+    if (props.submitAttempted && toSave > 0 && open) setView("confirm");
+  }, [props.submitAttempted, toSave, open]);
 
   // Escape collapses it. An outside click deliberately does not: the panel
   // annotates the page it sits on, so clicking into a field or scrolling the
@@ -599,10 +718,9 @@ export default function Widget(props: WidgetProps) {
   }, [open]);
 
   /*
-   * The edge fade is a lie on a list that fits, and it dims the last row of
-   * every small form for no reason. Measured rather than assumed, and remeasured
-   * on scroll so it disappears once you reach the bottom - at which point there
-   * is nothing below to signal.
+   * Whether anything is below the fold. Measured rather than assumed, and
+   * remeasured on scroll so the indicator disappears once you reach the bottom -
+   * at which point there is nothing left to signal.
    */
   const listRef = useRef<HTMLUListElement | null>(null);
   const [overflowing, setOverflowing] = useState(false);
@@ -610,8 +728,7 @@ export default function Widget(props: WidgetProps) {
   const measureOverflow = () => {
     const el = listRef.current;
     if (!el) return;
-    const more = el.scrollHeight - el.clientHeight - el.scrollTop > 2;
-    setOverflowing(more);
+    setOverflowing(el.scrollHeight - el.clientHeight - el.scrollTop > 2);
   };
 
   useEffect(measureOverflow, [rows, open]);
@@ -627,7 +744,7 @@ export default function Widget(props: WidgetProps) {
         className={`pmd-enter pointer-events-auto flex items-center gap-2 whitespace-nowrap rounded-full bg-slate-900 py-2 pl-2.5 pr-3.5 text-[13px] font-medium text-slate-100 shadow-[0_6px_20px_-4px_rgba(15,23,42,0.5)] ring-1 ring-slate-700/80 transition-colors duration-150 hover:bg-slate-800 ${FOCUS}`}
       >
         <Mark className="h-4 w-4 text-slate-400" />
-        {pending > 0 ? c.pill(pending) : c.pillDone}
+        {toSave > 0 ? c.pillSave(toSave) : unapplied > 0 ? c.pill(unapplied) : c.pillDone}
       </button>
     );
   }
@@ -673,7 +790,103 @@ export default function Widget(props: WidgetProps) {
         </p>
       )}
 
-      {rows.length === 0 ? (
+      {view === "confirm" && batch ? (
+        <>
+          <div className="border-b border-slate-700/70 px-4 py-3">
+            <p className="text-[13px] font-semibold leading-snug text-slate-100">
+              {c.confirmTitle(toSave)}
+            </p>
+            <p className="mt-1 text-[11px] leading-relaxed text-slate-400">{c.confirmNote}</p>
+          </div>
+
+          <div className="relative min-h-0">
+          <ul
+            ref={listRef}
+            onScroll={measureOverflow}
+            className="divide-y divide-slate-700/50 overflow-y-auto"
+          >
+            {batch.facts.map((item) => (
+              <PendingFactRow
+                key={item.key}
+                item={item}
+                lang={lang}
+                onDecline={() => props.onDeclineItem?.(item.key)}
+                onEdit={(value) => props.onEditItem?.(item.key, value)}
+              />
+            ))}
+            {batch.answers.map((item) => (
+              <li key={item.canonicalKey} className="px-4 py-2.5">
+                <p className="text-[12px] font-medium leading-snug text-slate-200">
+                  {c.answerFor} {item.question}
+                </p>
+                <Quoted>{item.text}</Quoted>
+                <p className="pmd-mono mt-1 text-[10px] tracking-[0.06em] text-slate-400">
+                  {item.canonicalKey}
+                </p>
+              </li>
+            ))}
+          </ul>
+          {overflowing && (
+            <div
+              aria-hidden
+              className="pmd-more pointer-events-none absolute inset-x-0 bottom-0 flex h-7 items-end justify-center pb-1"
+            >
+              <Chevron className="h-3.5 w-3.5 rotate-90 text-slate-400" />
+            </div>
+          )}
+          </div>
+
+          {saveError && (
+            <p className="px-4 pb-1">
+              <Failure>{saveError}</Failure>
+            </p>
+          )}
+
+          <div className="flex items-center justify-between gap-3 border-t border-slate-700/70 px-4 py-2.5">
+            <Action onClick={() => setView("ledger")} tone="quiet">
+              {c.back}
+            </Action>
+            {saved ? (
+              <span className="inline-flex items-center gap-1 text-xs text-emerald-300">
+                <Check className="h-3.5 w-3.5" />
+                {c.saved}
+              </span>
+            ) : (
+              <Action
+                onClick={() => {
+                  if (!props.onSaveBatch) return;
+                  setSaving(true);
+                  setSaveError(null);
+                  void props
+                    .onSaveBatch(batch)
+                    .then((ok) => {
+                      setSaved(ok);
+                      // Naming the file's state is the point: a failed save must
+                      // never look like a quiet success.
+                      if (!ok) setSaveError(c.saveFailed);
+                      if (ok) setView("ledger");
+                    })
+                    .catch(() => setSaveError(c.saveFailed))
+                    .finally(() => setSaving(false));
+                }}
+                disabled={saving || toSave === 0}
+              >
+                {saving ? (
+                  <>
+                    <span className="pmd-pulse h-1.5 w-1.5 rounded-full bg-sky-400" />
+                    {c.saving}
+                  </>
+                ) : (
+                  <>
+                    <Mark className="h-3.5 w-3.5" />
+                    {c.save} {toSave}
+                  </>
+                )}
+              </Action>
+            )}
+          </div>
+        </>
+      ) : rows.length === 0 ? (
         <div className="px-6 py-10 text-center">
           <p className="text-[13px] text-slate-200">{c.empty}</p>
           <p className="mx-auto mt-1.5 max-w-[34ch] text-[12px] leading-relaxed text-slate-400">
@@ -681,10 +894,11 @@ export default function Widget(props: WidgetProps) {
           </p>
         </div>
       ) : (
+        <div className="relative min-h-0">
         <ul
           ref={listRef}
           onScroll={measureOverflow}
-          className={`divide-y divide-slate-700/50 overflow-y-auto ${overflowing ? "pmd-fade" : ""}`}
+          className="divide-y divide-slate-700/50 overflow-y-auto"
         >
           {rows.map((row) =>
             row.kind === "fact" ? (
@@ -703,6 +917,36 @@ export default function Widget(props: WidgetProps) {
             ),
           )}
         </ul>
+        {/* Overlays the edge; never modifies a row. */}
+        {overflowing && (
+          <div
+            aria-hidden
+            className="pmd-more pointer-events-none absolute inset-x-0 bottom-0 flex h-7 items-end justify-center pb-1"
+          >
+            <Chevron className="h-3.5 w-3.5 rotate-90 text-slate-400" />
+          </div>
+        )}
+        </div>
+      )}
+
+      {/*
+        The way into the confirm view, and the only thing that ever announces a
+        pending batch inside the ledger. Deliberately a strip you choose to enter
+        rather than a panel that takes over: you may be mid-form, and the batch
+        keeps until you are done.
+      */}
+      {view === "ledger" && toSave > 0 && (
+        <button
+          type="button"
+          onClick={() => setView("confirm")}
+          className={`flex items-center justify-between gap-3 border-t border-slate-700/70 bg-slate-800/60 px-4 py-2 text-left transition-colors duration-150 hover:bg-slate-800 ${FOCUS}`}
+        >
+          <span className="text-[12px] text-slate-200">{c.reviewLead(toSave)}</span>
+          <span className="inline-flex shrink-0 items-center gap-1 text-[12px] font-medium text-slate-100">
+            {c.review}
+            <Chevron className="h-3.5 w-3.5" />
+          </span>
+        </button>
       )}
 
       <footer className="flex items-center justify-between gap-3 border-t border-slate-700/70 px-4 py-2">

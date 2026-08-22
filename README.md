@@ -181,7 +181,7 @@ Then load `packages/extension/.output/chrome-mv3` as an unpacked extension in
 Chrome, open the options page, and paste the token.
 
 ```bash
-npm test                  # 225 offline tests
+npm test                  # the offline suite, across all three packages
 npm run typecheck
 PERSONAL_MD_LIVE=1 node --test packages/server/test/claude.live.test.ts
 ```
