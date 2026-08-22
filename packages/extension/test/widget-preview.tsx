@@ -254,6 +254,28 @@ if (el) {
         />
       </Slot>
 
+      {/*
+        The two states no capture had ever shown, because they were always last
+        in the list and always below the fold: a draft in flight, and a question
+        not started. Also the only place "nothing in your file answers this"
+        should appear at all.
+      */}
+      <Slot title="Drafting, and not yet started" ground="#ffffff">
+        <Widget
+          lang="es"
+          domain="careers.example.com"
+          rows={ROWS.slice(8)}
+          undoCount={0}
+          serverUp
+          initialOpen
+          onFill={noop}
+          onDraft={noop}
+          onInsertDraft={noop}
+          onUndo={noop}
+          onDismissSite={noop}
+        />
+      </Slot>
+
       <Slot title="Collapsed, and the empty state" ground="#f1f5f9">
         <div style={{ display: "flex", gap: "24px", alignItems: "flex-start" }}>
           <Widget
