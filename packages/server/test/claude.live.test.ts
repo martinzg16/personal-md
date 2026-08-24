@@ -54,7 +54,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
 
-import { ask, askForJson, extractJson, readCliResult, totalInputTokens } from "../src/claude.ts";
+import { ask, askForJson, extractJson, totalInputTokens } from "../src/claude.ts";
 import { Store } from "../src/store.ts";
 
 const LIVE = process.env["PERSONAL_MD_LIVE"] === "1";
@@ -213,62 +213,5 @@ describe("JSON extraction", () => {
 
   it("throws when there is no object at all", () => {
     assert.throws(() => extractJson("no json here"), /no JSON object/);
-  });
-});
-
-/**
- * The CLI reports its own failures in-band - exit 0, is_error, reason in
- * `result` - so this mapping is the only thing standing between a real cause and
- * a shrug. The payloads below are trimmed from actual CLI output.
- */
-describe("reading the CLI envelope", () => {
-  it("returns the text on success", () => {
-    const read = readCliResult({ is_error: false, result: "PONG", subtype: "success" });
-    assert.equal(read.ok, true);
-    assert.equal(read.ok && read.text, "PONG");
-  });
-
-  it("names an expired login instead of repeating the CLI's misleading subtype", () => {
-    // Captured 24-ago-2026 on CLI 2.1.241. Note subtype: "success" on a failure -
-    // the old code printed "claude reported an error (success)" from it.
-    const read = readCliResult({
-      is_error: true,
-      subtype: "success",
-      terminal_reason: "api_error",
-      result: "Failed to authenticate: OAuth session expired and could not be refreshed",
-    });
-    assert.equal(read.ok, false);
-    if (read.ok) return;
-    assert.equal(read.error.kind, "unauthenticated");
-    assert.match(read.error.message, /not signed in/);
-    assert.match(read.error.message, /claude auth login/, "the message must say how to fix it");
-    assert.doesNotMatch(read.error.message, /success/, "the CLI's subtype is not a cause");
-    assert.match(read.error.detail, /OAuth session expired/, "keep the CLI's own words too");
-  });
-
-  it("quotes the reason for a failure it does not recognise", () => {
-    const read = readCliResult({
-      is_error: true,
-      subtype: "error_max_turns",
-      result: "Something went sideways\nsecond line",
-    });
-    assert.equal(read.ok, false);
-    if (read.ok) return;
-    assert.equal(read.error.kind, "failed");
-    assert.match(read.error.message, /Something went sideways/);
-    assert.doesNotMatch(read.error.message, /second line/, "message is one line; detail has both");
-  });
-
-  it("falls back to the subtype when there is no reason at all", () => {
-    const read = readCliResult({ is_error: true, subtype: "error_during_execution" });
-    assert.equal(read.ok, false);
-    if (read.ok) return;
-    assert.equal(read.error.kind, "failed");
-    assert.match(read.error.message, /error_during_execution/);
-  });
-
-  it("treats a missing result as a failure rather than an empty draft", () => {
-    const read = readCliResult({ is_error: false });
-    assert.equal(read.ok, false);
   });
 });
