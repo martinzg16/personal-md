@@ -29,6 +29,14 @@ export interface ProfileMirror {
   /** Which fact keys the server is withholding from prompts. */
   withheldKeys: string[];
   siteMemory: Record<string, string>;
+  /**
+   * What drafting has cost, cumulatively, from the file itself.
+   *
+   * Mirrored rather than fetched on demand because the Privacy screen has to be
+   * able to answer "what has this sent" with the companion stopped — which is
+   * exactly when somebody is most likely to be asking.
+   */
+  ledger: { calls: number; inputTokens: number; outputTokens: number; costUsd: number };
   fetchedAt: string;
 }
 

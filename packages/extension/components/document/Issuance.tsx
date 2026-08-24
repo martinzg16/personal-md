@@ -27,6 +27,7 @@ import { useEffect, useMemo, useReducer, useRef, useState } from "react";
 
 import type { Lang, Profile } from "@personal-md/core";
 
+import Scroller from "./Scroller.tsx";
 import Stamp from "./Stamp.tsx";
 import { Band, Rosette } from "./Guilloche.tsx";
 import { scopeNote, type Dossier } from "../../lib/document/dossier.ts";
@@ -84,13 +85,13 @@ function ZoneLines({ mrz, reveal }: { mrz: Mrz; reveal: number }) {
   );
 
   return (
-    <div
+    <Scroller
       className="pmd-mrz-scroll"
       style={{ ["--mrz-size" as string]: "clamp(11px, 1.86cqw, 17px)" }}
     >
       {line(mrz.line1, 0)}
       {line(mrz.line2, mrz.line1.length)}
-    </div>
+    </Scroller>
   );
 }
 
@@ -165,7 +166,7 @@ export default function Issuance({
         firstRecordedAt: dossier.firstRecordedAt,
         revisedAt: dossier.revisedAt,
         facts: dossier.extent.facts,
-        answers: dossier.extent.answers,
+        answers: dossier.extent.declarations,
         words: dossier.extent.words,
       }),
     [dossier],
@@ -241,13 +242,14 @@ export default function Issuance({
       </div>
 
       <div className="relative px-7 pb-10 pt-11 sm:px-10 sm:pb-12 sm:pt-14">
+        <p className="pmd-legend pmd-legend--secondary absolute right-7 top-5 sm:right-10 sm:top-6">
+          Expedición · Issuance
+        </p>
+
         <div className="flex flex-wrap items-start justify-between gap-6">
           <div>
-            <p className="pmd-legend pmd-legend--secondary">
-              Expedición · Issuance
-            </p>
             <h2
-              className="mt-1.5 max-w-[24ch] font-sans leading-[1.02]"
+              className="max-w-[24ch] font-sans leading-[1.02]"
               style={{
                 fontSize: "clamp(26px, 4.4vw, 42px)",
                 fontWeight: 700,
@@ -297,7 +299,7 @@ export default function Issuance({
             </Row>
             <Row es="Extensión" en="Extent" index={row++} visible={printed}>
               {data(
-                `${extent.facts}/${extent.factsTotal} ${es ? "datos" : "facts"} · ${extent.answers}/${extent.answersTotal} ${es ? "respuestas" : "answers"} · ${extent.words.toLocaleString(es ? "es-ES" : "en-GB")} ${es ? "palabras" : "words"} · ${(extent.bytes / 1024).toFixed(1)} kB`,
+                `${extent.facts}/${extent.factsTotal} ${es ? "datos" : "facts"} · ${extent.declarations}/${extent.declarationsTotal} ${es ? "declaraciones" : "declarations"} · ${extent.exemplars} ${es ? "muestras" : "samples"} · ${(extent.bytes / 1024).toFixed(1)} kB`,
               )}
             </Row>
             <Row es="Condiciones de acceso" en="Conditions of access" index={row++} visible={printed}>
@@ -305,7 +307,7 @@ export default function Issuance({
                 data(es ? "Sin restricciones" : "No restrictions")
               ) : (
                 <div>
-                  <span className="pmd-data" style={{ color: "var(--color-endorse-600)" }}>
+                  <span className="pmd-data" style={{ color: "var(--color-stamp-violet)" }}>
                     {dossier.restricted.length}{" "}
                     {es
                       ? dossier.restricted.length === 1
@@ -374,8 +376,8 @@ export default function Issuance({
               <div>
                 <p className="pmd-note max-w-[58ch]">
                   {es
-                    ? `Quedan ${dossier.outstanding.length} ${dossier.outstanding.length === 1 ? "campo" : "campos"} sin escribir y ${extent.answersTotal - extent.answers} ${extent.answersTotal - extent.answers === 1 ? "pregunta" : "preguntas"} sin contestar. El documento sirve igual: lo que está escrito se rellena, y los `
-                    : `${dossier.outstanding.length} ${dossier.outstanding.length === 1 ? "field is" : "fields are"} still unwritten and ${extent.answersTotal - extent.answers} ${extent.answersTotal - extent.answers === 1 ? "question is" : "questions are"} unanswered. The document works anyway: what is written gets filled, and the `}
+                    ? `Quedan ${dossier.outstanding.length} ${dossier.outstanding.length === 1 ? "campo" : "campos"} sin rellenar y ${extent.declarationsTotal - extent.declarations} ${extent.declarationsTotal - extent.declarations === 1 ? "declaración" : "declaraciones"} sin sellar${extent.exemplars === 0 ? ", y ninguna muestra de tu forma de escribir" : ""}. El documento sirve igual: lo que está escrito se rellena, y los `
+                    : `${dossier.outstanding.length} ${dossier.outstanding.length === 1 ? "field is" : "fields are"} still empty and ${extent.declarationsTotal - extent.declarations} ${extent.declarationsTotal - extent.declarations === 1 ? "declaration is" : "declarations are"} unstamped${extent.exemplars === 0 ? ", and there is no sample of how you write" : ""}. The document works anyway: what is written gets filled, and the `}
                   <code className="font-mono text-[12.5px]">&lt;</code>
                   {es
                     ? " de la zona de lectura son exactamente lo que falta."

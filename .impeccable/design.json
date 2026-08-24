@@ -1,194 +1,272 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-08-22T00:00:00Z",
+  "generatedAt": "2026-08-23T00:00:00.000Z",
   "title": "Design System: personal-md",
   "extensions": {
     "colorMeta": {
-      "slate-900": { "role": "primary", "displayName": "Tool Slate", "canonical": "oklch(20.8% 0.042 265.755)", "tonalRamp": ["oklch(15% 0.042 265.755)", "oklch(20.8% 0.042 265.755)", "oklch(27.9% 0.041 260.031)", "oklch(37.2% 0.044 257.287)", "oklch(55.4% 0.046 257.417)", "oklch(70.4% 0.04 256.788)", "oklch(86.9% 0.022 252.894)", "oklch(96.8% 0.007 247.896)"] },
-      "slate-50": { "role": "primary", "displayName": "Your Words", "canonical": "oklch(98.4% 0.003 247.858)", "tonalRamp": ["oklch(20.8% 0.003 247.858)", "oklch(37.2% 0.003 247.858)", "oklch(55.4% 0.003 247.858)", "oklch(70.4% 0.003 247.858)", "oklch(86.9% 0.003 247.858)", "oklch(92.9% 0.003 247.858)", "oklch(96.8% 0.003 247.858)", "oklch(98.4% 0.003 247.858)"] },
-      "sky-400": { "role": "secondary", "displayName": "Attention Sky", "canonical": "oklch(74.6% 0.16 232.661)", "tonalRamp": ["oklch(39.1% 0.09 240.876)", "oklch(44.3% 0.11 240.79)", "oklch(50% 0.134 242.749)", "oklch(68.5% 0.169 237.323)", "oklch(74.6% 0.16 232.661)", "oklch(82.8% 0.111 230.318)", "oklch(90.1% 0.058 230.902)", "oklch(97.7% 0.013 236.62)"] },
-      "emerald-300": { "role": "tertiary", "displayName": "Applied Emerald", "canonical": "oklch(84.5% 0.143 164.978)", "tonalRamp": ["oklch(37.8% 0.077 168.94)", "oklch(43.2% 0.095 166.913)", "oklch(50.8% 0.118 165.612)", "oklch(69.6% 0.17 162.48)", "oklch(76.5% 0.177 163.223)", "oklch(84.5% 0.143 164.978)", "oklch(90.5% 0.093 164.15)", "oklch(97.9% 0.021 166.113)"] },
-      "orange-950": { "role": "tertiary", "displayName": "Caution Ground", "canonical": "oklch(26.6% 0.079 36.259)", "tonalRamp": ["oklch(26.6% 0.079 36.259)", "oklch(40.8% 0.123 38.172)", "oklch(47% 0.157 37.304)", "oklch(55.3% 0.195 38.402)", "oklch(75% 0.183 55.934)", "oklch(83.7% 0.128 66.29)", "oklch(90.1% 0.076 70.697)", "oklch(98% 0.016 73.684)"] },
-      "orange-100": { "role": "tertiary", "displayName": "Caution Text", "canonical": "oklch(95.4% 0.038 75.164)", "tonalRamp": ["oklch(26.6% 0.079 36.259)", "oklch(40.8% 0.123 38.172)", "oklch(55.3% 0.195 38.402)", "oklch(70.5% 0.213 47.604)", "oklch(75% 0.183 55.934)", "oklch(83.7% 0.128 66.29)", "oklch(90.1% 0.076 70.697)", "oklch(95.4% 0.038 75.164)"] },
-      "amber-200": { "role": "tertiary", "displayName": "Degraded Amber", "canonical": "oklch(92.4% 0.12 95.746)", "tonalRamp": ["oklch(41.4% 0.112 45.904)", "oklch(47.3% 0.137 46.201)", "oklch(55.5% 0.163 48.998)", "oklch(76.9% 0.188 70.08)", "oklch(82.8% 0.189 84.429)", "oklch(87.9% 0.169 91.605)", "oklch(92.4% 0.12 95.746)", "oklch(98.7% 0.022 95.277)"] },
-      "rose-300": { "role": "tertiary", "displayName": "Failure Rose", "canonical": "oklch(81% 0.117 11.638)", "tonalRamp": ["oklch(41% 0.159 10.272)", "oklch(45.5% 0.188 13.697)", "oklch(51.4% 0.222 16.935)", "oklch(64.5% 0.246 16.439)", "oklch(71.2% 0.194 13.428)", "oklch(81% 0.117 11.638)", "oklch(89.2% 0.058 10.001)", "oklch(96.9% 0.015 12.422)"] },
-      "slate-400": { "role": "neutral", "displayName": "Support Slate", "canonical": "oklch(70.4% 0.04 256.788)", "tonalRamp": ["oklch(20.8% 0.042 265.755)", "oklch(27.9% 0.041 260.031)", "oklch(37.2% 0.044 257.287)", "oklch(55.4% 0.046 257.417)", "oklch(70.4% 0.04 256.788)", "oklch(86.9% 0.022 252.894)", "oklch(92.9% 0.013 255.508)", "oklch(98.4% 0.003 247.858)"] },
-      "slate-700": { "role": "neutral", "displayName": "Chrome Edge", "canonical": "oklch(37.2% 0.044 257.287)", "tonalRamp": ["oklch(20.8% 0.042 265.755)", "oklch(27.9% 0.041 260.031)", "oklch(37.2% 0.044 257.287)", "oklch(55.4% 0.046 257.417)", "oklch(70.4% 0.04 256.788)", "oklch(86.9% 0.022 252.894)", "oklch(92.9% 0.013 255.508)", "oklch(96.8% 0.007 247.896)"] }
+      "cover-900": {
+        "role": "primary",
+        "displayName": "Burgundy Black",
+        "canonical": "#200d16",
+        "tonalRamp": ["#140810", "#200d16", "#2a111d", "#351526", "#471e33", "#5d2843", "#8a4266", "#c39ab0"]
+      },
+      "cover-850": { "role": "primary", "displayName": "Burgundy Black, Lifted", "canonical": "#2a111d" },
+      "cover-800": { "role": "primary", "displayName": "Burgundy", "canonical": "#351526" },
+      "cover-700": { "role": "primary", "displayName": "Burgundy Rail Fill", "canonical": "#471e33" },
+      "cover-600": { "role": "primary", "displayName": "Burgundy Emboss Highlight", "canonical": "#5d2843" },
+      "foil-500": {
+        "role": "secondary",
+        "displayName": "Hot Foil",
+        "canonical": "#c9a227",
+        "tonalRamp": ["#2c2308", "#4a3b0e", "#6b5514", "#8f721b", "#c9a227", "#e6cd7a", "#f2e0a6", "#fff6ce"]
+      },
+      "foil-300": { "role": "secondary", "displayName": "Foil Light", "canonical": "#e6cd7a" },
+      "laminate-050": {
+        "role": "neutral",
+        "displayName": "Cold Laminate",
+        "canonical": "#eef1ea",
+        "tonalRamp": ["#20241d", "#3a4036", "#576050", "#78826f", "#aeb8a9", "#ccd4c8", "#e3e8de", "#eef1ea"]
+      },
+      "laminate-100": { "role": "neutral", "displayName": "Laminate Fill", "canonical": "#e3e8de" },
+      "laminate-200": { "role": "neutral", "displayName": "Laminate Rule", "canonical": "#ccd4c8" },
+      "laminate-300": { "role": "neutral", "displayName": "Laminate Hairline / Filler", "canonical": "#aeb8a9" },
+      "intaglio-900": {
+        "role": "neutral",
+        "displayName": "Intaglio Ink",
+        "canonical": "#131e35",
+        "tonalRamp": ["#0a1020", "#131e35", "#1c2b47", "#26375a", "#3a4a6e", "#4e5f82", "#6d7d9e", "#a3aec5"]
+      },
+      "intaglio-700": { "role": "neutral", "displayName": "Intaglio, Prose Weight", "canonical": "#26375a" },
+      "intaglio-500": { "role": "neutral", "displayName": "Intaglio, Legend Weight", "canonical": "#4e5f82" },
+      "intaglio-400": { "role": "neutral", "displayName": "Intaglio, Border Only", "canonical": "#6d7d9e" },
+      "iris-cyan": { "role": "secondary", "displayName": "Iris Cyan", "canonical": "#74a9b4" },
+      "iris-600": {
+        "role": "secondary",
+        "displayName": "Iris, Focus Weight",
+        "canonical": "#2f7381",
+        "tonalRamp": ["#0d2327", "#153a41", "#1e565f", "#2f7381", "#4a919f", "#74a9b4", "#a3c8cf", "#d3e5e8"]
+      },
+      "iris-lilac": { "role": "secondary", "displayName": "Iris Lilac", "canonical": "#a396c2" },
+      "iris-mint": { "role": "secondary", "displayName": "Iris Mint", "canonical": "#93b998" },
+      "stamp-blue": { "role": "tertiary", "displayName": "Stamp Blue", "canonical": "#2c5c8a" },
+      "stamp-green": { "role": "tertiary", "displayName": "Stamp Green", "canonical": "#1d6a49" },
+      "stamp-violet": {
+        "role": "tertiary",
+        "displayName": "Archival Violet",
+        "canonical": "#6a3d85",
+        "tonalRamp": ["#1e1126", "#2f1b3b", "#4a2b5e", "#6a3d85", "#8b5ea6", "#ac8bc0", "#cbb6d8", "#e8dcef"]
+      },
+      "endorse-600": {
+        "role": "tertiary",
+        "displayName": "Vermilion",
+        "canonical": "#a52f1c",
+        "tonalRamp": ["#2c0c07", "#4b1510", "#6d2014", "#a52f1c", "#c74a33", "#d4674f", "#e8a394", "#f7ded8"]
+      },
+      "endorse-400": { "role": "tertiary", "displayName": "Vermilion Light", "canonical": "#d4674f" },
+      "endorse-100": { "role": "tertiary", "displayName": "Vermilion Wash", "canonical": "#f7ded8" },
+      "widget-slate-900": {
+        "role": "primary",
+        "displayName": "Tool Slate (widget, unmigrated)",
+        "canonical": "oklch(20.8% 0.042 265.755)",
+        "tonalRamp": ["oklch(20.8% 0.042 265.755)", "oklch(27.9% 0.041 260.031)", "oklch(37.2% 0.044 257.287)", "oklch(55.4% 0.046 257.417)", "oklch(70.4% 0.04 256.788)", "oklch(86.9% 0.022 252.894)", "oklch(96.8% 0.007 247.896)", "oklch(98.4% 0.003 247.858)"]
+      },
+      "widget-slate-50": { "role": "neutral", "displayName": "Your Words (widget)", "canonical": "oklch(98.4% 0.003 247.858)" },
+      "widget-sky-400": { "role": "secondary", "displayName": "Attention Sky (widget)", "canonical": "oklch(74.6% 0.16 232.661)" },
+      "widget-emerald-300": { "role": "tertiary", "displayName": "Applied Emerald (widget)", "canonical": "oklch(84.5% 0.143 164.978)" },
+      "widget-orange-400": { "role": "tertiary", "displayName": "Caution Orange (widget)", "canonical": "oklch(75% 0.183 55.934)" },
+      "widget-amber-500": { "role": "tertiary", "displayName": "Degraded Amber (widget)", "canonical": "oklch(76.9% 0.188 70.08)" },
+      "widget-rose-300": { "role": "tertiary", "displayName": "Failure Rose (widget)", "canonical": "oklch(81% 0.117 11.638)" }
     },
     "typographyMeta": {
-      "lead": { "displayName": "Lead", "purpose": "The quoted value or stored answer. The largest text in the panel is always something the user wrote." },
-      "title": { "displayName": "Title", "purpose": "The panel heading, and the masked fact row's field identity." },
-      "body": { "displayName": "Body", "purpose": "The draft editor and non-lead quoted text." },
-      "action": { "displayName": "Action", "purpose": "Button labels, the caution, and the unanswered question." },
-      "support": { "displayName": "Support", "purpose": "Subtitle, failure text, degradation banner, instruction field, footer, masked value." },
-      "label": { "displayName": "Label", "purpose": "Monospace. Provenance keys, destinations, word counts, metadata chips. Data and measurement, never costume." }
+      "foil": { "displayName": "Foil", "purpose": "The cover wordmark, once, in gold. Nothing else is this size." },
+      "headline": { "displayName": "Headline", "purpose": "One per folio: the Spanish section title, English beneath at 13px." },
+      "data": { "displayName": "Data", "purpose": "Every value, code and date. Martian Mono caps at 82% width." },
+      "mrz": { "displayName": "Machine-readable zone", "purpose": "Forty-four characters per line, sized from its container by cqw, floored at 11px." },
+      "legend": { "displayName": "Legend", "purpose": "The ICAO dual label: Spanish over English, weight-separated, both always printed." },
+      "note": { "displayName": "Note", "purpose": "The tool's own voice. Archivo, never Literata." },
+      "prose": { "displayName": "Prose", "purpose": "The holder speaking, verbatim, and nowhere else on the surface. 68ch measure." },
+      "action": { "displayName": "Action", "purpose": "Every button label on both planes. Micro-caps at 0.1em." },
+      "stamp": { "displayName": "Stamp", "purpose": "The impression's title, over a mono date." },
+      "widget-lead": { "displayName": "Lead (widget)", "purpose": "The quoted value. The largest text in the panel is always something you wrote." },
+      "widget-label": { "displayName": "Label (widget)", "purpose": "Provenance, destination, measurement. Monospace is data, not costume." }
     },
     "shadows": [
-      { "name": "pill", "value": "0 6px 20px -4px rgba(15,23,42,0.5)", "purpose": "Lift on the collapsed pill. Always paired with ring-1 ring-slate-700/80." },
-      { "name": "panel", "value": "0 16px 48px -12px rgba(15,23,42,0.6)", "purpose": "Lift on the open panel. Tinted with the panel's own slate-900, never black." },
-      { "name": "ring", "value": "0 0 0 1px oklch(37.2% 0.044 257.287 / 0.8)", "purpose": "The edge that survives a dark host page when the shadow disappears." }
+      { "name": "laminate-thickness", "value": "inset 0 1px 0 rgba(255,255,255,0.75), inset 0 0 0 1px rgba(19,30,53,0.09), 0 1px 2px rgba(32,13,22,0.4), 0 18px 44px -14px rgba(15,5,10,0.7)", "purpose": "A laminated card's own thickness: bright top edge, hairline border, contact shadow, one deep cast in the cover's colour." },
+      { "name": "cover-object", "value": "inset 0 1px 0 rgba(255,255,255,0.1), inset 0 0 0 1px rgba(0,0,0,0.42), 0 40px 90px -20px rgba(0,0,0,0.9)", "purpose": "The closed booklet as an object on a desk." },
+      { "name": "page-block", "value": "1px 0 3px rgba(0,0,0,0.55)", "purpose": "The stack of pages along the cover's right edge, so the booklet has a thickness you can count." },
+      { "name": "field-focus", "value": "0 1px 0 0 var(--color-iris-600)", "purpose": "Doubles the field's baseline rule on focus. The only place iris appears as a line rather than as print." },
+      { "name": "prose-focus", "value": "inset 0 0 0 1px var(--color-iris-600)", "purpose": "The prose field's focus, inset so the box does not grow." },
+      { "name": "widget-pill", "value": "0 6px 20px -4px rgba(15,23,42,0.5)", "purpose": "Enough lift to read as an object, small enough to be ignorable. Tinted, never black." },
+      { "name": "widget-panel", "value": "0 16px 48px -12px rgba(15,23,42,0.6)", "purpose": "The open panel's deeper cast. Always paired with a 1px slate-700/80 ring so separation survives a dark host page." }
     ],
     "motion": [
-      { "name": "enter", "value": "260ms cubic-bezier(0.16, 1, 0.3, 1) both", "purpose": "The one authored moment: the panel arriving. Keyframe has a from-block only and runs with `both`, so a client that never animates still shows a correctly placed panel." },
-      { "name": "pulse", "value": "1.4s ease-in-out infinite", "purpose": "The drafting dot, for the ~10s wait." },
-      { "name": "state", "value": "colors 150ms", "purpose": "Hover and focus transitions on every interactive element." },
-      { "name": "reduced", "value": "animation: none", "purpose": "Both animations are cancelled under prefers-reduced-motion: reduce." }
+      { "name": "turn", "value": "620ms cubic-bezier(0.62, 0.02, 0.34, 1)", "purpose": "The cover turning: perspective(1800px) rotateY(-96deg) about the left edge. The one large authored motion." },
+      { "name": "page-in", "value": "300ms cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "A folio arriving: 2.6deg about the left edge plus a 6px slide. The short version of the cover's turn, so the surface has one motion idea." },
+      { "name": "print", "value": "300ms cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "Ink drying into the laminate: opacity, a 2px rise, a 1.4% scale and a 1.4px blur resolving." },
+      { "name": "press", "value": "240ms cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "The stamp landing: 1.5x collapsing to 1 at its own seeded angle. Never elastic - ink meeting paper decelerates hard." },
+      { "name": "draw", "value": "900ms cubic-bezier(0.33, 0, 0.2, 1), staggered 70ms per pass", "purpose": "The guilloche's stroke-dashoffset resolving. Used once, by the issuance sequence." },
+      { "name": "state", "value": "140ms ease", "purpose": "Every border, background and colour transition on a control or a field." },
+      { "name": "issuance-timeline", "value": "print 90ms, legends 1050ms, values 1560ms, zone 3260ms, note 4620ms, stamped 5460ms", "purpose": "The issuance sequence, cumulative. Tuned against the real thing being watched, not to a grid." }
     ],
-    "masks": [
-      { "name": "edge-fade", "value": "linear-gradient(to bottom, #000 calc(100% - 12px), rgba(0,0,0,0.4) 100%)", "purpose": "Signals that the ledger continues. Applied only when measured overflow exists, and ramping to 0.4 alpha rather than transparent because a full fade sliced horizontally through the glyphs of a clipped row." }
-    ],
-    "layout": [
-      { "name": "anchor", "value": "position: fixed; right: 16px; bottom: 16px; z-index: 2147480000", "purpose": "High, deliberately not the 32-bit ceiling: a page's own modal deserves to win sometimes." },
-      { "name": "panel-box", "value": "w-[min(380px,calc(100vw-2rem))] max-h-[min(70vh,560px)]", "purpose": "Narrow enough to sit beside a form, capped so it never becomes the page." }
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "lg", "value": "1024px" },
+      { "name": "shell", "value": "1240px" },
+      { "name": "rail", "value": "236px" }
     ]
   },
   "components": [
     {
-      "name": "Pill",
-      "kind": "custom",
-      "refersTo": "pill",
-      "description": "The entire first viewport. A count and nothing else; it never opens itself.",
-      "html": "<button class=\"ds-pill\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M3.5 2.5h6l3 3v8h-9z\"/><path d=\"M9.5 2.5v3h3\"/><path d=\"M5.5 8.5h5\"/><path d=\"M5.5 11h3\"/></svg>3 from your file</button>",
-      "css": ".ds-pill { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; border-radius: 9999px; background: oklch(20.8% 0.042 265.755); padding: 8px 14px 8px 10px; font-size: 13px; font-weight: 500; color: oklch(96.8% 0.007 247.896); box-shadow: 0 6px 20px -4px rgba(15,23,42,0.5), 0 0 0 1px oklch(37.2% 0.044 257.287 / 0.8); transition: background-color 150ms; cursor: pointer; border: 0; } .ds-pill svg { color: oklch(70.4% 0.04 256.788); } .ds-pill:hover { background: oklch(27.9% 0.041 260.031); } .ds-pill:focus-visible { outline: none; box-shadow: 0 6px 20px -4px rgba(15,23,42,0.5), 0 0 0 2px oklch(20.8% 0.042 265.755), 0 0 0 4px oklch(74.6% 0.16 232.661); }"
+      "name": "Ruled Field",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "The atom of the document: a dual-language legend, a Martian Mono value, and a hairline rule instead of a box.",
+      "html": "<div class=\"ds-field-cell\"><label class=\"ds-field-label\" for=\"ds-f1\"><span class=\"ds-legend\">Ciudad</span><span class=\"ds-legend ds-legend-secondary\">City</span></label><input id=\"ds-f1\" class=\"ds-field\" value=\"Barcelona\" spellcheck=\"false\" autocomplete=\"off\" /><span class=\"ds-legend ds-legend-secondary ds-field-help\">Donde vives ahora. / Where you live now.</span></div>",
+      "css": ".ds-field-cell { min-width: 0; background: #eef1ea; padding: 18px 20px; border-radius: 10px; } .ds-field-label { display: block; } .ds-legend { display: block; font-family: \"Archivo\", ui-sans-serif, system-ui, sans-serif; font-size: 8.5px; font-weight: 600; font-stretch: 78%; letter-spacing: 0.13em; line-height: 1.35; text-transform: uppercase; color: #4e5f82; } .ds-legend-secondary { font-weight: 400; opacity: 0.86; } .ds-field { width: 100%; margin-top: 4px; background: transparent; border: 0; border-bottom: 1px solid #aeb8a9; padding: 3px 1px 5px; font-family: \"Martian Mono\", ui-monospace, Menlo, monospace; font-stretch: 82%; font-size: 14px; letter-spacing: 0.01em; text-transform: uppercase; color: #131e35; transition: border-color 140ms ease, box-shadow 140ms ease; } .ds-field:hover:not(:focus) { border-color: #6d7d9e; } .ds-field:focus { outline: none; border-color: #2f7381; box-shadow: 0 1px 0 0 #2f7381; } .ds-field-help { margin-top: 6px; max-width: 46ch; text-transform: none; letter-spacing: 0.02em; line-height: 1.6; }"
     },
     {
-      "name": "Quoted value",
-      "kind": "custom",
-      "refersTo": "quoted",
-      "description": "Your own words on the one light surface inside the dark chrome. Leads every readable fact row.",
-      "html": "<p class=\"ds-quoted\">Martin Zulueta Perez</p>",
-      "css": ".ds-quoted { border-radius: 4px; border-left: 1px solid oklch(86.9% 0.022 252.894); background: oklch(98.4% 0.003 247.858); padding: 4px 8px; font-size: 14px; line-height: 1.375; color: oklch(20.8% 0.042 265.755); margin: 0; }"
+      "name": "Endorsed Field",
+      "kind": "input",
+      "refersTo": "field-endorsed",
+      "description": "A value that is never transmitted. A dashed archival-violet rule and a printed condition - never a grey pill, and never the vermilion.",
+      "html": "<div class=\"ds-field-cell\"><label class=\"ds-field-label\" for=\"ds-f2\"><span class=\"ds-legend\">NIF</span><span class=\"ds-legend ds-legend-secondary\">Tax ID</span></label><input id=\"ds-f2\" class=\"ds-field ds-field-endorsed\" value=\"12345678Z\" spellcheck=\"false\" autocomplete=\"off\" /><div class=\"ds-endorse-row\"><span class=\"ds-legend ds-legend-secondary ds-field-help\">Se rellena en local. / Filled locally.</span><span class=\"ds-legend ds-endorse-note\">No se transmite</span></div></div>",
+      "css": ".ds-field-cell { min-width: 0; background: #eef1ea; padding: 18px 20px; border-radius: 10px; } .ds-field-label { display: block; } .ds-legend { display: block; font-family: \"Archivo\", ui-sans-serif, system-ui, sans-serif; font-size: 8.5px; font-weight: 600; font-stretch: 78%; letter-spacing: 0.13em; line-height: 1.35; text-transform: uppercase; color: #4e5f82; } .ds-legend-secondary { font-weight: 400; opacity: 0.86; } .ds-field { width: 100%; margin-top: 4px; background: transparent; border: 0; border-bottom: 1px solid #aeb8a9; padding: 3px 1px 5px; font-family: \"Martian Mono\", ui-monospace, Menlo, monospace; font-stretch: 82%; font-size: 14px; letter-spacing: 0.01em; text-transform: uppercase; color: #131e35; transition: border-color 140ms ease, box-shadow 140ms ease; } .ds-field-endorsed { border-bottom-style: dashed; border-bottom-color: color-mix(in oklab, #6a3d85 58%, transparent); } .ds-field-endorsed:focus { outline: none; border-color: #6a3d85; box-shadow: 0 1px 0 0 #6a3d85; } .ds-endorse-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-top: 6px; } .ds-field-help { max-width: 40ch; text-transform: none; letter-spacing: 0.02em; line-height: 1.6; } .ds-endorse-note { flex: none; white-space: nowrap; color: #6a3d85; }"
     },
     {
-      "name": "Primary action",
+      "name": "Primary Action",
       "kind": "button",
       "refersTo": "action-primary",
-      "description": "Fill or Insert. Light-on-dark, so the write action is the brightest thing in its row.",
-      "html": "<button class=\"ds-action\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M2 8h7\"/><path d=\"M6.5 5.5 9 8l-2.5 2.5\"/><path d=\"M11.5 3.5h2.5v9h-2.5\"/></svg>Fill</button>",
-      "css": ".ds-action { display: inline-flex; flex-shrink: 0; align-items: center; gap: 6px; border-radius: 4px; border: 0; padding: 4px 10px; font-size: 12px; font-weight: 500; background: oklch(96.8% 0.007 247.896); color: oklch(20.8% 0.042 265.755); transition: background-color 150ms; cursor: pointer; } .ds-action:hover { background: #fff; } .ds-action:disabled { background: oklch(37.2% 0.044 257.287); color: oklch(55.4% 0.046 257.417); cursor: not-allowed; } .ds-action:focus-visible { outline: none; box-shadow: 0 0 0 2px oklch(20.8% 0.042 265.755), 0 0 0 4px oklch(74.6% 0.16 232.661); }"
+      "description": "Intaglio ink on the laminate - the darkest thing on the page, which is what makes it read as the action.",
+      "html": "<span class=\"ds-action-strip\"><button class=\"ds-action ds-action-primary\">Inscribir esta página</button><button class=\"ds-action ds-action-quiet\">Deshacer</button><button class=\"ds-action ds-action-primary\" disabled>Inscribir esta página</button></span>",
+      "css": ".ds-action-strip { display: inline-flex; align-items: center; gap: 12px; background: #eef1ea; padding: 16px; border-radius: 10px; } .ds-action { font-family: \"Archivo\", ui-sans-serif, system-ui, sans-serif; font-size: 11px; font-weight: 600; font-stretch: 88%; letter-spacing: 0.1em; text-transform: uppercase; border: 0; border-radius: 2px; padding: 7px 14px; cursor: pointer; transition: background-color 140ms ease, color 140ms ease; } .ds-action-primary { background: #131e35; color: #eef1ea; } .ds-action-primary:hover:not(:disabled) { background: #26375a; } .ds-action-primary:disabled { background: #ccd4c8; color: #26375a; cursor: not-allowed; } .ds-action-quiet { background: transparent; color: #26375a; } .ds-action-quiet:hover:not(:disabled) { background: #ccd4c8; } .ds-action:focus-visible { outline: 2px solid #2f7381; outline-offset: 2px; }"
     },
     {
-      "name": "Quiet action",
+      "name": "Foil Action",
       "kind": "button",
-      "refersTo": "action-quiet",
-      "description": "Draft it, Redraft, Undo. Present but not competing with the write action.",
-      "html": "<button class=\"ds-action-quiet\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M11.5 2.5 13.5 4.5 6 12H4v-2z\"/><path d=\"M10 4l2 2\"/><path d=\"M3 14h10\"/></svg>Draft it</button>",
-      "css": ".ds-action-quiet { display: inline-flex; flex-shrink: 0; align-items: center; gap: 6px; border-radius: 4px; border: 0; background: none; padding: 4px 10px; font-size: 12px; font-weight: 500; color: oklch(86.9% 0.022 252.894); transition: color 150ms, background-color 150ms; cursor: pointer; } .ds-action-quiet:hover { color: #fff; background: oklch(37.2% 0.044 257.287 / 0.6); } .ds-action-quiet:disabled { color: oklch(44.6% 0.043 257.281); cursor: not-allowed; } .ds-action-quiet:focus-visible { outline: none; box-shadow: 0 0 0 2px oklch(20.8% 0.042 265.755), 0 0 0 4px oklch(74.6% 0.16 232.661); }"
+      "refersTo": "action-foil",
+      "description": "The cover's only control. Gold on burgundy, and gold never touches the laminate.",
+      "html": "<span class=\"ds-cover-strip\"><button class=\"ds-action ds-action-foil\">Abrir el documento</button></span>",
+      "css": ".ds-cover-strip { display: inline-block; background: #200d16; padding: 26px 32px; border-radius: 10px; } .ds-action { font-family: \"Archivo\", ui-sans-serif, system-ui, sans-serif; font-size: 11px; font-weight: 600; font-stretch: 88%; text-transform: uppercase; border-radius: 2px; cursor: pointer; transition: background-color 140ms ease, border-color 140ms ease; } .ds-action-foil { background: transparent; color: #e6cd7a; border: 1px solid color-mix(in oklab, #c9a227 52%, transparent); padding: 11px 26px; letter-spacing: 0.22em; } .ds-action-foil:hover { background: color-mix(in oklab, #c9a227 13%, transparent); border-color: #c9a227; } .ds-action-foil:focus-visible { outline: 2px solid #74a9b4; outline-offset: 2px; }"
     },
     {
-      "name": "Caution",
+      "name": "Stamp",
+      "kind": "custom",
+      "refersTo": "stamp",
+      "description": "Replaces the word 'saved'. Off-square, unevenly inked, dated from the file, and it stays on the page. The angle and ink are seeded from the record's key, so it never moves.",
+      "html": "<span class=\"ds-stamp-ground\"><span class=\"ds-stamp\" style=\"--stamp-angle:-3.40deg\"><span class=\"ds-stamp-title\">Inscrito</span><span class=\"ds-stamp-date\">14 AUG 2026</span></span><span class=\"ds-stamp ds-stamp-green\" style=\"--stamp-angle:4.10deg\"><span class=\"ds-stamp-title\">Recorded</span><span class=\"ds-stamp-date\">02 AUG 2026</span></span><span class=\"ds-stamp ds-stamp-endorse\" style=\"--stamp-angle:-5.20deg\"><span class=\"ds-stamp-title\">Incompleto</span></span></span>",
+      "css": ".ds-stamp-ground { display: inline-flex; align-items: center; gap: 22px; background: #eef1ea; padding: 22px 26px; border-radius: 10px; } .ds-stamp { --stamp-ink: #2c5c8a; position: relative; display: inline-flex; flex-direction: column; align-items: center; gap: 1px; padding: 6px 12px 5px; border: 1.5px solid var(--stamp-ink); border-radius: 2px; color: var(--stamp-ink); transform: rotate(var(--stamp-angle, -3deg)); opacity: 0.88; -webkit-mask-image: radial-gradient(118% 132% at 22% 8%, rgba(0,0,0,1) 52%, rgba(0,0,0,0.62) 78%, rgba(0,0,0,0.86) 100%), repeating-linear-gradient(41deg, rgba(0,0,0,1) 0 2px, rgba(0,0,0,0.78) 2px 3px); -webkit-mask-composite: source-in; mask-image: radial-gradient(118% 132% at 22% 8%, rgba(0,0,0,1) 52%, rgba(0,0,0,0.62) 78%, rgba(0,0,0,0.86) 100%), repeating-linear-gradient(41deg, rgba(0,0,0,1) 0 2px, rgba(0,0,0,0.78) 2px 3px); mask-composite: intersect; } .ds-stamp-green { --stamp-ink: #1d6a49; } .ds-stamp-endorse { --stamp-ink: #a52f1c; } .ds-stamp-title { font-family: \"Archivo\", ui-sans-serif, system-ui, sans-serif; font-size: 10px; font-weight: 700; font-stretch: 88%; letter-spacing: 0.16em; text-transform: uppercase; white-space: nowrap; } .ds-stamp-date { font-family: \"Martian Mono\", ui-monospace, Menlo, monospace; font-stretch: 78%; font-size: 9px; letter-spacing: 0.06em; }"
+    },
+    {
+      "name": "Endorsement Box",
       "kind": "chip",
-      "refersTo": "caution",
-      "description": "The guard against overwriting. Quotes the value already in the field, which is what the banner structurally cannot do and what the decision actually needs.",
-      "html": "<span class=\"ds-caution\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M8 2.5v2M8 11.5v2M2.5 8h2M11.5 8h2\"/><circle cx=\"8\" cy=\"8\" r=\"2.5\"/></svg><span>This field already holds</span><span class=\"ds-caution-quote\">Barcelona</span></span>",
-      "css": ".ds-caution { display: inline-flex; max-width: 100%; flex-wrap: wrap; align-items: center; gap: 2px 6px; border-radius: 4px; border: 1px solid oklch(75% 0.183 55.934 / 0.5); background: oklch(26.6% 0.079 36.259 / 0.6); padding: 4px 8px; font-size: 12px; font-weight: 500; line-height: 1.375; color: oklch(95.4% 0.038 75.164); } .ds-caution svg { flex-shrink: 0; } .ds-caution-quote { font-family: ui-monospace, SFMono-Regular, \"SF Mono\", Menlo, monospace; border-radius: 4px; background: oklch(75% 0.183 55.934 / 0.15); padding: 0 4px; font-size: 11px; color: oklch(98% 0.016 73.684); }"
+      "refersTo": "endorse-box",
+      "description": "The native checkbox drawn in the document's own language: an empty box that takes a vermilion fill and a two-border tick. The input stays in the DOM and keeps every native behaviour.",
+      "html": "<span class=\"ds-endorse-ground\"><label class=\"ds-endorse-label\"><input type=\"checkbox\" class=\"ds-endorse-check\" checked /><span class=\"ds-endorse-box\" aria-hidden=\"true\"></span><span class=\"ds-legend ds-endorse-copy\">No aparecer nunca en <span class=\"ds-verbatim\">jobs.example.com</span><span style=\"display:block\">Never appear on this site</span></span></label></span>",
+      "css": ".ds-endorse-ground { display: inline-block; background: #eef1ea; padding: 16px 20px; border-radius: 10px; } .ds-endorse-label { display: flex; align-items: flex-start; gap: 8px; cursor: pointer; } .ds-endorse-check { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; } .ds-endorse-box { position: relative; flex: none; width: 14px; height: 14px; margin-top: 2px; border: 1px solid #6d7d9e; border-radius: 1px; transition: background-color 140ms ease, border-color 140ms ease; } .ds-endorse-check:checked + .ds-endorse-box { background: #a52f1c; border-color: #a52f1c; } .ds-endorse-check:checked + .ds-endorse-box::after { content: \"\"; position: absolute; left: 3px; top: 3.5px; width: 7px; height: 3.5px; border-left: 1.5px solid #eef1ea; border-bottom: 1.5px solid #eef1ea; transform: rotate(-45deg); } .ds-endorse-check:focus-visible + .ds-endorse-box { outline: 2px solid #2f7381; outline-offset: 2px; } .ds-endorse-label:hover .ds-endorse-box { border-color: #26375a; } .ds-legend { font-family: \"Archivo\", ui-sans-serif, system-ui, sans-serif; font-size: 8.5px; font-weight: 600; font-stretch: 78%; letter-spacing: 0.13em; line-height: 1.35; text-transform: uppercase; color: #4e5f82; } .ds-endorse-copy { font-weight: 400; opacity: 0.86; text-transform: none; letter-spacing: 0.02em; line-height: 1.45; } .ds-verbatim { font-family: \"Martian Mono\", ui-monospace, Menlo, monospace; font-size: 10px; font-stretch: 82%; color: #131e35; }"
     },
     {
-      "name": "Degradation banner",
+      "name": "Laminate Page",
+      "kind": "card",
+      "refersTo": "page",
+      "description": "The one light plane. Four shadow layers describing a laminated card's own thickness, a fixed raking sheen, and a hairline inner border. Redeclares the focus ink to iris-600 on itself.",
+      "html": "<article class=\"ds-page\"><p class=\"ds-legend ds-page-folio\">Folio 01</p><h2 class=\"ds-page-title\">Identidad</h2><p class=\"ds-page-sub\">Identity</p><p class=\"ds-note\">Lo que un formulario pregunta primero. Nada es obligatorio.</p><div class=\"ds-rule\"></div><p class=\"ds-prose\">Escribo aquí con mis propias palabras, y esta es la única cara de la superficie que dice que está hablando una persona.</p></article>",
+      "css": ".ds-page { --focus-ink: #2f7381; position: relative; overflow: hidden; background-color: #eef1ea; border-radius: 10px; color: #131e35; padding: 40px 28px 32px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.75), inset 0 0 0 1px rgba(19,30,53,0.09), 0 1px 2px rgba(32,13,22,0.4), 0 18px 44px -14px rgba(15,5,10,0.7); } .ds-page::after { content: \"\"; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; background: linear-gradient(104deg, transparent 26%, rgba(255,255,255,0.42) 42%, rgba(255,255,255,0.1) 50%, transparent 58%); mix-blend-mode: soft-light; } .ds-legend { font-family: \"Archivo\", ui-sans-serif, system-ui, sans-serif; font-size: 8.5px; font-weight: 400; font-stretch: 78%; letter-spacing: 0.13em; text-transform: uppercase; color: #4e5f82; opacity: 0.86; } .ds-page-folio { position: absolute; top: 20px; right: 28px; font-variant-numeric: tabular-nums; } .ds-page-title { margin: 0; font-family: \"Archivo\", ui-sans-serif, system-ui, sans-serif; font-size: clamp(21px, 3.1vw, 29px); font-weight: 700; font-stretch: 104%; letter-spacing: 0.005em; line-height: 1; } .ds-page-sub { margin: 4px 0 0; font-family: \"Archivo\", ui-sans-serif, system-ui, sans-serif; font-size: 13px; font-stretch: 96%; color: #4e5f82; } .ds-note { margin: 20px 0 0; max-width: 58ch; font-family: \"Archivo\", ui-sans-serif, system-ui, sans-serif; font-size: 13.5px; line-height: 1.6; color: #26375a; } .ds-rule { height: 1px; margin: 28px 0; background: #ccd4c8; } .ds-prose { margin: 0; max-width: 68ch; font-family: \"Literata\", Georgia, ui-serif, serif; font-optical-sizing: auto; font-size: 15px; line-height: 1.62; color: #131e35; }"
+    },
+    {
+      "name": "Machine-Readable Zone",
       "kind": "custom",
-      "refersTo": "degraded-banner",
-      "description": "Panel-level capability report: the companion server is stopped, so drafting is unavailable and everything else still works.",
-      "html": "<p class=\"ds-banner\">Drafting needs the server running. Everything below still works.</p>",
-      "css": ".ds-banner { display: flex; align-items: center; gap: 8px; border-bottom: 1px solid oklch(76.9% 0.188 70.08 / 0.2); background: oklch(76.9% 0.188 70.08 / 0.1); padding: 8px 16px; font-size: 11px; line-height: 1.25; color: oklch(92.4% 0.12 95.746); margin: 0; }"
+      "refersTo": "mrz-line",
+      "description": "The surface's progress indicator: it reports completeness by being incomplete. Every '<' is a field not yet written, in a lighter ink, in the cell it will occupy once it holds a character.",
+      "html": "<div class=\"ds-mrz-ground\"><p class=\"ds-legend ds-mrz-legend\"><span>Zona de lectura mecánica · Machine-readable zone</span><span>37 × &lt;</span></p><div class=\"ds-mrz-scroll\"><div class=\"ds-mrz\">PMOWNZULUETA&lt;OCHOA&lt;&lt;MARTIN&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</div><div class=\"ds-mrz\">K7X2M4APM6SPA2604123&lt;260814F019A03W01284&lt;&lt;&lt;4 7</div></div></div>",
+      "css": ".ds-mrz-ground { background: #eef1ea; padding: 20px 24px; border-radius: 10px; } .ds-legend { font-family: \"Archivo\", ui-sans-serif, system-ui, sans-serif; font-size: 8.5px; font-weight: 400; font-stretch: 78%; letter-spacing: 0.13em; text-transform: uppercase; color: #4e5f82; opacity: 0.86; } .ds-mrz-legend { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin: 0 0 8px; padding-top: 12px; border-top: 1px dashed #ccd4c8; } .ds-mrz-scroll { max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain; padding-bottom: 2px; -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), rgba(0,0,0,0.15) 100%); mask-image: linear-gradient(to right, #000 calc(100% - 28px), rgba(0,0,0,0.15) 100%); } .ds-mrz { font-family: \"Martian Mono\", ui-monospace, Menlo, monospace; font-stretch: 75%; font-size: 14px; letter-spacing: 0.04em; line-height: 1.55; white-space: pre; color: #131e35; min-width: max-content; }"
     },
     {
-      "name": "Failure line",
+      "name": "Page Rail",
+      "kind": "nav",
+      "refersTo": "rail-item",
+      "description": "The thumb edge. A closed passport shows which of its pages are stamped before you open any of them, so the rail is both the navigation and the only progress indicator. An empty page carries the MRZ's own filler.",
+      "html": "<nav class=\"ds-rail\"><button class=\"ds-rail-item\" aria-current=\"page\"><span class=\"ds-rail-folio\">01</span><span class=\"ds-rail-title\">Identidad</span><span class=\"ds-rail-mark\">•</span></button><button class=\"ds-rail-item\"><span class=\"ds-rail-folio\">02</span><span class=\"ds-rail-title\">Trabajo</span><span class=\"ds-rail-mark\">•</span></button><button class=\"ds-rail-item\"><span class=\"ds-rail-folio\">03</span><span class=\"ds-rail-title\">Idiomas</span><span class=\"ds-rail-mark ds-rail-filler\">&lt;</span></button></nav>",
+      "css": ".ds-rail { display: flex; flex-direction: column; width: 236px; background: #200d16; padding: 8px 0; border-radius: 4px; } .ds-rail-item { position: relative; display: flex; align-items: baseline; gap: 10px; width: 100%; padding: 7px 10px 7px 14px; text-align: left; background: transparent; border: 0; border-left: 2px solid transparent; color: color-mix(in oklab, #ccd4c8 66%, transparent); font-family: \"Archivo\", ui-sans-serif, system-ui, sans-serif; font-size: 8.5px; font-weight: 600; font-stretch: 78%; letter-spacing: 0.13em; text-transform: uppercase; cursor: pointer; transition: background-color 140ms ease, color 140ms ease, border-color 140ms ease; } .ds-rail-item:hover { background: color-mix(in oklab, #471e33 52%, transparent); color: #e3e8de; } .ds-rail-item[aria-current=\"page\"] { background: color-mix(in oklab, #471e33 74%, transparent); border-left-color: #c9a227; color: #eef1ea; } .ds-rail-item:focus-visible { outline: 2px solid #74a9b4; outline-offset: -2px; } .ds-rail-folio { font-family: \"Martian Mono\", ui-monospace, Menlo, monospace; font-stretch: 78%; font-size: 9px; letter-spacing: 0.04em; } .ds-rail-title { flex: 1; letter-spacing: 0.08em; } .ds-rail-mark { font-family: \"Martian Mono\", ui-monospace, Menlo, monospace; font-size: 9px; } .ds-rail-filler { color: #aeb8a9; opacity: 0.7; }"
+    },
+    {
+      "name": "Widget Ledger Row (unmigrated incumbent)",
       "kind": "custom",
-      "refersTo": "failure",
-      "description": "Something was attempted and did not happen. Always names the recovery.",
-      "html": "<p class=\"ds-failure\"><svg width=\"12\" height=\"12\" viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M8 2.5v2M8 11.5v2M2.5 8h2M11.5 8h2\"/><circle cx=\"8\" cy=\"8\" r=\"2.5\"/></svg><span>That field is no longer on the page. Reload and try again.</span></p>",
-      "css": ".ds-failure { display: flex; align-items: flex-start; gap: 6px; margin: 6px 0 0; font-size: 11px; line-height: 1.35; color: oklch(81% 0.117 11.638); } .ds-failure svg { flex-shrink: 0; margin-top: 2px; }"
-    },
-    {
-      "name": "Destination",
-      "kind": "custom",
-      "refersTo": "chip-meta",
-      "description": "Where this row will write. Wraps; never truncates, because a clipped destination hides the thing being confirmed.",
-      "html": "<span class=\"ds-destination\"><svg width=\"12\" height=\"12\" viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M2.5 8h9\"/><path d=\"M8.5 5 11.5 8l-3 3\"/></svg><span>Expectativa salarial bruta anual</span></span>",
-      "css": ".ds-destination { font-family: ui-monospace, SFMono-Regular, \"SF Mono\", Menlo, monospace; display: inline-flex; min-width: 0; align-items: flex-start; gap: 4px; font-size: 10px; line-height: 1.625; letter-spacing: 0.06em; color: oklch(86.9% 0.022 252.894); } .ds-destination svg { flex-shrink: 0; margin-top: 3px; color: oklch(55.4% 0.046 257.417); } .ds-destination > span { min-width: 0; overflow-wrap: break-word; }"
-    },
-    {
-      "name": "Withheld chip",
-      "kind": "chip",
-      "refersTo": "chip-meta",
-      "description": "Marks a value the egress allowlist withholds from every prompt. Filled locally by the deterministic matcher, which makes no model call.",
-      "html": "<span class=\"ds-chip\"><svg width=\"12\" height=\"12\" viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"3.5\" y=\"7\" width=\"9\" height=\"6.5\" rx=\"1\"/><path d=\"M5.5 7V5a2.5 2.5 0 0 1 5 0v2\"/></svg>never sent to Claude</span>",
-      "css": ".ds-chip { display: inline-flex; align-items: center; gap: 4px; border-radius: 4px; background: oklch(37.2% 0.044 257.287 / 0.7); padding: 2px 6px; font-size: 10px; color: oklch(92.9% 0.013 255.508); }"
-    },
-    {
-      "name": "Draft editor",
-      "kind": "input",
-      "refersTo": "draft-editor",
-      "description": "The generated text, on the light surface, editable before it is inserted. Nothing is written to the page or saved to the file without a click.",
-      "html": "<textarea class=\"ds-editor\" rows=\"4\">I led the migration of our investor flow last year.</textarea>",
-      "css": ".ds-editor { width: 100%; resize: vertical; border-radius: 4px; border: 1px solid oklch(86.9% 0.022 252.894); background: oklch(98.4% 0.003 247.858); padding: 8px; font-family: inherit; font-size: 13px; line-height: 1.625; color: oklch(20.8% 0.042 265.755); } .ds-editor:focus-visible { outline: none; border-color: oklch(68.5% 0.169 237.323); box-shadow: 0 0 0 2px oklch(20.8% 0.042 265.755), 0 0 0 4px oklch(74.6% 0.16 232.661); }"
-    },
-    {
-      "name": "Instruction field",
-      "kind": "input",
-      "refersTo": "instruction-field",
-      "description": "The note that steers a redraft. Dark and recessed, so it is never mistaken for the text that will be submitted.",
-      "html": "<input class=\"ds-instruction\" placeholder=\"Tell it what to change\" />",
-      "css": ".ds-instruction { width: 100%; border-radius: 4px; border: 1px solid oklch(37.2% 0.044 257.287); background: oklch(27.9% 0.041 260.031 / 0.6); padding: 4px 8px; font-family: ui-monospace, SFMono-Regular, \"SF Mono\", Menlo, monospace; font-size: 11px; color: oklch(92.9% 0.013 255.508); } .ds-instruction::placeholder { color: oklch(70.4% 0.04 256.788); } .ds-instruction:focus-visible { outline: none; border-color: oklch(68.5% 0.169 237.323); box-shadow: 0 0 0 2px oklch(20.8% 0.042 265.755), 0 0 0 4px oklch(74.6% 0.16 232.661); }"
-    },
-    {
-      "name": "Applied state",
-      "kind": "custom",
-      "refersTo": "panel",
-      "description": "Replaces the action once a row has been written into the page. Emerald is only ever retrospective.",
-      "html": "<span class=\"ds-applied\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M3 8.5 6.5 12 13 4.5\"/></svg>Filled</span>",
-      "css": ".ds-applied { display: inline-flex; flex-shrink: 0; align-items: center; gap: 4px; padding: 4px 4px 0; font-size: 12px; color: oklch(84.5% 0.143 164.978); }"
+      "refersTo": "widget-quoted",
+      "description": "The in-page widget's source-first row: your value leads on the one light surface, its provenance follows, and the host form's field name is demoted to a destination. Still on the retired slate palette.",
+      "html": "<div class=\"ds-w-panel\"><div class=\"ds-w-row\"><div class=\"ds-w-content\"><div class=\"ds-w-quoted\">Barcelona</div><div class=\"ds-w-meta\"><span class=\"ds-w-mono\">from personal.city</span><span class=\"ds-w-mono\">→ Ciudad de residencia</span></div></div><button class=\"ds-w-action\">Fill</button></div></div>",
+      "css": ".ds-w-panel { width: 340px; background: oklch(20.8% 0.042 265.755); border-radius: 8px; box-shadow: 0 16px 48px -12px rgba(15,23,42,0.6), 0 0 0 1px color-mix(in oklab, oklch(37.2% 0.044 257.287) 80%, transparent); font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; } .ds-w-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 12px 16px; } .ds-w-content { min-width: 0; flex: 1; } .ds-w-quoted { background: oklch(98.4% 0.003 247.858); color: oklch(20.8% 0.042 265.755); border-left: 1px solid oklch(86.9% 0.022 252.894); border-radius: 4px; padding: 4px 8px; font-size: 14px; line-height: 1.375; } .ds-w-meta { display: flex; flex-wrap: wrap; gap: 4px 8px; margin-top: 6px; } .ds-w-mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; letter-spacing: 0.06em; color: oklch(70.4% 0.04 256.788); overflow-wrap: break-word; } .ds-w-action { flex: none; background: oklch(96.8% 0.007 247.896); color: oklch(20.8% 0.042 265.755); border: 0; border-radius: 4px; padding: 4px 10px; font-size: 12px; font-weight: 500; cursor: pointer; transition: background-color 150ms ease; } .ds-w-action:hover { background: #ffffff; } .ds-w-action:focus-visible { outline: 2px solid oklch(74.6% 0.16 232.661); outline-offset: 2px; }"
     }
   ],
   "narrative": {
-    "northStar": "Your File, Projected",
-    "overview": "This system governs one surface: the in-page widget that appears over third-party forms. Its thesis is written into the code it governs: this panel is your file, projected onto someone else's form. Rows lead with what you wrote and where it came from, naming the host field only as the destination - refusing the field-inventory list every autofill extension ships.\n\nThe visual world is inherited and then inverted. The extension's options page and popup are white cards on a plain ground with Tailwind slate neutrals and one accent per state. The widget takes the same palette and turns it over: dark slate chrome, because the panel does not live on a ground it controls. Inside that chrome, your own words are quoted on the one light surface. The light chips are your file; the dark frame is the tool holding it.\n\nNothing here is decorative. There is one authored animation, the panel arriving. There are ten hand-drawn icons on one 16px grid at one stroke weight. No gradient, no glass, no illustration, no colour that does not carry a state.",
+    "northStar": "The Document You Issue To Yourself",
+    "overview": "This system governs two surfaces, and it is honest about the fact that only one of them has been built in the new world. The document is the options page and the browser-action popup: a machine-readable personal document with a burgundy-black cover, one cold laminate plane holding the user's own words, iris-print guilloche seeded from their own name, and gold foil on the cover. Its thesis refuses the onboarding wizard's progress bar: completeness is the MRZ's own '<' filler, and every field states its condition of access rather than wearing a grey pill. The story is the whole reason the form fits: nobody issues this to you. The issuing authority in the machine-readable zone is the literal string OWN, there is no country and no nationality anywhere, and the closing sequence is called Expedicion - the issuance. You type, and the document becomes valid.\n\nThe in-page widget is the panel that appears over third-party forms. It is unchanged by this work, still shipping, and its own system is preserved. Its north star is 'Your File, Projected': dark slate chrome, a source-first ledger, four state colours, and your own words on the one light surface. It has not been migrated to the document's palette. That is a real gap, not a pending refinement.\n\nThe two surfaces are not arbitrary neighbours. Six rules were inherited on purpose: the One Light Surface Rule, the Content-Before-Hue Rule, the Measured Fold Rule, the Drawn Icon Rule, the Tinted Shadow Rule, and the Pixel Ramp Rule. The clearest of them is the first: on both surfaces, light means the user's own words, and the code says so in both places. Density is a printed document's, not an app's: micro-caps legends at 8.5px, values at 14px in a narrow mono, one heading per folio, and no card inside a card. Nothing is decorative except the guilloche, and the guilloche says so in its own markup - aria-hidden, because a guilloche carries no information.",
     "keyCharacteristics": [
-      "Source-first reading order: your value, then its provenance, then the destination.",
-      "Dark slate chrome on an uncontrolled ground; light chips for your own words.",
-      "Four states with four meanings, distinguished by content before hue.",
-      "Drawn icons on a single 1.5px stroke grid. No emoji, no glyph font.",
-      "Explicit over ambient: nothing opens, writes, submits, or closes itself."
+      "One cold laminate plane on a burgundy-black ground; light is always the holder's.",
+      "Three faces with three jobs: Archivo says the tool is talking, Martian Mono says a machine reads this, Literata says a person wrote it - and Literata appears nowhere else.",
+      "Completeness is reported by the MRZ's own '<' filler. No bar, no ring, no percentage, anywhere on either surface.",
+      "Every field states its condition of access as a printed endorsement, never a grey pill.",
+      "Two inks, two meanings, and never swapped: vermilion is a limitation on the document; archival violet is a condition of access.",
+      "Ruled hairlines instead of boxes; borders earn their place one at a time.",
+      "Everything derived from the holder's own data is seeded, not random: the same name yields the same rosette, document number and stamp angle, forever."
     ],
     "rules": [
-      { "name": "The Content-Before-Hue Rule", "body": "Two warm states sit in the same panel - the row-level caution and the panel-level degradation banner - and the distinction between them is carried by what they say, not by their colour. Measured against each other their fills were the same colour and their text 18 degrees apart in the same family, so a colour-only distinction was never going to carry it. The fix was to give the caution something the banner structurally cannot have: the value already in the field, quoted. Hue reinforces the split; it is the second signal, not the first.", "section": "colors" },
-      { "name": "The Readable Guard Rule", "body": "The caution is the guard against the failure this whole design was pointed at, so it is never the smallest thing in the panel. It carries a border, a filled ground, a 14px icon and 12px text - up from an earlier 10px form that was the smallest text in the panel wearing a status colour.", "section": "colors" },
-      { "name": "The One Light Surface Rule", "body": "Inside the dark chrome, slate-50 is reserved for text you wrote or are about to send: the quoted value and the draft editor. Nothing structural, nothing chrome, nothing of the host page's gets a light ground. The light is the signal for \"this is yours\".", "section": "colors" },
-      { "name": "The Tinted Shadow Rule", "body": "Shadows use rgba(15,23,42,...) - the panel's own slate-900, not black. A pure-black shadow under a slate panel on a white form reads as a dropped sticker.", "section": "colors" },
-      { "name": "The Pixel Ramp Rule", "body": "Type sizes are declared in px, not in the rem-based scale. The shadow root isolates the cascade but not the root font size, and a panel that shrinks to 9px on a host page with html { font-size: 12px } is illegible through no fault of its own.", "section": "typography" },
-      { "name": "The Monospace Is Data Rule", "body": "Monospace marks provenance, destination and measurement only: source keys, field labels, word counts, the quoted existing value, the masked value, the instruction field. Never a heading, never a value you wrote, never body prose.", "section": "typography" },
-      { "name": "The Title Outranks The Page Rule", "body": "No text sourced from the host page is set at the panel title's weight and size. The unanswered question - the one row kind where a host-page string legitimately leads - sits at 12px slate-200, one step below the title.", "section": "typography" },
-      { "name": "The Nothing Truncates Rule", "body": "Inside a row, text wraps; it does not truncate. At 390px a truncating destination clipped the very thing the user has to read before committing, and worse, the question a long-form answer was about to be inserted into. A second line costs nothing next to confirming the wrong destination.", "section": "layout" },
-      { "name": "The Measured Fold Rule", "body": "The list's bottom mask is applied only when the list actually overflows, measured and re-measured on scroll. The edge fade is a lie on a list that fits, and it dims the last row of every small form for no reason.", "section": "layout" },
-      { "name": "The Winnable Ceiling Rule", "body": "z-index: 2147480000 - high, and deliberately not the 32-bit maximum. A page's own modal deserves to win sometimes, and a fight for the top is unwinnable anyway.", "section": "elevation" },
-      { "name": "The Flat Interior Rule", "body": "Nothing inside the panel casts a shadow. A row is separated from its neighbour by a slate-700/50 divider and nothing else.", "section": "elevation" },
-      { "name": "The Soft Cut Rule", "body": "The overflow mask ramps to rgba(0,0,0,0.4) over 12px, not to fully transparent over 18px. A full fade caught rows clipped near the boundary and greyed their entire visible sliver, slicing horizontally through the glyphs of an already-applied row so that \"done\" read as \"broken\".", "section": "elevation" },
-      { "name": "The Drawn Icon Rule", "body": "Every icon is inline SVG on the 16px grid at 1.5px stroke, inheriting currentColor. No emoji, no icon font, no <img>. Emoji and glyph fonts are both substitutable by the host environment, and a tool whose padlock renders as a tofu box on someone else's page has lost the argument it was making.", "section": "shapes" },
-      { "name": "The No Sparkle Rule", "body": "The drafting icon is a nib, not a sparkle - the sparkle is the category's tell. The panel does not advertise that a model is involved with the genre's stock glyph.", "section": "shapes" },
-      { "name": "The No X Rule", "body": "The header's control is a chevron rotated to point down at the pill it collapses into, not a cross. A bare X reads as \"dismiss this\", and dismissal is the footer's job - which is a different, remembered decision.", "section": "shapes" }
+      { "name": "The One Light Surface Rule", "body": "There is exactly one light plane per surface and it belongs to the holder. On the document that is the laminate; on the widget it is slate-50. Nothing structural, nothing chrome, and nothing belonging to the tool is ever laminate-coloured. The light IS the signal for 'this is yours'. Inherited on purpose from the widget, and the stylesheet says so.", "section": "colors" },
+      { "name": "The Two Inks, Two Meanings Rule", "body": "Vermilion (endorse-600) means exactly one thing: a limitation on the document - the INCOMPLETO endorsement, a refused credential, an over-length answer. Archival violet (stamp-violet) carries a condition of access: a permanent, neutral fact, and specifically not a warning. They were one ink at first, and the collision was a real defect: 'this value never leaves your machine' is the reassuring fact on the page, and it was the only thing coloured like an error.", "section": "colors" },
+      { "name": "The Content-Before-Hue Rule", "body": "Two states in the same family are never distinguished by hue alone. The widget's record is the origin: measured against each other their fills were the same colour and their text 18 degrees apart in the same family, so a colour-only distinction was never going to carry it. The fix was to give the caution something the banner structurally cannot have - the value already in the field, quoted. Hue reinforces the split; it never carries it.", "section": "colors" },
+      { "name": "The Border-Only Ink Rule", "body": "intaglio-400 measures 3.63:1 on the laminate: it clears the 3:1 non-text floor and fails the 4.5:1 text floor, so it is permitted on borders and forbidden on text. The boundary exists because the English half of every bilingual label was set in it - the second line of every field on the surface was its least legible text, on a product whose stated commitment is that it works in both languages.", "section": "colors" },
+      { "name": "The Cold Laminate Rule", "body": "The light plane is #eef1ea and its family: cold, with a green cast. Not cream, not ivory, not warm white. Named in the code as the single most likely way to lose this world.", "section": "colors" },
+      { "name": "The Foil Never Touches The Laminate Rule", "body": "Gold is the cover's material, and it never appears on the light plane. The build's three uses outside the closed cover are all on burgundy: the rail's current-page marker, the issuance entry, and the header wordmark. Gold-on-burgundy everywhere would be the cliche this world is one bad decision away from.", "section": "colors" },
+      { "name": "The Face Names The Author Rule", "body": "You can tell who wrote a string from the face it is set in. Martian Mono means a machine reads it; Literata means a person wrote it; Archivo means the tool is talking. The first build set the tool's own notes in Literata too, which quietly broke the one typographic rule the surface has: if the reading face also carries the tool talking, it marks nothing.", "section": "typography" },
+      { "name": "The Printed Bilingual Label Rule", "body": "Every field label prints Spanish over English, always, in the same ink, separated by weight. The interview has stored every label as an {en, es} pair since long before the redesign, and a data page prints both by construction - which is why the language toggle that used to swap labels is gone. It now sets only which language the holder's own prose is written in.", "section": "typography" },
+      { "name": "The Pixel Ramp Rule", "body": "Type sizes are absolute pixels on both surfaces, never the rem-based scale. On the widget the reason is environmental: the shadow root isolates the cascade but not the root font size, and a panel that shrinks to 9px on a host page with html { font-size: 12px } is illegible through no fault of its own. On the document it keeps micro-caps legends at the one size they were measured at.", "section": "typography" },
+      { "name": "The Case Is Not Cosmetic Rule", "body": "Caps are a display transform and never touch the stored value - but where case carries meaning, the transform is switched off by name. The repository line lost the capitals of the filename the whole product is named after; an email shown back as MARTIN@TAXDOWN.ES when it was typed in lower case makes the user doubt what actually reached the file, and the one thing this surface cannot afford is doubt about what it stored.", "section": "typography" },
+      { "name": "The No Eyebrow Rule", "body": "No micro-caps line is stacked directly above a heading. The folio number sits in the page's top corner where a bound document prints its page number, because a micro-caps line directly over a heading is an eyebrow whatever it contains, and the heading carries itself.", "section": "typography" },
+      { "name": "The Measured Fold Rule", "body": "An edge fade is applied only when the content actually overflows, measured and re-measured on scroll and resize, never applied unconditionally. On the document: a forty-four character line clipped flat at the edge of the page does not read as 'there is more'; it reads as a wrong check digit, on the one element of the surface whose whole claim is that its digits are right. Inherited from the widget's ledger, where an edge fade on content that fits is a lie about the content.", "section": "layout" },
+      { "name": "The Legible Line Rule", "body": "Forty-four characters must fit on one line at every width, sized by container query rather than breakpoint - but with an 11px floor. On a 375px viewport, fitting forty-four characters put the line at 8px, and a machine-readable zone nobody can read is a worse outcome than one you swipe, which is also how you read the real thing.", "section": "layout" },
+      { "name": "The Thumb Edge Rule", "body": "Navigation and progress are the same object. A closed passport shows the stack of its pages and which are stamped before you open any of them, so the rail carries a mark per folio and an MRZ '<' where a page is still empty - one vocabulary for 'nothing here yet'. It replaced two counters that said the same thing while looking like homework.", "section": "layout" },
+      { "name": "The Narrow Rail Rule", "body": "Below the two-column breakpoint the vertical rail was 719px tall on a 375px viewport - fourteen entries to scroll past before reaching a single field, which is the whole surface's first impression spent on a table of contents. It becomes what a closed booklet actually shows edge-on: one scroll-snapped row of folio numbers.", "section": "layout" },
+      { "name": "The Tinted Shadow Rule", "body": "A shadow is cast in the colour of the ground it falls on, never in black. The page's cast is the cover's own burgundy, because a black shadow under a card on burgundy reads as a sticker dropped on it. The widget's is its own slate, for the same stated reason on a white ATS form. Same rule, two grounds.", "section": "elevation" },
+      { "name": "The Flat Interior Rule", "body": "Nothing inside a laminate page casts a shadow, and nothing inside the widget panel does either. Separation is a hairline rule or a tonal fill. The one inset shadow on the surface is the focus state's, and it is 1px.", "section": "elevation" },
+      { "name": "The Material Not Modal Rule", "body": "Depth says 'this is an object made of layers', never 'this floats above the app'. Blind embossing carries no ink at all - only the highlight and shadow a die leaves - and the foil wordmark is a gradient because the material on the object being drawn is literally a metal foil. Gradient lettering is a habit this world earns; it is not licence for gradients elsewhere.", "section": "elevation" },
+      { "name": "The Drawn Icon Rule", "body": "Every mark on either surface is drawn geometry - inline SVG or CSS borders - inheriting currentColor. No emoji, no icon font, no img. The widget's reason is environmental: a host font can substitute a glyph, and a tool whose padlock renders as a tofu box on someone else's page has lost the argument it was making. The document's is material: a document's marks are struck, not typed.", "section": "shapes" },
+      { "name": "The Own Control Rule", "body": "No stock operating-system control survives inside the document. The native checkbox was a rounded blue-grey system square in the middle of a page whose every other border is a hairline rule. The textarea's resize grabber was the one piece of operating-system furniture visible anywhere inside the document, sitting in the corner of the field that holds the most personal thing on the page.", "section": "shapes" },
+      { "name": "The Seeded Not Random Rule", "body": "Anything generated from the holder's data is derived from it deterministically, so the same input yields the same mark forever: the rosette's geometry from the name, the stamp's angle and ink from the record's key, the document number from the transliterated name. A random one would look identical and mean nothing, and a stamp that jittered to a new angle on every render would be decoration pretending to be evidence.", "section": "shapes" },
+      { "name": "The One Spine Rule", "body": "Everything that arrives on the document arrives by turning about the left edge, because that is where the binding is. There is no fade-up, no slide-in from the right, and no scale-from-centre anywhere on the surface. The folio's 2.6-degree turn is the short version of the cover's 96-degree one, so the surface has one motion idea rather than two unrelated ones.", "section": "motion" },
+      { "name": "The Finished State Rule", "body": "Every keyframe runs with 'both' and ends on the resting value, so prefers-reduced-motion cancels the animation and keeps the finished document. Reduced motion yields a complete page, never an invisible one.", "section": "motion" },
+      { "name": "The Nothing Truncates Rule", "body": "Inside a widget row text wraps; it does not truncate. At 390px a truncating destination clipped the very thing the user has to read before committing. The one surviving truncate is the header's domain subtitle, which is chrome, not a commitment.", "section": "layout" }
     ],
     "dos": [
-      "Do lead every row with the user's own content, and put the host page's field name in the destination slot. Depart from this only where there is no readable value to lead with, and say so in a comment.",
-      "Do give each state its own accent and its own content: emerald for written, orange for check this, amber for degraded, rose for failed.",
-      "Do quote the value already in a field when warning about overwriting it. That fact is what the decision needs, and it is what separates the caution from the banner.",
-      "Do name the recovery in every failure message. \"That field is no longer on the page. Reload and try again.\" is the pattern.",
-      "Do let row text wrap. Truncation inside a row hides the thing being confirmed.",
-      "Do declare type sizes in px inside the shadow root.",
-      "Do put every new icon on the 16px / 1.5px stroke grid in icons.tsx and let it inherit currentColor.",
-      "Do pair the 1px slate-700/80 ring with any shadow, so separation survives a dark host page.",
-      "Do define both language strings in the t table in the same edit as the component that uses them."
+      "Do keep exactly one light plane per surface, and keep it for the holder's own words. Laminate on the document, slate-50 in the widget.",
+      "Do state a condition of access as a printed endorsement - a dashed rule and a violet legend - not as a pill, a badge or a grey chip.",
+      "Do use vermilion only for a limitation on the document, and archival violet only for a condition of access. Never swap them; never render a reassurance in the alarm ink.",
+      "Do report completeness with the MRZ's own '<' filler and the rail's marks. A '<' is the system's word for 'nothing here yet', on both the line and the rail.",
+      "Do print both languages on every field label, in the same ink, separated by weight.",
+      "Do set values and codes in Martian Mono caps, the tool's own voice in Archivo, and the holder's prose in Literata - and switch caps off by name (--exact, --verbatim) wherever case carries meaning.",
+      "Do declare type sizes in absolute pixels on both surfaces.",
+      "Do cast every shadow in the colour of the ground it falls on.",
+      "Do measure before applying an edge fade, and re-measure on scroll and resize.",
+      "Do put minmax(0,1fr) on every grid track that can contain the MRZ, single-column layouts included.",
+      "Do seed anything generated from the holder's data, so the same name yields the same rosette, number and stamp angle forever.",
+      "Do draw every mark - inline SVG or CSS borders - inheriting currentColor.",
+      "Do keep every font file bundled and subset to latin + latin-ext.",
+      "Do let a disabled control stay readable enough to say what it will do once it is available (intaglio-700 on laminate-200, 7.78:1)."
     ],
     "donts": [
-      "Don't distinguish two warm states by hue alone. Measure them against each other; if their fills land on the same colour, one of them needs different content.",
-      "Don't put a status colour on text smaller than 11px. The caution's earlier 10px form was a defect.",
-      "Don't add a second light surface inside the chrome. slate-50 means \"this is yours\".",
-      "Don't use slate-500 for text on slate-900: it measures 3.74:1, below the 4.5:1 floor. slate-500 survives only on disabled controls and on the decorative destination arrow.",
-      "Don't introduce emoji or an icon font.",
-      "Don't add an X. The collapse is a chevron; dismissal is a named footer action.",
-      "Don't raise z-index toward the 32-bit ceiling.",
-      "Don't add elevation inside the panel. Dividers and tone, not shadows.",
-      "Don't apply a decorative overlay unconditionally. The edge fade is measured and conditional for a reason.",
-      "Don't add a sparkle, a gradient, or a second animation. There is one authored motion moment and it is the panel arriving."
+      "Don't put intaglio-400 on text. It is 3.63:1 - a border ink only.",
+      "Don't warm the laminate toward cream. It is #eef1ea, cold, green-cast.",
+      "Don't put foil on the laminate. Gold belongs to the burgundy.",
+      "Don't add a progress bar, a ring, a percentage or an 'N of M' counter to either surface. The filler and the rail already report it.",
+      "Don't distinguish two states in the same colour family by hue alone. Give one of them different content.",
+      "Don't leave a stock operating-system control inside the document - no native checkbox square, no resize grabber.",
+      "Don't let the MRZ wrap, and don't let it shrink below 11px to avoid scrolling.",
+      "Don't stack a micro-caps line directly above a heading. That is an eyebrow whatever it contains.",
+      "Don't re-roll a seeded value on render. A stamp that moves is an animation, not a record.",
+      "Don't overshoot on the stamp press, or spring any motion on this surface. Ink meeting paper decelerates hard.",
+      "Don't add a country, a nationality, an ISO 3166 code, or a crest anywhere.",
+      "Don't invent a photograph, a date, or a clause the file does not hold.",
+      "Don't put a status colour on text smaller than 11px (the widget's earlier 10px caution was a defect).",
+      "Don't add a second light surface, an emoji, an icon font, an X-to-close, or a sparkle on either surface.",
+      "Don't apply a decorative overlay unconditionally."
     ]
   }
 }

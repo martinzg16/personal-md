@@ -23,6 +23,31 @@ const base = {
 };
 
 /** The mark: a document with a line lifted out of it. The file, applied. */
+/**
+ * The mark: the initial, set in the display face, on the one orange disc the
+ * panel is allowed.
+ *
+ * Not an SVG. It is the same letterform as the wordmark, so if the display face
+ * ever changes the mark changes with it rather than quietly becoming a second,
+ * older brand. Sized from the disc rather than inherited, because it appears at
+ * two sizes here (the pill and the header) and an em-relative glyph would be a
+ * different mark in each.
+ */
+export const Brand = ({ size = 22 }: { size?: number }) => (
+  <span
+    aria-hidden="true"
+    className="inline-flex shrink-0 items-center justify-center rounded-full bg-brio-500 leading-none text-white"
+    style={{
+      width: size,
+      height: size,
+      fontSize: Math.round(size * 0.58),
+      fontFamily: "var(--font-display)",
+    }}
+  >
+    <span style={{ transform: "translateY(0.03em)" }}>B</span>
+  </span>
+);
+
 export const Mark = ({ className }: IconProps) => (
   <svg {...base} className={className}>
     <path d="M3.5 2.5h6l3 3v8h-9z" />

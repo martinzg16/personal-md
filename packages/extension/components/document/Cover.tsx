@@ -16,6 +16,15 @@
  * composition inside is centred and symmetrical, which is what every cover of
  * this kind has always done and the reason one is recognisable at a glance.
  *
+ * The second build put the booklet in a column beside a 56px headline, and that
+ * was worse in a subtler way: at 27% of the viewport's width, with the largest
+ * lettering on screen belonging to a sentence about the product, the memory test
+ * came back "a landing page with a passport on it" rather than "a passport". The
+ * booklet is now the composition. What explanation a stranger needs is set at the
+ * scale of the slip that comes with a document, underneath it, where it can be
+ * read second - and the one action sits on the cover, which is where the only
+ * action on a closed document is.
+ *
  * There is no country, no crest and no nationality on it. The mark is the
  * holder's own generated rosette, the authority is OWN, and the document code is
  * PM. This borrows a travel document's grammar and is deliberately not one:
@@ -39,31 +48,24 @@ export default function Cover({
   const es = lang === "es";
 
   return (
-    <div className="grid min-h-screen place-items-center px-5 py-10 sm:px-8">
-      <div className="grid w-full max-w-[1000px] items-center gap-8 sm:gap-12 lg:grid-cols-[minmax(0,400px)_minmax(0,470px)] lg:gap-20">
-        {/* ------------------------------------------------------- the booklet */}
+    <div className="grid min-h-screen place-items-center px-5 py-9 sm:px-8">
+      <div className="w-full max-w-[560px]">
         {/*
-          Capped in the axis that overflows. Sized by width alone, the booklet was
-          476px tall on an 812px phone and pushed the headline and the one action
-          below the fold - a first viewport whose only action you have to scroll to
-          find. A 88:125 page is 1.42x as tall as it is wide, so a height budget
-          converts to a width: 28vh wide is 40vh tall, which leaves the headline,
-          the paragraph and the button inside the fold on a small phone.
+          Sized so the whole booklet is in the fold and still dominates it. A
+          88:125 page is 1.42x as tall as it is wide, so the height budget is
+          spent as a width: 52vh wide is 74vh tall, leaving room for the slip
+          beneath without the object ever leaving the first viewport.
         */}
         <div
-          className={`relative mx-auto w-full max-w-[min(400px,28vh)] sm:max-w-[min(400px,42vh)] lg:max-w-[min(400px,55vh)] ${turning ? "pmd-turn" : ""}`}
-          style={{ perspective: "1800px" }}
+          className={`relative mx-auto w-full max-w-[min(430px,52vh)] ${turning ? "pmd-turn" : ""}`}
+          style={{ perspective: "2000px" }}
         >
-          {/* The block of pages, along the right edge. Thin laminate slivers, so
-              the booklet has a thickness you can count rather than a border. */}
+          {/* The block of pages, along the right edge. Thin slivers, mostly in
+              shadow, so the booklet has a thickness you can count. */}
           <div
             className="absolute inset-y-5 -right-[5px] rounded-r-[2px]"
             style={{
               width: "6px",
-              // The pages are in shadow inside a closed cover: a dim, mostly dark
-              // stack with the odd lit edge. At laminate brightness this was a
-              // silver bar down the right of the booklet that read as a rendering
-              // artefact rather than as paper.
               background:
                 "repeating-linear-gradient(90deg, rgba(206,214,201,0.34) 0 1px, rgba(0,0,0,0.5) 1px 2.5px)",
               boxShadow: "1px 0 3px rgba(0,0,0,0.55)",
@@ -80,10 +82,9 @@ export default function Cover({
               background:
                 "radial-gradient(128% 88% at 22% 6%, var(--color-cover-700) 0%, var(--color-cover-850) 52%, var(--color-cover-900) 100%)",
               boxShadow:
-                "inset 0 1px 0 rgba(255,255,255,0.1), inset 0 0 0 1px rgba(0,0,0,0.42), 0 34px 74px -18px rgba(0,0,0,0.85)",
+                "inset 0 1px 0 rgba(255,255,255,0.1), inset 0 0 0 1px rgba(0,0,0,0.42), 0 40px 90px -20px rgba(0,0,0,0.9)",
             }}
           >
-            {/* The grain, at cover scale rather than the body's. */}
             <div
               className="pointer-events-none absolute inset-0 opacity-[0.55]"
               style={{ backgroundImage: "var(--grain)" }}
@@ -91,7 +92,7 @@ export default function Cover({
             />
 
             {/* The spine: a darker band with the crease highlight on its inner
-                edge, which is the only place on the cover that catches light. */}
+                edge, the only place on the cover that catches light. */}
             <div
               className="pointer-events-none absolute inset-y-0 left-0"
               style={{
@@ -102,7 +103,7 @@ export default function Cover({
               aria-hidden="true"
             />
 
-            <div className="relative flex h-full flex-col items-center justify-between px-7 py-9 text-center sm:px-9 sm:py-11">
+            <div className="relative flex h-full flex-col items-center justify-between px-7 py-8 text-center sm:px-9 sm:py-10">
               <div>
                 <p className="pmd-legend pmd-legend--dark">
                   Autoridad&nbsp;· Authority&nbsp;·&nbsp;OWN
@@ -119,7 +120,7 @@ export default function Cover({
                   only the highlight and shadow a die leaves. Foil is kept for the
                   lettering, so the mark and the name are different operations. */}
               <div
-                className="pointer-events-none w-[62%]"
+                className="pointer-events-none w-[64%]"
                 style={{
                   color: "var(--color-cover-600)",
                   opacity: 0.85,
@@ -132,22 +133,29 @@ export default function Cover({
               </div>
 
               <div className="flex flex-col items-center">
+                {/*
+                  Foil, stamped rather than printed. The specular sweep alone read
+                  as airbrushed gold; what makes hot foil look like metal is the
+                  die - so the lettering carries a dark relief hard against its
+                  lower edge and a light one above, and sits in a shallow cast.
+                  Gradient lettering is a habit this world earns: the material on
+                  the object being drawn is literally a metal foil.
+                */}
                 <span
                   className="font-sans"
                   style={{
-                    fontSize: "clamp(19px, 5.6vw, 27px)",
+                    fontSize: "clamp(21px, 6.4vw, 31px)",
                     fontWeight: 700,
                     fontStretch: "116%",
                     letterSpacing: "0.055em",
                     lineHeight: 1,
-                    // Foil is a raking specular, not a wash: several hard stops
-                    // across the lettering, so the metal turns along the line.
                     background:
                       "linear-gradient(101deg, #7d5d0f 0%, #e9d38d 15%, #fff6ce 27%, #c9a227 44%, #8a6a14 58%, #f2e0a6 78%, #ac871c 100%)",
                     WebkitBackgroundClip: "text",
                     WebkitTextFillColor: "transparent",
                     backgroundClip: "text",
-                    filter: "drop-shadow(0 1px 0 rgba(0,0,0,0.55))",
+                    filter:
+                      "drop-shadow(0 1px 0 rgba(0,0,0,0.72)) drop-shadow(0 -0.5px 0 rgba(255,246,206,0.34)) drop-shadow(0 3px 5px rgba(0,0,0,0.5))",
                   }}
                 >
                   PERSONAL.md
@@ -160,7 +168,7 @@ export default function Cover({
                   width="30"
                   height="24"
                   viewBox="0 0 30 24"
-                  className="mt-5"
+                  className="mt-4"
                   style={{ color: "var(--color-foil-500)", opacity: 0.72 }}
                   aria-hidden="true"
                 >
@@ -197,44 +205,19 @@ export default function Cover({
           </div>
         </div>
 
-        {/* --------------------------------------------------------- the pitch */}
-        <div className="text-center lg:text-left">
-          <h1
-            className="mx-auto max-w-[19ch] font-sans lg:mx-0"
-            style={{
-              color: "var(--color-laminate-050)",
-              fontSize: "clamp(28px, 4.6vw, 44px)",
-              fontWeight: 700,
-              fontStretch: "104%",
-              lineHeight: 1.04,
-              letterSpacing: "-0.005em",
-            }}
-          >
-            {es ? (
-              <>
-                Escribe tus respuestas
-                <br />
-                una vez.
-              </>
-            ) : (
-              <>
-                Write your answers
-                <br />
-                once.
-              </>
-            )}
-          </h1>
-
+        {/* The slip. Document scale, not hero scale: it is the note that comes
+            with the thing, and it is read after the thing. */}
+        <div className="mx-auto mt-8 max-w-[46ch] text-center">
           <p
-            className="pmd-note mx-auto mt-5 max-w-[44ch] lg:mx-0"
-            style={{ color: "var(--color-laminate-200)", fontSize: "15px" }}
+            className="pmd-note"
+            style={{ color: "var(--color-laminate-200)", fontSize: "14.5px" }}
           >
             {es
-              ? "A partir de entonces, cuando un formulario pregunte algo que ya has contestado, sale tu respuesta - la tuya, en tus palabras, con su procedencia. El fichero es markdown plano, está en tu disco y lo puedes editar a mano."
-              : "From then on, when a form asks something you have already answered, your answer comes back - yours, in your words, with its provenance. The file is plain markdown, on your own disk, and you can edit it by hand."}
+              ? "Escribe tus datos y tus respuestas una vez. A partir de entonces, cuando un formulario pregunte algo que ya has contestado, sale tu respuesta — la tuya, en tus palabras, con su procedencia. El fichero es markdown plano, está en tu disco y lo puedes editar a mano."
+              : "Write your facts and your answers once. From then on, when a form asks something you have already answered, your answer comes back — yours, in your words, with its provenance. The file is plain markdown, on your own disk, and you can edit it by hand."}
           </p>
 
-          <div className="mt-9 flex flex-col items-center gap-4 lg:items-start">
+          <div className="mt-7 flex flex-col items-center gap-3.5">
             <button className="pmd-action pmd-action--foil" onClick={onOpen}>
               {es ? "Abrir el documento" : "Open the document"}
             </button>

@@ -14,5 +14,6 @@ export default defineConfig({
   root: "test/preview",
   publicDir: "../../public",
   plugins: [react(), tailwindcss()],
-  server: { port: 5601, host: "127.0.0.1" },
+  // 5601 by default; PORT lets a second harness run beside a first one.
+  server: { port: Number(process.env["PORT"] ?? 5601), host: "127.0.0.1" },
 });

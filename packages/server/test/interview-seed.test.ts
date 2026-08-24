@@ -5,6 +5,16 @@
  * This is the test that would have caught the egress mistake. The catalogue asks
  * for a NIF, an email, a phone number and a home address, so it is exactly the
  * input that proves the allowlist holds in practice rather than in a unit test.
+ *
+ * It matters more now than it did. The interview stopped asking for prose and
+ * started collecting declaration atoms - twenty-odd new keys that all have to be
+ * sendable, because a draft assembles from them, while the identity facts beside
+ * them all have to stay off disk. Those two requirements point in opposite
+ * directions and the atoms were added by hand to `SENDABLE_KEYS`, so the thing
+ * worth testing is the whole catalogue at once, driven the way the UI drives it.
+ *
+ * Values for the atoms are generated from the catalogue rather than listed here,
+ * so a future atom is covered by this test the day it is added.
  */
 
 import assert from "node:assert/strict";
@@ -14,18 +24,24 @@ import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
 
 import {
-  INTERVIEW_QUESTIONS,
+  INTERVIEW_DECLARATIONS,
   INTERVIEW_SECTIONS,
+  REGISTER_FACT,
   classifyEgress,
   normaliseQuestion,
+  type InterviewFact,
 } from "@personal-md/core";
 
 import { Store } from "../src/store.ts";
 import { paths } from "../src/paths.ts";
 import { assertSafeToSend } from "../src/egress.ts";
 
-/** Realistic answers, so the assertions are about behaviour not placeholders. */
-const FACT_VALUES: Record<string, string> = {
+/**
+ * Realistic answers for the typed fields, so the assertions are about behaviour
+ * and not placeholders. The withheld ones are deliberately distinctive strings:
+ * every leak assertion below is a substring search for one of them.
+ */
+const TYPED: Record<string, string> = {
   "personal.full_name": "Martin Zulueta",
   "personal.email": "martin@example.com",
   "personal.phone": "+34 600 123 456",
@@ -35,17 +51,33 @@ const FACT_VALUES: Record<string, string> = {
   "work.current_role": "Product Manager",
   "work.current_employer": "TaxDown",
   "work.years_experience": "6",
-  "work.domain": "fintech, tax",
-  "work.notice_period": "15 days",
-  "logistics.salary_expectation": "70.000 EUR",
-  "logistics.availability": "1 month",
-  "logistics.remote_preference": "hybrid, 2 days office",
-  "logistics.work_authorisation": "EU citizen",
-  "languages.spoken": "Spanish native, English C1",
-  "education.highest_level": "Licenciatura",
   "education.field": "Business Administration",
   "education.institution": "Universidad Complutense",
+  "experience.leadership.project": "checkout migration",
+  "experience.leadership.team_size": "6",
+  "experience.impact.metric": "conversion to payment",
+  "experience.impact.from": "22%",
+  "experience.impact.to": "31%",
 };
+
+/** What the UI would store for a field: a marked option, or the typed value. */
+function valueFor(fact: InterviewFact): string {
+  if (fact.input === "choice") return fact.options?.[0]?.label.en ?? "";
+  if (fact.input === "multi") {
+    // Two marked, which is what a real answer looks like and also exercises the
+    // comma-joined form the file has to round-trip.
+    return (fact.options ?? [])
+      .slice(0, Math.min(2, fact.max ?? 2))
+      .map((o) => o.label.en)
+      .join(", ");
+  }
+  return TYPED[fact.key] ?? "";
+}
+
+const everyAtom = (): InterviewFact[] => [
+  ...INTERVIEW_DECLARATIONS.flatMap((d) => d.atoms),
+  REGISTER_FACT,
+];
 
 let store: Store;
 
@@ -60,20 +92,46 @@ before(async () => {
       section.facts.map((fact) => ({
         key: fact.key,
         label: fact.label.en,
-        value: FACT_VALUES[fact.key] ?? "",
+        value: valueFor(fact),
         updatedAt: "",
       })),
     );
   }
 
-  // Then each open question, in English, as the interview does.
-  for (const question of INTERVIEW_QUESTIONS) {
+  // Then each declaration's atoms, one write per page, as the UI does.
+  for (const declaration of INTERVIEW_DECLARATIONS) {
+    if (declaration.atoms.length === 0) continue;
+    await store.upsertFacts(
+      declaration.atoms.map((atom) => ({
+        key: atom.key,
+        label: atom.label.en,
+        value: valueFor(atom),
+        updatedAt: "",
+      })),
+    );
+  }
+
+  await store.upsertFacts([
+    {
+      key: REGISTER_FACT.key,
+      label: REGISTER_FACT.label.en,
+      value: valueFor(REGISTER_FACT),
+      updatedAt: "",
+    },
+  ]);
+
+  /*
+   * Exemplars, the way they actually arrive now: imported prose the person
+   * already wrote, not one typed answer per question. Two of them, under two of
+   * the canonical keys, which is a realistic import and not a full set.
+   */
+  for (const declaration of INTERVIEW_DECLARATIONS.slice(0, 2)) {
     await store.recordAnswer({
-      canonicalKey: question.canonicalKey,
-      question: question.prompt.en,
-      text: `A realistic answer to ${question.canonicalKey} with a concrete figure: 300,000 users.`,
+      canonicalKey: declaration.canonicalKey,
+      question: declaration.prompt.en,
+      text: `Prose this person actually wrote about ${declaration.canonicalKey}, with a concrete figure: 300,000 users.`,
       language: "en",
-      genre: question.genre,
+      genre: declaration.genre,
     });
   }
 });
@@ -83,17 +141,18 @@ after(() => {
 });
 
 describe("a completed interview produces a usable profile", () => {
-  it("stores every fact and every answer", async () => {
+  it("stores every fact, every atom and every exemplar", async () => {
     const { profile } = await store.load();
-    const expectedFacts = INTERVIEW_SECTIONS.flatMap((s) => s.facts).length;
-    assert.equal(profile.facts.length, expectedFacts);
-    assert.equal(profile.answers.length, INTERVIEW_QUESTIONS.length);
+    const expected =
+      INTERVIEW_SECTIONS.flatMap((s) => s.facts).length + everyAtom().length;
+    assert.equal(profile.facts.length, expected);
+    assert.equal(profile.answers.length, 2);
   });
 
   it("keeps every withheld value out of PERSONAL.md", async () => {
     const md = await readFile(paths.profile, "utf8");
     const leaked: string[] = [];
-    for (const [key, value] of Object.entries(FACT_VALUES)) {
+    for (const [key, value] of Object.entries(TYPED)) {
       if (classifyEgress(key) === "never" && value && md.includes(value)) leaked.push(key);
     }
     assert.deepEqual(leaked, [], `these withheld values were written to the file: ${leaked}`);
@@ -105,10 +164,31 @@ describe("a completed interview produces a usable profile", () => {
     assert.ok(!md.includes("Calle Falsa 123"), "home address leaked");
   });
 
+  it("writes every declaration atom, because a draft is assembled from them", async () => {
+    // The inverse of the leak test, and the reason it exists: an atom the guard
+    // withholds never reaches a prompt, so the page that collected it was a waste
+    // of the user's time - and nothing would say so.
+    const { profile } = await store.load();
+    for (const atom of everyAtom()) {
+      const stored = profile.facts.find((f) => f.key === atom.key);
+      assert.ok(stored, `${atom.key} was not stored at all`);
+      assert.equal(
+        stored.egress,
+        "sendable",
+        `${atom.key} was stored as withheld, so drafting cannot use it`,
+      );
+    }
+  });
+
   it("still writes the values that shape drafted prose", async () => {
     const md = await readFile(paths.profile, "utf8");
-    for (const key of ["work.current_role", "work.years_experience", "logistics.salary_expectation"]) {
-      const value = FACT_VALUES[key] as string;
+    for (const key of [
+      "work.current_role",
+      "work.years_experience",
+      "experience.impact.metric",
+      "experience.leadership.project",
+    ]) {
+      const value = TYPED[key] as string;
       assert.ok(md.includes(value), `${key} should be readable in the file`);
     }
   });
@@ -124,8 +204,8 @@ describe("a completed interview produces a usable profile", () => {
   });
 
   it("survives a prompt built from the sendable half of the profile", async () => {
-    // The realistic drafting payload: sendable facts plus the answers, which is
-    // what the guard will actually see. It must not trip on ordinary data.
+    // The realistic drafting payload: sendable facts - which now includes every
+    // atom - plus the exemplars. It must not trip the guard on ordinary data.
     const { profile } = await store.load();
     const sendable = profile.facts.filter((f) => f.egress === "sendable");
     const payload = [
@@ -140,23 +220,27 @@ describe("a completed interview produces a usable profile", () => {
     assert.doesNotThrow(() => assertSafeToSend(payload));
     assert.ok(!payload.includes("12345678Z"));
     assert.ok(!payload.includes("martin@example.com"));
+    // And the material is genuinely in there, or the guard passing means nothing.
+    assert.ok(payload.includes("conversion to payment"));
+    assert.ok(payload.includes("checkout migration"));
   });
 
-  it("makes every seeded question free to recognise, in both languages", async () => {
+  it("makes an imported exemplar free to recognise in both languages", async () => {
     const { profile } = await store.load();
+    const seeded = INTERVIEW_DECLARATIONS.slice(0, 2);
 
-    // English was what the interview submitted, so those aliases exist now.
-    for (const question of INTERVIEW_QUESTIONS) {
+    // English was what the import submitted, so those aliases exist now.
+    for (const declaration of seeded) {
       assert.equal(
-        profile.index.aliases[normaliseQuestion(question.prompt.en)],
-        question.canonicalKey,
-        `${question.canonicalKey} is not recognisable from its English prompt`,
+        profile.index.aliases[normaliseQuestion(declaration.prompt.en)],
+        declaration.canonicalKey,
+        `${declaration.canonicalKey} is not recognisable from its English prompt`,
       );
     }
 
     // The Spanish surface form is learned the first time it is seen, and from
     // then on resolves for free. Simulate meeting it on a form.
-    const first = INTERVIEW_QUESTIONS[0]!;
+    const first = seeded[0]!;
     await store.recordAnswer({
       canonicalKey: first.canonicalKey,
       question: first.prompt.es,
@@ -165,13 +249,13 @@ describe("a completed interview produces a usable profile", () => {
       genre: first.genre,
     });
 
-    const after = await store.load();
+    const later = await store.load();
     assert.equal(
-      after.profile.index.aliases[normaliseQuestion(first.prompt.es)],
+      later.profile.index.aliases[normaliseQuestion(first.prompt.es)],
       first.canonicalKey,
       "the Spanish form should now resolve to the same answer",
     );
-    const answer = after.profile.answers.find((a) => a.canonicalKey === first.canonicalKey);
+    const answer = later.profile.answers.find((a) => a.canonicalKey === first.canonicalKey);
     assert.equal(answer?.askedAs.length, 2, "both surface forms should be remembered");
     assert.ok(answer?.text.includes("300,000"), "an empty submission must not wipe the answer");
   });

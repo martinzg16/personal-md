@@ -1,0 +1,72 @@
+@import "tailwindcss";
+@import "@personal-md/brand/brio.css";
+@import "../../styles/brio-fonts.css";
+
+/*
+ * The app's own sheet, deliberately separate from `style.css`.
+ *
+ * Both surfaces are Tailwind v4 and both declare an `@theme`, and two `@theme`
+ * blocks in one sheet merge rather than scope: whichever is imported last wins
+ * every name they share. `--font-sans` is one of those names — Archivo in the
+ * document world, Instrument Sans here — so importing Brío into `style.css`
+ * silently set the app in the other world's face. Two sheets, one per surface,
+ * is the only version of this that cannot go quietly wrong.
+ *
+ * `style.css` therefore stays exactly as it was, and the document surface it
+ * dresses still builds. See BrioApp.tsx for how to put it back.
+ */
+
+/*
+ * Sources, declared rather than detected. Tailwind v4 infers what to scan from
+ * the stylesheet's own directory, and this one lives four levels down inside one
+ * workspace package — so detection finds nothing and every utility silently does
+ * not exist, which looks like a broken grid rather than like a missing scan.
+ */
+@source "../../components/app";
+@source "../../entrypoints/options";
+/*
+ * The popup rides this sheet too, and it is a sibling directory rather than a
+ * child — so leaving it out silently dropped every class that only the popup
+ * uses. It rendered as an unstyled full-width block, which looks like a broken
+ * component and is actually a missing scan path.
+ */
+@source "../../entrypoints/popup";
+
+@layer base {
+  html,
+  body {
+    height: 100%;
+  }
+
+  body {
+    margin: 0;
+    /*
+      Bone, not white. The whole design rests on the difference between the
+      ground the user's own words sit on (white cards) and the ground the app
+      sits on, and on a true white those two collapse into one plane.
+    */
+    background: var(--color-bone-050);
+    color: var(--color-graphite-900);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /*
+   * One ring for the whole surface.
+   *
+   * Every focusable thing here is either on bone or on ink, and `brio-500`
+   * clears the 3:1 floor for a non-text indicator on both — 3.6:1 on bone-050,
+   * 5.9:1 on ink-900 — so unlike the document world this needs no per-ground
+   * redeclaration. Components add the matching `ring-offset` colour so the ring
+   * does not sit directly on the element it is ringing.
+   */
+  :focus-visible {
+    outline: 2px solid var(--color-brio-500);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background: var(--color-brio-150);
+    color: var(--color-graphite-900);
+  }
+}

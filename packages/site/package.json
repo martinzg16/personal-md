@@ -1,0 +1,30 @@
+{
+  "name": "@personal-md/site",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Brío's landing page. The only surface of this product that talks to someone who does not have it yet.",
+  "scripts": {
+    "sync-fonts": "cp ../brand/fonts/*.woff2 public/fonts/",
+    "predev": "npm run sync-fonts",
+    "prebuild": "npm run sync-fonts",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@personal-md/brand": "*",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^6.1.0",
+    "tailwindcss": "^4.0.0",
+    "typescript": "^5.8.0",
+    "vite": "^8.0.0"
+  }
+}

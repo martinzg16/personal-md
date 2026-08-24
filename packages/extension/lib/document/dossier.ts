@@ -16,9 +16,10 @@
  */
 
 import {
-  INTERVIEW_QUESTIONS,
+  INTERVIEW_DECLARATIONS,
   INTERVIEW_SECTIONS,
   classifyEgress,
+  declarationProgress,
   type Lang,
   type Profile,
 } from "@personal-md/core";
@@ -28,8 +29,18 @@ import { documentNumber } from "./mrz.ts";
 export interface Extent {
   facts: number;
   factsTotal: number;
-  answers: number;
-  answersTotal: number;
+  /**
+   * Declarations whose boxes are all marked.
+   *
+   * This used to count written answers, which is not the same thing any more and
+   * was the wrong thing to count even then: a declaration is complete when its
+   * atoms are held, and the prose gets written later, over the form. Counting
+   * prose made the document look empty while its material was all there.
+   */
+  declarations: number;
+  declarationsTotal: number;
+  /** Prose on file to model a voice on - imported, or a draft that was kept. */
+  exemplars: number;
   words: number;
   bytes: number;
 }
@@ -78,11 +89,44 @@ export function readDossier(
   profile: Profile | null,
   withheldKeys: readonly string[],
   lang: Lang,
+  /**
+   * Values typed but not yet recorded.
+   *
+   * The machine-readable line is the surface's whole argument: you type, and a
+   * `<` becomes a character. Derived from the stored profile alone it did not do
+   * that - you typed your name, the line stayed empty, and the page's central
+   * claim was false until you pressed a button. So the draft is overlaid here.
+   *
+   * The dates are deliberately not: a value that has never been written has no
+   * `updatedAt`, and inventing one would put a date on the document for something
+   * that is not in the file. The page states the difference in words instead -
+   * every folio with unrecorded changes says so under its own button.
+   */
+  draft: Readonly<Record<string, string>> = {},
 ): Dossier {
-  const facts = profile?.facts ?? [];
   const answers = profile?.answers ?? [];
-  const held = new Map(facts.filter((f) => f.value.trim()).map((f) => [f.key, f]));
 
+  const facts = profile?.facts ?? [];
+  const held = new Map(facts.filter((f) => f.value.trim()).map((f) => [f.key, f]));
+  for (const [key, value] of Object.entries(draft)) {
+    if (value.trim()) {
+      held.set(key, {
+        key,
+        label: key,
+        value: value.trim(),
+        egress: "never",
+        updatedAt: "",
+      });
+    } else {
+      // An emptied field is emptied on screen too, or the line would keep
+      // reporting a character the page no longer shows.
+      held.delete(key);
+    }
+  }
+
+  // Section facts only. The declaration atoms have their own per-page readout,
+  // and folding thirty of them into one "outstanding" list would bury the four
+  // identity fields that actually block everything else.
   const interviewKeys = INTERVIEW_SECTIONS.flatMap((s) => s.facts.map((f) => f.key));
   const factsTotal = interviewKeys.length;
   const factsHeld = interviewKeys.filter((key) => held.has(key)).length;
@@ -90,8 +134,13 @@ export function readDossier(
   const answered = answers.filter((a) => a.text.trim());
   const totalWords = answered.reduce((n, a) => n + words(a.text), 0);
 
+  const declarationsHeld = INTERVIEW_DECLARATIONS.filter(
+    (d) => declarationProgress(d, (key) => (held.get(key)?.value ?? "").trim() !== "").complete,
+  ).length;
+
   // The dates the document reports are the extremes of what is actually on
-  // disk, so an untouched file has no dates at all rather than today's.
+  // disk, so an untouched file has no dates at all rather than today's. Drafts
+  // are excluded here on purpose: they have no date, because they are not written.
   const stamps = [
     ...facts.filter((f) => f.value.trim()).map((f) => parseDate(f.updatedAt)),
     ...answered.map((a) => parseDate(a.writtenAt)),
@@ -109,6 +158,10 @@ export function readDossier(
 
   const holder = held.get("personal.full_name")?.value.trim() || null;
 
+  // The restriction list is computed from the keys, not from the stored egress
+  // flag, so a draft value shows its condition of access while it is being typed
+  // - which is the moment the user is deciding whether to type a NIF at all.
+
   return {
     holder,
     number: documentNumber(holder ?? ""),
@@ -120,8 +173,9 @@ export function readDossier(
     extent: {
       facts: factsHeld,
       factsTotal,
-      answers: answered.length,
-      answersTotal: INTERVIEW_QUESTIONS.length,
+      declarations: declarationsHeld,
+      declarationsTotal: INTERVIEW_DECLARATIONS.length,
+      exemplars: answered.length,
       words: totalWords,
       // What the file costs on disk, near enough: the values and the prose. Not
       // the markdown scaffolding, which is not the user's content.
@@ -131,7 +185,16 @@ export function readDossier(
     },
     restricted,
     outstanding,
-    complete: factsHeld === factsTotal && answered.length === INTERVIEW_QUESTIONS.length,
+    /*
+     * Complete means every box is marked and there is at least one voice sample.
+     * The sample is part of it deliberately: a document with every atom and no
+     * exemplar drafts accurately and generically, which is the failure this whole
+     * page set exists to avoid, so it is not "finished".
+     */
+    complete:
+      factsHeld === factsTotal &&
+      declarationsHeld === INTERVIEW_DECLARATIONS.length &&
+      answered.length > 0,
   };
 }
 
@@ -151,31 +214,53 @@ export function scopeNote(profile: Profile | null, dossier: Dossier, lang: Lang)
   const years = value("work.years_experience");
   const domain = value("work.domain");
   const languages = value("languages.spoken");
-  const { answers, words: totalWords } = dossier.extent;
+  const { declarations, words: totalWords, exemplars } = dossier.extent;
 
   const clauses: string[] = [];
+
+  /*
+   * Each clause becomes its own sentence, so each one is capitalised. Joined raw
+   * they read as "...8 anos de experiencia. sector fintech. idiomas: Spanish
+   * native" - a sentence that looks like a bug on the most persuasive line of the
+   * most persuasive page.
+   */
+  const sentence = (parts: string[]): string =>
+    parts
+      .map((c) => c.charAt(0).toLocaleUpperCase(lang === "es" ? "es-ES" : "en-GB") + c.slice(1))
+      .map((c) => `${c}.`)
+      .join(" ");
 
   if (lang === "es") {
     if (role) clauses.push(years ? `${role}, ${years} años de experiencia` : role);
     if (domain) clauses.push(`sector ${domain}`);
     if (languages) clauses.push(`idiomas: ${languages}`);
-    if (answers > 0) {
+    if (declarations > 0) {
       clauses.push(
-        `${answers} ${answers === 1 ? "respuesta" : "respuestas"} redactadas, ${totalWords.toLocaleString("es-ES")} palabras`,
+        `${declarations} ${declarations === 1 ? "declaración" : "declaraciones"} en el fichero`,
+      );
+    }
+    if (exemplars > 0) {
+      clauses.push(
+        `${exemplars} ${exemplars === 1 ? "muestra" : "muestras"} de su forma de escribir, ${totalWords.toLocaleString("es-ES")} palabras`,
       );
     }
     if (clauses.length === 0) return "Documento sin contenido. Nada que describir todavía.";
-    return `${clauses.join(". ")}.`;
+    return sentence(clauses);
   }
 
   if (role) clauses.push(years ? `${role}, ${years} years' experience` : role);
   if (domain) clauses.push(`working in ${domain}`);
   if (languages) clauses.push(`languages: ${languages}`);
-  if (answers > 0) {
+  if (declarations > 0) {
     clauses.push(
-      `${answers} written ${answers === 1 ? "answer" : "answers"}, ${totalWords.toLocaleString("en-GB")} words`,
+      `${declarations} ${declarations === 1 ? "declaration" : "declarations"} on file`,
+    );
+  }
+  if (exemplars > 0) {
+    clauses.push(
+      `${exemplars} writing ${exemplars === 1 ? "sample" : "samples"}, ${totalWords.toLocaleString("en-GB")} words`,
     );
   }
   if (clauses.length === 0) return "Empty document. Nothing to describe yet.";
-  return `${clauses.join(". ")}.`;
+  return sentence(clauses);
 }

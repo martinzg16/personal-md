@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Brío — panel states</title>
+    <style>
+      body {
+        margin: 0;
+        background: #e2e8f0;
+      }
+      /*
+        The real panel is position:fixed bottom-right. The harness lays the
+        states out inline so several can be compared in one screenshot.
+      */
+      /*
+        Beats `.pmd-root { position: fixed }` in the real sheet, which is
+        unlayered, later in the cascade, and the same specificity. One extra
+        element on the left is enough and does not need !important.
+      */
+      body .pmd-preview {
+        position: static;
+        right: auto;
+        bottom: auto;
+        z-index: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="./widget.tsx"></script>
+  </body>
+</html>

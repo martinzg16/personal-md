@@ -27,18 +27,21 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
-  INTERVIEW_QUESTIONS,
+  INTERVIEW_DECLARATIONS,
   INTERVIEW_SECTIONS,
+  REGISTER_FACT,
+  declarationProgress,
   type Lang,
 } from "@personal-md/core";
 
 import Bureau from "../../components/document/Bureau.tsx";
 import Cover from "../../components/document/Cover.tsx";
 import DataPage from "../../components/document/DataPage.tsx";
+import Declaration from "../../components/document/Declaration.tsx";
+import Exemplars from "../../components/document/Exemplars.tsx";
 import Issuance from "../../components/document/Issuance.tsx";
 import Observations from "../../components/document/Observations.tsx";
 import PageRail, { type RailPage } from "../../components/document/PageRail.tsx";
-import VisaPage from "../../components/document/VisaPage.tsx";
 import { readDossier } from "../../lib/document/dossier.ts";
 import { encodeMrz } from "../../lib/document/mrz.ts";
 import { send } from "../../lib/protocol.ts";
@@ -93,9 +96,11 @@ export default function App() {
     [payload],
   );
 
+  // The draft is part of what the document currently says, so it goes in here:
+  // the machine-readable line has to fill as the user types, not when they save.
   const dossier = useMemo(
-    () => readDossier(profile, payload?.mirror?.withheldKeys ?? [], lang),
-    [profile, payload, lang],
+    () => readDossier(profile, payload?.mirror?.withheldKeys ?? [], lang, draft),
+    [profile, payload, lang, draft],
   );
 
   const mrz = useMemo(
@@ -106,7 +111,7 @@ export default function App() {
         firstRecordedAt: dossier.firstRecordedAt,
         revisedAt: dossier.revisedAt,
         facts: dossier.extent.facts,
-        answers: dossier.extent.answers,
+        answers: dossier.extent.declarations,
         words: dossier.extent.words,
       }),
     [dossier],
@@ -116,42 +121,50 @@ export default function App() {
     () => new Map((profile?.facts ?? []).map((f) => [f.key, f])),
     [profile],
   );
-  const answers = useMemo(
-    () => new Map((profile?.answers ?? []).map((a) => [a.canonicalKey, a])),
-    [profile],
-  );
 
-  /** Draft wins over stored, so a half-typed field is not overwritten by a refetch. */
+  /**
+   * Draft wins over stored, so a half-answered page is not overwritten by a
+   * refetch. Sections, declaration atoms and the register all live in one map,
+   * because they are all ordinary facts and the save path is the same for each.
+   */
   const values = useMemo(() => {
     const out: Record<string, string> = {};
-    for (const section of INTERVIEW_SECTIONS) {
-      for (const fact of section.facts) {
-        out[fact.key] = draft[fact.key] ?? stored.get(fact.key)?.value ?? "";
-      }
-    }
+    const put = (key: string) => {
+      out[key] = draft[key] ?? stored.get(key)?.value ?? "";
+    };
+    for (const section of INTERVIEW_SECTIONS) for (const f of section.facts) put(f.key);
+    for (const d of INTERVIEW_DECLARATIONS) for (const a of d.atoms) put(a.key);
+    put(REGISTER_FACT.key);
     return out;
   }, [draft, stored]);
 
-  const saveSection = async (sectionId: string) => {
-    const section = INTERVIEW_SECTIONS.find((s) => s.id === sectionId);
-    if (!section) return;
-    const facts = section.facts
-      .filter((f) => draft[f.key] !== undefined)
-      .map((f) => ({ key: f.key, label: f.label.en, value: (draft[f.key] ?? "").trim() }));
-    if (facts.length === 0) return;
+  /**
+   * Save an arbitrary set of keys. One message, because it is one decision by
+   * the user and it has to be one write on disk - the same rule the confirm-to-
+   * learn batch follows.
+   */
+  const saveKeys = async (id: string, facts: { key: string; label: string }[]) => {
+    const pending = facts.filter((f) => draft[f.key] !== undefined);
+    if (pending.length === 0) return;
 
-    setSavingSection(sectionId);
+    setSavingSection(id);
     setError("");
     try {
-      await send({ kind: "saveFacts", facts });
+      await send({
+        kind: "saveFacts",
+        facts: pending.map((f) => ({
+          key: f.key,
+          label: f.label,
+          value: (draft[f.key] ?? "").trim(),
+        })),
+      });
       setDraft((d) => {
         const next = { ...d };
-        for (const f of facts) delete next[f.key];
+        for (const f of pending) delete next[f.key];
         return next;
       });
       await load();
-      // The press plays once, on the page that was just recorded.
-      setStamped(sectionId);
+      setStamped(id);
     } catch (err) {
       setError(err instanceof Error ? err.message : "could not save");
     } finally {
@@ -159,27 +172,7 @@ export default function App() {
     }
   };
 
-  const saveAnswer = async (index: number, text: string) => {
-    const question = INTERVIEW_QUESTIONS[index];
-    if (!question) return;
-    setError("");
-    try {
-      await send({
-        kind: "saveAnswer",
-        canonicalKey: question.canonicalKey,
-        question: question.prompt[lang],
-        text,
-        language: lang,
-        genre: question.genre,
-      });
-      await load();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "could not save");
-      // Rethrown so the page keeps the text on screen rather than reporting a
-      // stamp that never landed.
-      throw err;
-    }
-  };
+
 
   const openCover = () => {
     setTurning(true);
@@ -205,17 +198,30 @@ export default function App() {
     stamped: section.facts.some((f) => (stored.get(f.key)?.value ?? "").trim() !== ""),
   }));
 
-  const questionPages: RailPage[] = INTERVIEW_QUESTIONS.map((question, i) => ({
-    id: `q-${i}`,
+  const declarationPages: RailPage[] = INTERVIEW_DECLARATIONS.map((declaration, i) => ({
+    id: `d-${i}`,
     folio: folio(INTERVIEW_SECTIONS.length + i),
-    // The rail cannot carry a whole question, so it carries the subject the
-    // canonical key names - which is also what the file calls it.
+    // The rail cannot carry a whole question, so it carries it without its
+    // punctuation - which is also roughly what the file calls it.
     title: {
-      es: question.prompt.es.replace(/[¿?.]/g, "").trim(),
-      en: question.prompt.en.replace(/[?.]/g, "").trim(),
+      es: declaration.prompt.es.replace(/[¿?.]/g, "").trim(),
+      en: declaration.prompt.en.replace(/[?.]/g, "").trim(),
     },
-    stamped: (answers.get(question.canonicalKey)?.text ?? "").trim() !== "",
+    stamped: declarationProgress(
+      declaration,
+      (key) => (stored.get(key)?.value ?? "").trim() !== "",
+    ).complete,
   }));
+
+  const voicePage: RailPage = {
+    id: "voice",
+    folio: folio(INTERVIEW_SECTIONS.length + INTERVIEW_DECLARATIONS.length),
+    title: { es: "Cómo escribes tú", en: "How you write" },
+    // Marked when there is something to model a voice on. The register alone is
+    // not enough to claim this page is done, and saying otherwise would hide the
+    // one gap that makes drafts read generically.
+    stamped: (profile?.answers ?? []).some((a) => a.text.trim()),
+  };
 
   const asidePages: RailPage[] = [
     {
@@ -256,19 +262,27 @@ export default function App() {
       );
       if (section) return `s-${section.id}`;
     }
-    const question = INTERVIEW_QUESTIONS.findIndex(
-      (q) => (answers.get(q.canonicalKey)?.text ?? "").trim() === "",
+    const declaration = INTERVIEW_DECLARATIONS.findIndex(
+      (d) =>
+        !declarationProgress(d, (key) => (stored.get(key)?.value ?? "").trim() !== "").complete,
     );
-    return question === -1 ? null : `q-${question}`;
+    if (declaration !== -1) return `d-${declaration}`;
+    // Everything is declared; what is left is a voice to model drafts on.
+    return (profile?.answers ?? []).some((a) => a.text.trim()) ? null : "voice";
   })();
 
-  const sectionSavedAt = (sectionId: string): Date | null => {
-    const section = INTERVIEW_SECTIONS.find((s) => s.id === sectionId);
-    if (!section) return null;
-    const stamps = section.facts
-      .map((f) => stored.get(f.key))
-      .filter((f) => f && f.value.trim())
-      .map((f) => new Date(f!.updatedAt).getTime())
+  /**
+   * When any of these keys was last written, from the file.
+   *
+   * Generalised from sections to any set of keys, because a declaration's stamp
+   * is the same idea over a different group: the date on the impression has to be
+   * a date the file actually holds, not the moment the page rendered.
+   */
+  const factSavedAt = (keys: readonly string[]): Date | null => {
+    const stamps = keys
+      .map((key) => stored.get(key))
+      .filter((f): f is NonNullable<typeof f> => Boolean(f && f.value.trim()))
+      .map((f) => new Date(f.updatedAt).getTime())
       .filter((t) => !Number.isNaN(t));
     return stamps.length ? new Date(Math.max(...stamps)) : null;
   };
@@ -323,23 +337,56 @@ export default function App() {
       );
     }
 
-    if (page.startsWith("q-")) {
-      const index = Number(page.slice(2));
-      const question = INTERVIEW_QUESTIONS[index];
-      if (!question) return null;
-      const existing = answers.get(question.canonicalKey);
+    if (page === "voice") {
       return (
-        <VisaPage
-          // Keyed so switching pages resets the local text rather than carrying
-          // one question's draft onto the next.
-          key={question.canonicalKey}
-          question={question}
+        <Exemplars
+          answers={profile?.answers ?? []}
+          register={values[REGISTER_FACT.key] ?? ""}
+          lang={lang}
+          savedAt={factSavedAt([REGISTER_FACT.key])}
+          justStamped={stamped === "voice"}
+          dirty={draft[REGISTER_FACT.key] !== undefined}
+          saving={savingSection === "voice"}
+          onChange={(value) => {
+            setStamped(null);
+            setDraft((d) => ({ ...d, [REGISTER_FACT.key]: value }));
+          }}
+          onSave={() =>
+            void saveKeys("voice", [
+              { key: REGISTER_FACT.key, label: REGISTER_FACT.label.en },
+            ])
+          }
+        />
+      );
+    }
+
+    if (page.startsWith("d-")) {
+      const index = Number(page.slice(2));
+      const declaration = INTERVIEW_DECLARATIONS[index];
+      if (!declaration) return null;
+      return (
+        <Declaration
+          key={declaration.canonicalKey}
+          declaration={declaration}
           folio={folio(INTERVIEW_SECTIONS.length + index)}
-          initial={existing?.text ?? ""}
-          writtenAt={existing?.writtenAt ? new Date(existing.writtenAt) : null}
+          values={values}
+          withheld={withheld}
           lang={lang}
           seed={dossier.holder ?? ""}
-          onSave={(text) => saveAnswer(index, text)}
+          dirty={declaration.atoms.some((a) => draft[a.key] !== undefined)}
+          saving={savingSection === declaration.canonicalKey}
+          savedAt={factSavedAt(declaration.atoms.map((a) => a.key))}
+          justStamped={stamped === declaration.canonicalKey}
+          onChange={(key, value) => {
+            setStamped(null);
+            setDraft((d) => ({ ...d, [key]: value }));
+          }}
+          onSave={() =>
+            void saveKeys(
+              declaration.canonicalKey,
+              declaration.atoms.map((a) => ({ key: a.key, label: a.label.en })),
+            )
+          }
         />
       );
     }
@@ -362,13 +409,18 @@ export default function App() {
         lang={lang}
         dirty={section.facts.some((f) => draft[f.key] !== undefined)}
         saving={savingSection === section.id}
-        savedAt={sectionSavedAt(section.id)}
+        savedAt={factSavedAt(section.facts.map((f) => f.key))}
         justStamped={stamped === section.id}
         onChange={(key, value) => {
           setStamped(null);
           setDraft((d) => ({ ...d, [key]: value }));
         }}
-        onSave={() => void saveSection(section.id)}
+        onSave={() =>
+          void saveKeys(
+            section.id,
+            section.facts.map((f) => ({ key: f.key, label: f.label.en })),
+          )
+        }
       />
     );
   };
@@ -455,7 +507,7 @@ export default function App() {
       */}
       <div className="grid grid-cols-[minmax(0,1fr)] gap-7 lg:grid-cols-[236px_minmax(0,1fr)] lg:gap-9">
         <PageRail
-          pages={[...sectionPages, ...questionPages, ...asidePages]}
+          pages={[...sectionPages, ...declarationPages, voicePage, ...asidePages]}
           feature={issuancePage}
           current={page}
           onSelect={setPage}

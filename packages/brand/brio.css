@@ -1,0 +1,220 @@
+/*
+ * Brío — the token layer.
+ *
+ * One file, imported by all three surfaces: the in-page panel (shadow root), the
+ * app (extension page), and the landing site. They are three different CSS roots
+ * with three different constraints, and the only thing that keeps them one
+ * product is that the palette and the faces are declared exactly once, here.
+ *
+ * Four rules carry it, and every token below serves one of them.
+ *
+ *  1. BONE IS THE GROUND, INK IS THE TOOL. The reading surfaces are warm off-
+ *     white; the tool's own chrome — the top bar, the panel that sits over
+ *     someone else's page — is near-black. You can always tell, at a glance,
+ *     whether you are looking at your own file or at Brío talking about it.
+ *
+ *  2. ORANGE IS AN EVENT, NOT A DECORATION. `brio-500` marks the thing that just
+ *     happened or the one action worth taking. Two orange things competing on a
+ *     screen means one of them is wrong. Lapis is the second voice and appears
+ *     on the landing only, where there is a second thing to say.
+ *
+ *  3. THE SERIF SPEAKS, THE MONO MEASURES. Instrument Serif carries statements —
+ *     headlines, group names, the mark. The mono face carries anything a machine
+ *     produced: keys, counts, costs, timestamps, provenance. Instrument Sans is
+ *     everything in between. You can tell who authored a string by its face.
+ *
+ *  4. THE DARK PALETTE IS NOT AN INVERSION. On ink, jade and amber replace the
+ *     jade and amber used on bone, because the light-ground versions go muddy
+ *     there. Both sets are listed; neither is derived from the other.
+ */
+
+@theme {
+  /*
+   * Ink. The tool's own chrome, and the panel it projects your file through.
+   * Warm rather than neutral: #121210 next to bone reads as the same room, and a
+   * true grey next to it reads as a different application.
+   */
+  --color-ink-900: #121210;
+  --color-ink-850: #171613;
+  --color-ink-800: #1c1b18;
+  --color-ink-700: #2a2926;
+  --color-ink-600: #333230;
+
+  /* Bone. Every surface that holds the user's own words. */
+  --color-bone-050: #f8f8f6;
+  --color-bone-100: #fafaf8;
+  --color-bone-200: #f1f1ee;
+  --color-bone-250: #f1f1ec;
+  --color-bone-300: #f0f0eb;
+
+  /*
+   * Rules. Six weights of hairline and that is not excessive: this design has no
+   * shadows below the panel layer, so separation is entirely carried by lines,
+   * and a nested card inside a card inside a page needs three of them to stay
+   * legible without any of them becoming a border you notice.
+   */
+  --color-rule-100: #f4f4f0;
+  --color-rule-200: #efefea;
+  --color-rule-250: #edede8;
+  --color-rule-300: #ebebe4;
+  --color-rule-400: #e6e6e1;
+  --color-rule-500: #dfded6;
+  --color-rule-600: #d5d4cb;
+
+  /* Text on bone. */
+  --color-graphite-900: #121210;
+  --color-graphite-700: #46453f;
+  --color-graphite-600: #55544d;
+  --color-graphite-500: #65645c;
+  --color-graphite-400: #86857c;
+  --color-graphite-300: #96958b;
+  --color-graphite-200: #a3a299;
+
+  /* Text on ink. */
+  --color-paper-050: #f7f7f4;
+  --color-paper-200: #e6e6e1;
+  --color-paper-400: #c9c8c0;
+  --color-paper-500: #a9a8a0;
+
+  /*
+   * The accent. One per screen.
+   *
+   * Orange does two jobs and they are the same job: *something happened that you
+   * have to look at*. It marks the one action worth taking, and it marks a
+   * refusal — a payload blocked before it left, a fill that could not be applied.
+   * Amber is the other thing entirely and must not be confused with it: amber
+   * means nobody is sure yet.
+   *
+   * `brio-400` and `brio-950` exist for the ink surfaces. `brio-500` clears 5.9:1
+   * on `ink-900` and is fine for a 13px line, but the panel's failure text runs at
+   * 11px, and at that size the lighter step is the honest one.
+   */
+  --color-brio-050: #fff5f1;
+  --color-brio-100: #ffede6;
+  --color-brio-150: #ffe1d6;
+  --color-brio-200: #ffebe4;
+  --color-brio-300: #ffd3c4;
+  --color-brio-400: #ff8557;
+  --color-brio-500: #ff4e1e;
+  --color-brio-600: #e63f12;
+  --color-brio-700: #c2350c;
+  /* On ink. */
+  --color-brio-950: #2e0f06;
+
+  /* The second voice. Landing only. */
+  --color-lapis-100: #e7ebff;
+  --color-lapis-500: #2440ff;
+  --color-lapis-700: #1e34c8;
+
+  /* Caution: something was inferred, or wants a second look. */
+  --color-amber-100: #fff6d9;
+  --color-amber-150: #fff2d6;
+  --color-amber-700: #9a6300;
+  --color-amber-800: #8a6100;
+  /* On ink. */
+  --color-amber-300: #ffb259;
+  --color-amber-950: #3a2410;
+
+  /* Affirmation: kept, filled, done. */
+  --color-jade-100: #dff7ee;
+  --color-jade-600: #00875a;
+  /* On ink. */
+  --color-jade-300: #3fdd97;
+  --color-jade-950: #0f2a1f;
+
+  /*
+   * Faces.
+   *
+   * `--font-mono` is deliberately a system stack rather than a fourth webfont.
+   * Every mono string in this product is short — a key, a cost, a timestamp — and
+   * loading a face for them would cost more than it buys. The two Instrument
+   * faces are bundled; see the `@font-face` blocks that accompany each surface.
+   */
+  --font-display: "Instrument Serif", Georgia, "Times New Roman", serif;
+  --font-sans: "Instrument Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+}
+
+/*
+ * Motion.
+ *
+ * Four keyframes and no more. Everything that appears in this product appears
+ * because something the user did caused it, so the entrance is short and travels
+ * a few pixels: it says "this is new" and then gets out of the way.
+ *
+ * All four are suppressed under `prefers-reduced-motion` at the bottom of this
+ * file, including the pulse — an indefinitely repeating opacity animation is the
+ * one most likely to be actively unpleasant, not merely unnecessary.
+ */
+@keyframes brio-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+@keyframes brio-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.99);
+  }
+}
+
+@keyframes brio-pulse {
+  50% {
+    opacity: 0.3;
+  }
+}
+
+/* A value that just landed in a field, seen once and never again. */
+@keyframes brio-flash {
+  from {
+    background: var(--color-brio-150);
+  }
+  to {
+    background: transparent;
+  }
+}
+
+@utility brio-in {
+  animation: brio-in 240ms ease-out both;
+}
+
+@utility brio-rise {
+  animation: brio-rise 300ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@utility brio-pulse {
+  animation: brio-pulse 1.2s ease-in-out infinite;
+}
+
+@utility brio-flash {
+  animation: brio-flash 900ms ease-out both;
+}
+
+/*
+ * The mono voice, as one utility rather than four classes repeated everywhere.
+ * Uppercase is not included: it is applied where the string is a label, and left
+ * off where the string is a value the user might want to read literally.
+ */
+@utility brio-mono {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+}
+
+@utility brio-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .brio-in,
+  .brio-rise,
+  .brio-pulse,
+  .brio-flash {
+    animation: none;
+  }
+}

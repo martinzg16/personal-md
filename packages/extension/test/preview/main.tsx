@@ -16,7 +16,13 @@ import { createRoot } from "react-dom/client";
 
 import type { Profile } from "@personal-md/core";
 
-import "../../entrypoints/options/style.css";
+/*
+ * The stylesheet is loaded below rather than here, because there are now two of
+ * them and they cannot both be on the page. Brío and the document surface each
+ * declare a Tailwind `@theme`, and two `@theme` blocks in one document merge
+ * rather than scope — so whichever loaded second would silently reset shared
+ * names like `--font-sans` for both.
+ */
 
 const now = "2026-08-20T18:04:00.000Z";
 
@@ -31,7 +37,17 @@ const profile: Profile = {
     { key: "work.current_employer", label: "Current employer", value: "TaxDown", egress: "sendable", updatedAt: "2026-08-18T11:02:00.000Z" },
     { key: "work.years_experience", label: "Years of experience", value: "8", egress: "sendable", updatedAt: "2026-08-18T11:02:00.000Z" },
     { key: "work.domain", label: "Domain you work in", value: "fintech, tax", egress: "sendable", updatedAt: "2026-08-18T11:03:00.000Z" },
-    { key: "languages.spoken", label: "Languages", value: "Spanish native, English C1", egress: "sendable", updatedAt: "2026-08-20T18:04:00.000Z" },
+    { key: "languages.spoken", label: "Languages", value: "español nativo, inglés C1", egress: "sendable", updatedAt: "2026-08-20T18:04:00.000Z" },
+    { key: "logistics.remote_preference", label: "Remote preference", value: "híbrido, 1-2 días en oficina", egress: "sendable", updatedAt: "2026-08-20T18:04:00.000Z" },
+    { key: "logistics.availability", label: "Availability", value: "en 1 mes", egress: "sendable", updatedAt: "2026-08-20T18:04:00.000Z" },
+    { key: "work.notice_period", label: "Notice period", value: "1 mes", egress: "sendable", updatedAt: "2026-08-20T18:04:00.000Z" },
+    // One declaration fully marked, so a stamped page is visible next to blank ones.
+    { key: "experience.impact.metric", label: "The metric that moved", value: "conversión a pago", egress: "sendable", updatedAt: "2026-08-21T10:00:00.000Z" },
+    { key: "experience.impact.from", label: "From", value: "22%", egress: "sendable", updatedAt: "2026-08-21T10:00:00.000Z" },
+    { key: "experience.impact.to", label: "To", value: "31%", egress: "sendable", updatedAt: "2026-08-21T10:00:00.000Z" },
+    { key: "experience.impact.window", label: "Over", value: "dos trimestres", egress: "sendable", updatedAt: "2026-08-21T10:00:00.000Z" },
+    { key: "experience.impact.contribution", label: "Your part", value: "lideré al equipo que lo hizo", egress: "sendable", updatedAt: "2026-08-21T10:00:00.000Z" },
+    { key: "voice.register", label: "Which sounds most like you", value: "Lideré la migración y bajamos el tiempo de carga a la mitad.", egress: "sendable", updatedAt: "2026-08-21T10:02:00.000Z" },
   ],
   answers: [
     {
@@ -68,16 +84,46 @@ const store: Record<string, unknown> = {
 
 const withheldKeys = ["personal.email", "personal.city", "personal.nif", "personal.phone", "personal.address_exact"];
 
-const mirror = () => ({
-  mirror: { profile, withheldKeys, siteMemory: {}, fetchedAt: now },
-  connection:
-    new URLSearchParams(location.search).get("conn") === "down"
-      ? { kind: "server_down" as const }
-      : { kind: "ok" as const, port: 8787 },
-});
+/*
+ * `?empty=1` hands back a file with nothing in it, which is what first run
+ * actually looks like and therefore the only way to see onboarding here. The
+ * harness header says it already: the empty states are most of what this
+ * surface is, and a fixture that is always populated hides every one of them.
+ *
+ * `?conn=down` stops the companion, and `?conn=signedout` leaves it running with
+ * the CLI signed out — three states with three different remedies.
+ */
+const mirror = () => {
+  const q = new URLSearchParams(location.search);
+  const conn = q.get("conn");
+  return {
+    mirror: q.get("empty") === "1"
+      ? null
+      : {
+          profile,
+          withheldKeys,
+          siteMemory: {
+            "jobs.example-ats.com\tsig-1": "motivation.why_this_company",
+            "sede.agenciatributaria.gob.es\tsig-2": "personal.nif",
+          },
+          ledger: { calls: 4, inputTokens: 103_600, outputTokens: 1_240, costUsd: 0.012 },
+          fetchedAt: now,
+        },
+    connection:
+      conn === "down"
+        ? { kind: "server_down" as const, port: 8787 }
+        : conn === "signedout"
+          ? { kind: "claude_signed_out" as const, port: 8787 }
+          : { kind: "ok" as const, port: 8787 },
+  };
+};
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 (globalThis as any).chrome = {
+  tabs: {
+    query: async () => [{ url: "https://jobs.example-ats.com/apply/1842" }],
+  },
+  runtime2: null,
   storage: {
     local: {
       get: async (key: string) => ({ [key]: store[key] }),
@@ -138,8 +184,34 @@ const mirror = () => ({
 
       return { ok: false, error: `harness has no stub for ${request.kind}` };
     },
+    openOptionsPage: async () => {
+      location.search = "";
+    },
   },
 };
 
-const { default: App } = await import("../../entrypoints/options/App.tsx");
+/*
+ * Three surfaces share this harness and its stubbed `chrome`:
+ *
+ *   (default)     Brío, which is what ships
+ *   ?document=1   the document surface, still in the tree and still building
+ *   ?popup=1      the browser-action popup, which rides the document sheet
+ *
+ * Each pulls its own stylesheet with it. Whenever one of these changes, the
+ * other two are worth a look: they are the same data through three designs.
+ */
+const mode = new URLSearchParams(location.search);
+const popup = mode.get("popup") === "1";
+const document_ = mode.get("document") === "1";
+
+if (document_) await import("../../entrypoints/options/style.css");
+else await import("../../entrypoints/options/brio.css");
+
+const { default: App } = popup
+  ? document_
+    ? await import("../../entrypoints/popup/App.tsx")
+    : await import("../../entrypoints/popup/BrioApp.tsx")
+  : document_
+    ? await import("../../entrypoints/options/App.tsx")
+    : await import("../../entrypoints/options/BrioApp.tsx");
 createRoot(document.getElementById("root")!).render(<App />);

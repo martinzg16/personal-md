@@ -102,8 +102,16 @@ export function genreForPurpose(
   }
 }
 
-/** A short description of the form, for the drafting prompt's register hint. */
-export function registerHintFor(purpose: string, domain: string): string {
+/**
+ * A short description of the form, for the drafting prompt's register hint.
+ *
+ * Two things are folded into one string because the prompt takes one: what kind
+ * of form this is, and - when the profile holds it - how this person writes.
+ * The second half is the whole return on the interview no longer asking anybody
+ * to produce a writing sample by hand: they picked one of three sentences, and
+ * that choice has to actually reach the draft or it was theatre.
+ */
+export function registerHintFor(purpose: string, domain: string, register?: string): string {
   const kind =
     purpose === "job_application"
       ? "job application"
@@ -114,7 +122,8 @@ export function registerHintFor(purpose: string, domain: string): string {
           : purpose === "profile"
             ? "profile page"
             : "web form";
-  return `${kind} on ${domain}`;
+  const form = `${kind} on ${domain}`;
+  return register?.trim() ? `${form}; this person writes like: "${register.trim()}"` : form;
 }
 
 /** Detect the form's language from the page, which may differ from the browser's. */

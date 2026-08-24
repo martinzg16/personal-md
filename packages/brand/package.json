@@ -1,0 +1,15 @@
+{
+  "name": "@personal-md/brand",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Brío — the palette, the faces and the motion, declared once for every surface.",
+  "type": "module",
+  "exports": {
+    "./brio.css": "./brio.css",
+    "./fonts/*": "./fonts/*"
+  },
+  "files": [
+    "brio.css",
+    "fonts"
+  ]
+}

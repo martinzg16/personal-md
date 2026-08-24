@@ -21,6 +21,8 @@ export interface RailPage {
   aside?: boolean;
 }
 
+import Scroller from "./Scroller.tsx";
+
 export default function PageRail({
   pages,
   feature,
@@ -126,8 +128,10 @@ export default function PageRail({
         Páginas · Pages
       </p>
 
-      {/* Narrow: the thumb edge. */}
-      <div className="pmd-rail-strip lg:hidden">
+      {/* Narrow: the thumb edge. Fifteen folios do not fit a phone, so it
+          scrolls, and the track under it says how much of the edge you are
+          currently looking at. */}
+      <Scroller className="pmd-rail-strip" wrapperClassName="lg:hidden" track>
         {record.map(tab)}
         <span
           className="mx-1 my-2 w-px flex-none"
@@ -136,7 +140,7 @@ export default function PageRail({
         />
         {aside.map(tab)}
         {tab({ ...feature, aside: true })}
-      </div>
+      </Scroller>
 
       {/* Wide: the full stack. */}
       <div className="hidden lg:block">

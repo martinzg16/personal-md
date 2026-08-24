@@ -68,6 +68,14 @@
 
   /* Iris print: the three inks a security background bleeds between. */
   --color-iris-cyan: #74a9b4;
+  /*
+   * The same attention hue, taken down until it is visible as a line on the
+   * laminate. `iris-cyan` measures 2.28:1 on `laminate-050`, so the focus ring on
+   * every field of the data page was under the 3:1 floor for a non-text
+   * indicator - the one piece of UI whose entire job is to be seen. This is
+   * 4.73:1 there and 3.44:1 on the cover, so one ink clears both grounds.
+   */
+  --color-iris-600: #2f7381;
   --color-iris-lilac: #a396c2;
   --color-iris-mint: #93b998;
 
@@ -126,10 +134,18 @@
     -webkit-font-smoothing: antialiased;
   }
 
-  /* The tool never uses the browser's focus ring, because the ring has to read
-     on both the cover and the laminate. One ring, two grounds, declared once. */
+  /*
+   * One ring, two grounds. The ink is a custom property rather than a fixed
+   * colour because the surface has a dark chrome and a light page, and a single
+   * value cannot clear the 3:1 floor on both: `--focus-ink` is the bright iris by
+   * default, and every laminate page redeclares it to the darker one.
+   */
+  :root {
+    --focus-ink: var(--color-iris-cyan);
+  }
+
   :focus-visible {
-    outline: 2px solid var(--color-iris-cyan);
+    outline: 2px solid var(--focus-ink);
     outline-offset: 2px;
   }
 
@@ -161,9 +177,28 @@
     color: var(--color-intaglio-500);
   }
 
+  /*
+   * The English half of every bilingual label.
+   *
+   * It was `intaglio-400`, which measures 3.63:1 on the laminate at 8.5px - so the
+   * second line of every field on the surface was its least legible text, on a
+   * product whose stated commitment is that it works in both languages.
+   *
+   * The first fix moved it to `intaglio-500` and then held it at `opacity: 0.86`
+   * to keep a tonal step, which put it back at 4.18:1 - under the floor again, and
+   * worse than the original defect because the comment above it claimed 5.61:1.
+   * Opacity composites the element against whatever is behind it, so the ink's own
+   * contrast figure says nothing about what you end up looking at. Measure the
+   * composite, or do not put opacity on text.
+   *
+   * So there is no opacity: 5.61:1, and the Spanish and English lines are
+   * separated by weight alone, which is how a data page distinguishes them anyway.
+   *
+   * `intaglio-400` survives only on borders, where the floor is 3:1.
+   */
   .pmd-legend--secondary {
     font-weight: 400;
-    color: var(--color-intaglio-400);
+    color: var(--color-intaglio-500);
   }
 
   /* The same legend, on the cover rather than the laminate. */
@@ -202,6 +237,7 @@
   /* ------------------------------------------------------------------- PAGE */
 
   .pmd-page {
+    --focus-ink: var(--color-iris-600);
     position: relative;
     background-color: var(--color-laminate-050);
     border-radius: var(--radius-page);
@@ -270,8 +306,8 @@
 
   .pmd-field:focus {
     outline: none;
-    border-color: var(--color-iris-cyan);
-    box-shadow: 0 1px 0 0 var(--color-iris-cyan);
+    border-color: var(--color-iris-600);
+    box-shadow: 0 1px 0 0 var(--color-iris-600);
   }
 
   /*
@@ -291,16 +327,28 @@
     text-transform: none;
   }
 
-  /* A field whose value is never transmitted. The endorsement is a printed
-     condition on the document, not a grey pill bolted onto a label. */
+  /*
+   * A field whose value is never transmitted.
+   *
+   * It is a printed condition on the document, not a grey pill bolted to a label -
+   * but it is also not a warning, and it was rendered in the same vermilion as the
+   * INCOMPLETO endorsement. Two different meanings in one ink is the failure the
+   * widget's own system documents as the Content-Before-Hue Rule, and here it was
+   * worse than ambiguous: "this value never leaves your machine" is the reassuring
+   * fact on the page, and it was the only thing coloured like an error.
+   *
+   * So the condition is stated in the archival violet - an endorsement ink, not an
+   * alarm - and the dashed rule carries it. Vermilion now means exactly one thing
+   * on this surface: an endorsement that limits the document.
+   */
   .pmd-field--endorsed {
     border-bottom-style: dashed;
-    border-bottom-color: var(--color-endorse-400);
+    border-bottom-color: color-mix(in oklab, var(--color-stamp-violet) 58%, transparent);
   }
 
   .pmd-field--endorsed:focus {
-    border-color: var(--color-endorse-600);
-    box-shadow: 0 1px 0 0 var(--color-endorse-600);
+    border-color: var(--color-stamp-violet);
+    box-shadow: 0 1px 0 0 var(--color-stamp-violet);
   }
 
   /* ------------------------------------------------------------ THE PROSE */
@@ -334,6 +382,10 @@
     font-size: 15px;
     line-height: 1.62;
     color: var(--color-intaglio-900);
+    /* The holder's own words are the one thing on this surface that gets read a
+       paragraph at a time, so they get a measure. Unbounded, the answer field ran
+       past 100 characters a line on a wide window. */
+    max-width: 68ch;
   }
 
   textarea.pmd-prose {
@@ -342,7 +394,16 @@
     border: 1px solid var(--color-laminate-200);
     border-radius: var(--radius-window);
     padding: 12px 14px;
-    resize: vertical;
+    /*
+     * Grows with the answer instead of showing the platform's resize grabber. The
+     * grabber was the one piece of operating-system furniture visible anywhere
+     * inside the document, sitting in the corner of the field that holds the most
+     * personal thing on the page; `field-sizing` gets the same accommodation from
+     * the content rather than from the user dragging a handle.
+     */
+    field-sizing: content;
+    resize: none;
+    min-height: 9lh;
     transition:
       border-color 140ms ease,
       box-shadow 140ms ease;
@@ -350,8 +411,8 @@
 
   textarea.pmd-prose:focus {
     outline: none;
-    border-color: var(--color-iris-cyan);
-    box-shadow: inset 0 0 0 1px var(--color-iris-cyan);
+    border-color: var(--color-iris-600);
+    box-shadow: inset 0 0 0 1px var(--color-iris-600);
   }
 
   /* ------------------------------------------------------------- CONTROLS */
@@ -389,9 +450,12 @@
   /* Disabled, not illegible. The first version put laminate-300 on
      laminate-200, which measured under 1.5:1 - the label was gone, so the
      control said nothing about what it would do once it was available. */
+  /* Disabled, and still readable. `intaglio-500` on `laminate-200` measured
+     4.20:1, under the floor at 11px caps; `intaglio-700` is 7.76:1. A disabled
+     control still has to say what it will do once it is available. */
   .pmd-action--primary:disabled {
     background: var(--color-laminate-200);
-    color: var(--color-intaglio-500);
+    color: var(--color-intaglio-700);
     cursor: not-allowed;
   }
 
@@ -405,7 +469,7 @@
   }
 
   .pmd-action--quiet:disabled {
-    color: var(--color-intaglio-400);
+    color: var(--color-intaglio-500);
     cursor: not-allowed;
   }
 
@@ -452,6 +516,30 @@
     overflow-x: auto;
     overscroll-behavior-x: contain;
     padding-bottom: 2px;
+  }
+
+  /*
+   * The measured fold.
+   *
+   * A forty-four character line clipped flat at the edge of the page does not read
+   * as "there is more"; it reads as a wrong check digit, on the one element of the
+   * surface whose whole claim is that its digits are right. So the trailing edge
+   * fades - but only when the content actually overflows, measured, never applied
+   * unconditionally. That rule is inherited rather than invented: the in-page
+   * widget's ledger does the same thing for the same reason, and an edge fade on a
+   * line that fits is a lie about the line.
+   */
+  .pmd-folded {
+    -webkit-mask-image: linear-gradient(
+      to right,
+      #000 calc(100% - 28px),
+      rgba(0, 0, 0, 0.15) 100%
+    );
+    mask-image: linear-gradient(
+      to right,
+      #000 calc(100% - 28px),
+      rgba(0, 0, 0, 0.15) 100%
+    );
   }
 
   /* Filler. Present, legible, and quiet: it is the honest report that a field is
@@ -545,6 +633,218 @@
     animation: pmd-press 240ms cubic-bezier(0.16, 1, 0.3, 1) both;
   }
 
+  /*
+   * The endorsement box.
+   *
+   * A native checkbox is the one stock control that was left inside a committed
+   * form, and it showed: a rounded blue-grey system square in the middle of a
+   * page whose every other border is a hairline rule. This is the same control
+   * drawn in the document's own language - an empty box that takes a vermilion
+   * fill and a struck mark when the endorsement is applied, because "never appear
+   * on this site" is a condition written onto the document, not a preference.
+   *
+   * The input stays in the DOM and keeps every native behaviour; only its box is
+   * ours. `+` rather than a wrapper class, so the checked state needs no JS.
+   */
+  .pmd-endorse-check {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .pmd-endorse-box {
+    position: relative;
+    flex: none;
+    width: 14px;
+    height: 14px;
+    border: 1px solid var(--color-intaglio-400);
+    border-radius: 1px;
+    transition:
+      background-color 140ms ease,
+      border-color 140ms ease;
+  }
+
+  /*
+   * A checked box is inked, not coloured.
+   *
+   * This was vermilion, which put a third meaning into an ink that means exactly
+   * one thing. "Never appear on this site" is not a condition of access on a value
+   * (that is the archival violet) and it is not a limitation on the document (that
+   * is the vermilion) - it is the user choosing where the tool operates, which the
+   * widget's own footer has always treated as a plain action with no state colour
+   * at all. So the box takes the document's own ink and claims nothing.
+   */
+  .pmd-endorse-check:checked + .pmd-endorse-box {
+    background: var(--color-intaglio-900);
+    border-color: var(--color-intaglio-900);
+  }
+
+  /* The mark is drawn, not typeset: a glyph here would be substitutable and a
+     tick is two strokes. */
+  .pmd-endorse-check:checked + .pmd-endorse-box::after {
+    content: "";
+    position: absolute;
+    left: 3px;
+    top: 3.5px;
+    width: 7px;
+    height: 3.5px;
+    border-left: 1.5px solid var(--color-laminate-050);
+    border-bottom: 1.5px solid var(--color-laminate-050);
+    transform: rotate(-45deg);
+  }
+
+  .pmd-endorse-check:focus-visible + .pmd-endorse-box {
+    outline: 2px solid var(--color-iris-cyan);
+    outline-offset: 2px;
+  }
+
+  label:hover > .pmd-endorse-box {
+    border-color: var(--color-intaglio-700);
+  }
+
+  /*
+   * The marked box.
+   *
+   * An official form does not give you a dropdown; it prints the options with a
+   * box beside each one and tells you to mark the one that applies. That control
+   * is the reason this redesign works at all - the interview used to ask for
+   * twelve hundred words of prose and now it mostly asks you to point at things,
+   * and pointing has to be the fastest thing on the page.
+   *
+   * The real input stays in the DOM, visually hidden: radios keep their arrow-key
+   * behaviour and their one-of-many semantics, checkboxes keep theirs, labels stay
+   * associated, and screen readers announce a group rather than a row of divs.
+   * Only the drawing is ours. A native radio here would be the single piece of
+   * operating-system furniture inside a printed document.
+   *
+   * The clave is printed inside the box, small, the way a code table prints it.
+   * It is decoration in the sense that nothing reads it back - and it is not
+   * decoration in the sense that it is what makes the row look like a form
+   * rather than a list of chips.
+   */
+  /*
+   * The tap target.
+   *
+   * The box is drawn at 20x16, which is the size it is on paper and the size it
+   * should look. The thing you hit is not the box: it was 18px tall on a phone,
+   * which is under half the reachable minimum, on the interface this whole
+   * redesign now rests on - marking boxes is the interaction, so a target you
+   * miss is not a detail.
+   *
+   * Sized by input device rather than by viewport. `pointer: coarse` is the real
+   * question here: a narrow window driven by a mouse does not need a 44px row,
+   * and a wide tablet driven by a thumb does.
+   */
+  .pmd-mark-option {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 6px 0;
+    cursor: pointer;
+  }
+
+  @media (pointer: coarse) {
+    .pmd-mark-option {
+      min-height: 44px;
+      align-items: center;
+      padding: 0;
+    }
+  }
+
+  .pmd-mark-check {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .pmd-mark-box {
+    position: relative;
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 16px;
+    border: 1px solid var(--color-intaglio-400);
+    border-radius: 1px;
+    background: color-mix(in oklab, var(--color-laminate-100) 60%, white);
+    transition:
+      border-color 140ms ease,
+      background-color 140ms ease;
+  }
+
+  .pmd-mark-code {
+    font-family: var(--font-mono);
+    font-stretch: 78%;
+    font-size: 8px;
+    letter-spacing: 0.02em;
+    color: var(--color-intaglio-400);
+    transition: opacity 120ms ease;
+  }
+
+  label:hover > .pmd-mark-box {
+    border-color: var(--color-intaglio-700);
+  }
+
+  /* The mark itself: two strokes, drawn. An X rather than a tick, because the
+     instruction on a form of this kind has always been "marque con una X". */
+  .pmd-mark-check:checked + .pmd-mark-box {
+    border-color: var(--color-intaglio-900);
+    background: var(--color-intaglio-900);
+  }
+
+  .pmd-mark-check:checked + .pmd-mark-box .pmd-mark-code {
+    opacity: 0;
+  }
+
+  .pmd-mark-check:checked + .pmd-mark-box::before,
+  .pmd-mark-check:checked + .pmd-mark-box::after {
+    content: "";
+    position: absolute;
+    left: 4px;
+    right: 4px;
+    height: 1.5px;
+    border-radius: 1px;
+    background: var(--color-laminate-050);
+  }
+
+  .pmd-mark-check:checked + .pmd-mark-box::before {
+    transform: rotate(34deg);
+  }
+
+  .pmd-mark-check:checked + .pmd-mark-box::after {
+    transform: rotate(-34deg);
+  }
+
+  .pmd-mark-check:focus-visible + .pmd-mark-box {
+    outline: 2px solid var(--focus-ink);
+    outline-offset: 2px;
+  }
+
+  .pmd-mark-check:disabled + .pmd-mark-box {
+    border-color: var(--color-laminate-300);
+    background: var(--color-laminate-100);
+  }
+
+  /* The option's meaning. Archivo, because this is the tool naming a choice -
+     the same voice as every other label on the page. */
+  .pmd-mark-label {
+    font-family: var(--font-sans);
+    font-size: 13px;
+    line-height: 1.35;
+    color: var(--color-intaglio-900);
+  }
+
   /* ----------------------------------------------------------------- RAIL */
 
   /*
@@ -616,6 +916,39 @@
     cursor: pointer;
   }
 
+  /*
+   * The page-edge track.
+   *
+   * The trailing mask that works on a dense character line does nothing on a row
+   * of widely-spaced tabs: at 390px the fade landed in the gap after folio 08 and
+   * signalled nothing at all, so seven destinations were unreachable in effect
+   * rather than in fact. A booklet's edge is continuous, so the cue is continuous -
+   * a hairline the width of the strip with a brighter segment marking the span you
+   * can currently see, sized from the same measurement. It appears only when the
+   * strip actually scrolls.
+   */
+  .pmd-rail-track {
+    position: relative;
+    height: 2px;
+    margin: 2px 0 0;
+    border-radius: 2px;
+    background: color-mix(in oklab, var(--color-cover-600) 62%, transparent);
+    overflow: hidden;
+  }
+
+  .pmd-rail-track::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: var(--track-start, 0%);
+    width: var(--track-span, 100%);
+    border-radius: inherit;
+    background: var(--color-foil-500);
+    opacity: 0.85;
+    transition: left 120ms linear;
+  }
+
   .pmd-rail-tab[aria-current="page"] {
     background: color-mix(in oklab, var(--color-cover-700) 72%, transparent);
     border-bottom-color: var(--color-foil-500);
@@ -647,10 +980,20 @@
     }
   }
 
+  /*
+   * A folio arriving.
+   *
+   * This was a 6px fade up, which is the same generic entrance every section of
+   * every page gets and carries nothing of this world. A page in a bound document
+   * arrives by turning on its binding, so it turns: a short rotation off the left
+   * edge, which is where the spine is on the cover. The cover's own turn is the
+   * long version of the same move, so the surface has one motion idea rather than
+   * two unrelated ones.
+   */
   @keyframes pmd-page-in {
     from {
       opacity: 0;
-      transform: translateY(6px);
+      transform: perspective(2400px) rotateY(2.6deg) translateX(-6px);
     }
     to {
       opacity: 1;
@@ -678,7 +1021,10 @@
   }
 
   .pmd-turn { animation: pmd-turn 620ms cubic-bezier(0.62, 0.02, 0.34, 1) both; }
-  .pmd-page-in { animation: pmd-page-in 260ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+  .pmd-page-in {
+    transform-origin: left center;
+    animation: pmd-page-in 300ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
   .pmd-print { animation: pmd-print 300ms cubic-bezier(0.16, 1, 0.3, 1) both; }
 
   /*

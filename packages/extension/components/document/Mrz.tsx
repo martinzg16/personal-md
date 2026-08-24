@@ -21,6 +21,7 @@
  * and you can watch which cells it lands in.
  */
 
+import Scroller from "./Scroller.tsx";
 import { MRZ_FIELDS, type Mrz as MrzValue } from "../../lib/document/mrz.ts";
 
 /** Which contiguous spans a data-page field feeds, as [line, start, length]. */
@@ -98,7 +99,7 @@ export default function Mrz({
           </span>
         </div>
 
-        <div
+        <Scroller
           className="pmd-mrz-scroll"
           style={{
             // Forty-four characters plus tracking across the container, with a
@@ -108,20 +109,22 @@ export default function Mrz({
         >
           <Line value={mrz.line1} line={1} highlight={highlight} />
           <Line value={mrz.line2} line={2} highlight={highlight} />
-        </div>
+        </Scroller>
 
         <p className="pmd-legend pmd-legend--secondary mt-2.5 max-w-[62ch] normal-case tracking-normal">
           {lang === "es" ? (
             <>
               Cada <code className="font-mono">&lt;</code> es un campo que aún no has
-              escrito. Los dígitos de control se calculan de verdad, con el
-              algoritmo 7-3-1 de la norma ICAO 9303, sobre lo que hay ahora mismo.
+              escrito. Los dígitos de control son de verdad — algoritmo 7-3-1 de la
+              norma ICAO 9303 — y se calculan sobre lo que la página tiene ahora
+              mismo, inscrito o todavía sin inscribir.
             </>
           ) : (
             <>
               Every <code className="font-mono">&lt;</code> is a field you have not
-              written yet. The check digits are computed for real, with ICAO
-              9303&rsquo;s 7-3-1 algorithm, over what is here right now.
+              written yet. The check digits are real — ICAO 9303&rsquo;s 7-3-1
+              algorithm — computed over what the page holds right now, recorded or
+              not yet recorded.
             </>
           )}
         </p>

@@ -97,13 +97,23 @@ export default function DataPage({
       </div>
 
       <div className="relative px-7 pb-8 pt-10 sm:px-10 sm:pb-10 sm:pt-12">
+        {/*
+          The folio sits in the page's top corner, where a bound document prints
+          its page number - not stacked above the heading. A micro-caps line
+          directly over a heading is an eyebrow whatever it contains, and the
+          heading carries itself.
+        */}
+        <p
+          className="pmd-legend pmd-legend--secondary absolute right-7 top-5 tabular-nums sm:right-10 sm:top-6"
+          aria-label={`Folio ${folio}`}
+        >
+          Folio {folio}
+        </p>
+
         <div className="flex items-start justify-between gap-6">
           <div>
-            <p className="pmd-legend pmd-legend--secondary tabular-nums">
-              {lang === "es" ? "Folio" : "Folio"} {folio}
-            </p>
             <h2
-              className="mt-1.5 font-sans leading-none"
+              className="font-sans leading-none"
               style={{
                 fontSize: "clamp(21px, 3.1vw, 29px)",
                 fontWeight: 700,

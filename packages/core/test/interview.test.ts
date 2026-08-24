@@ -3,14 +3,24 @@ import { describe, it } from "node:test";
 
 import {
   GENRES,
-  INTERVIEW_QUESTIONS,
+  INTERVIEW_DECLARATIONS,
   INTERVIEW_SECTIONS,
+  REGISTER_FACT,
   SENDABLE_KEYS,
   classifyEgress,
+  declarationProgress,
   interviewCanonicalKeys,
   interviewFactKeys,
   normaliseQuestion,
+  type InterviewFact,
 } from "../src/index.ts";
+
+/** Every fact the catalogue can present, sections and declarations alike. */
+const everyFact = (): InterviewFact[] => [
+  ...INTERVIEW_SECTIONS.flatMap((s) => s.facts),
+  ...INTERVIEW_DECLARATIONS.flatMap((d) => d.atoms),
+  REGISTER_FACT,
+];
 
 const KEY_RE = /^[a-z0-9_]+(?:\.[a-z0-9_:-]+)+$/;
 
@@ -88,21 +98,129 @@ describe("the interview catalogue is well formed", () => {
         }
       }
     }
-    for (const q of INTERVIEW_QUESTIONS) {
-      assert.ok(q.prompt.en && q.prompt.es, `${q.canonicalKey} prompt is not bilingual`);
-      assert.ok(q.why.en && q.why.es, `${q.canonicalKey} rationale is not bilingual`);
+    for (const d of INTERVIEW_DECLARATIONS) {
+      assert.ok(d.prompt.en && d.prompt.es, `${d.canonicalKey} prompt is not bilingual`);
+      assert.ok(d.why.en && d.why.es, `${d.canonicalKey} rationale is not bilingual`);
+    }
+    // Every option on every tick box, too. A half-translated option list is the
+    // easiest thing in this catalogue to miss and the most visible once shipped.
+    for (const fact of everyFact()) {
+      for (const option of fact.options ?? []) {
+        assert.ok(
+          option.label.en && option.label.es,
+          `${fact.key} option ${option.code} is not bilingual`,
+        );
+      }
     }
   });
 
-  it("declares a real genre and a usable target length for every question", () => {
-    for (const q of INTERVIEW_QUESTIONS) {
-      assert.ok(GENRES.includes(q.genre), `${q.canonicalKey} has genre ${q.genre}`);
-      // Seeded answers double as voice exemplars, so a one-line target would
-      // teach the wrong sentence rhythm.
-      assert.ok(
-        q.suggestedWords >= 80 && q.suggestedWords <= 400,
-        `${q.canonicalKey} suggests ${q.suggestedWords} words, which is not a usable exemplar`,
+  it("declares a real genre for every declaration", () => {
+    for (const d of INTERVIEW_DECLARATIONS) {
+      assert.ok(GENRES.includes(d.genre), `${d.canonicalKey} has genre ${d.genre}`);
+    }
+  });
+
+  it("asks for no prose anywhere", () => {
+    // This is the redesign, expressed as a test. The catalogue asked for eight
+    // answers of 100-180 words each, which is twelve hundred words of writing
+    // before the product does anything for you. Nothing here may reintroduce
+    // that: a free line is capped, and the only uncapped inputs are the typed
+    // ones a browser already constrains.
+    for (const fact of everyFact()) {
+      assert.notEqual(fact.input as string, "textarea", `${fact.key} is a textarea`);
+      if (fact.input === "text") {
+        assert.ok(fact.maxLength, `${fact.key} is a free line with no cap`);
+        assert.ok(
+          fact.maxLength <= 120,
+          `${fact.key} allows ${fact.maxLength} characters, which is a paragraph`,
+        );
+      }
+    }
+  });
+
+  it("gives every tick box a real, unambiguous set of options", () => {
+    for (const fact of everyFact()) {
+      if (fact.input !== "choice" && fact.input !== "multi") {
+        assert.equal(fact.options, undefined, `${fact.key} carries options it cannot show`);
+        continue;
+      }
+      const options = fact.options ?? [];
+      assert.ok(options.length >= 2, `${fact.key} offers ${options.length} options`);
+      const codes = options.map((o) => o.code);
+      assert.deepEqual([...new Set(codes)], codes, `${fact.key} repeats an option code`);
+      for (const lang of ["en", "es"] as const) {
+        const labels = options.map((o) => o.label[lang]);
+        assert.deepEqual(
+          [...new Set(labels)],
+          labels,
+          `${fact.key} repeats an option label in ${lang}`,
+        );
+      }
+      if (fact.input === "multi") {
+        assert.ok(fact.max && fact.max >= 1, `${fact.key} is multi-select with no cap`);
+        assert.ok(
+          fact.max < options.length,
+          `${fact.key} caps at ${fact.max} of ${options.length}, which is not a choice`,
+        );
+      }
+    }
+  });
+
+  it("keeps every atom sendable, or it was collected for nothing", () => {
+    // An atom the egress guard withholds can never reach a draft, so the whole
+    // reason for asking it disappears silently.
+    for (const declaration of INTERVIEW_DECLARATIONS) {
+      for (const atom of declaration.atoms) {
+        assert.equal(
+          classifyEgress(atom.key),
+          "sendable",
+          `${atom.key} is withheld, so drafting cannot use it`,
+        );
+      }
+    }
+    assert.equal(classifyEgress(REGISTER_FACT.key), "sendable");
+  });
+
+  it("never asks an atom that a form could be autofilled with", () => {
+    // "I co-led it" typed into an employer's box would be worse than no autofill.
+    // Atoms are safe because the scanner's DIRECT map does not name them, and
+    // this test pins the namespaces that map deliberately avoids.
+    const fillable = /^(personal|address|contact|financial)\./;
+    for (const declaration of INTERVIEW_DECLARATIONS) {
+      for (const atom of declaration.atoms) {
+        assert.ok(!fillable.test(atom.key), `${atom.key} sits in a fillable namespace`);
+      }
+    }
+  });
+
+  it("derives a declaration from named keys instead of asking for it", () => {
+    const derived = INTERVIEW_DECLARATIONS.filter((d) => d.derived);
+    assert.ok(derived.length > 0, "nothing is derived, so the catalogue got longer not shorter");
+
+    const asked = new Set(
+      INTERVIEW_SECTIONS.flatMap((s) => s.facts.map((f) => f.key)),
+    );
+    for (const d of derived) {
+      assert.equal(d.atoms.length, 0, `${d.canonicalKey} is derived but still asks`);
+      assert.ok(d.derivedFrom?.length, `${d.canonicalKey} is derived from nothing`);
+      // It can only be derived from something the interview actually collects.
+      for (const key of d.derivedFrom ?? []) {
+        assert.ok(asked.has(key), `${d.canonicalKey} derives from ${key}, which is never asked`);
+      }
+    }
+  });
+
+  it("never reports a declaration on an empty profile", () => {
+    // A derived declaration used to count as complete unconditionally, so a
+    // profile holding nothing at all reported one declaration on file. The
+    // document may not claim what it does not hold, derived or otherwise.
+    for (const d of INTERVIEW_DECLARATIONS) {
+      assert.equal(
+        declarationProgress(d, () => false).complete,
+        false,
+        `${d.canonicalKey} is complete on an empty profile`,
       );
+      assert.equal(declarationProgress(d, () => true).complete, true);
     }
   });
 
@@ -110,7 +228,7 @@ describe("the interview catalogue is well formed", () => {
     // Two questions whose normalised forms collide would map to one alias and
     // silently overwrite each other in the index.
     for (const lang of ["en", "es"] as const) {
-      const normalised = INTERVIEW_QUESTIONS.map((q) => normaliseQuestion(q.prompt[lang]));
+      const normalised = INTERVIEW_DECLARATIONS.map((d) => normaliseQuestion(d.prompt[lang]));
       assert.deepEqual(
         [...new Set(normalised)],
         normalised,

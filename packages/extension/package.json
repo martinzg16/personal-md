@@ -4,14 +4,19 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "sync-fonts": "cp ../brand/fonts/*.woff2 public/fonts/",
+    "predev": "npm run sync-fonts",
+    "prebuild": "npm run sync-fonts",
     "dev": "wxt",
     "build": "wxt build",
     "zip": "wxt zip",
     "typecheck": "tsc --noEmit",
     "postinstall": "wxt prepare",
-    "test": "node --test test/*.test.ts"
+    "test": "node --test test/*.test.ts",
+    "preview": "vite --config vite.preview.config.ts"
   },
   "dependencies": {
+    "@personal-md/brand": "*",
     "@personal-md/core": "*",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"

@@ -129,6 +129,44 @@ export const SENDABLE_KEYS: readonly string[] = [
   "logistics.availability",
   "logistics.work_authorisation",
   "logistics.remote_preference",
+
+  /*
+   * The declaration atoms.
+   *
+   * These are the material a draft is assembled from - which project, how many
+   * people, which metric, from what to what - so they have to reach the prompt or
+   * they were collected for nothing.
+   *
+   * They are listed one by one rather than admitted by an `experience.*` /
+   * `skills.*` prefix, and the verbosity is the point. A wholesale prefix would
+   * promote whatever anybody adds under it later, which is exactly the mistake the
+   * `personal.*` prefix already made once: it made `personal.phone` sendable by
+   * accident. Adding an atom now means adding a line here, deliberately, and
+   * `CREDENTIAL_SHAPED` still vetoes anything credential-looking on top.
+   */
+  "experience.leadership.project",
+  "experience.leadership.role",
+  "experience.leadership.team_size",
+  "experience.leadership.duration",
+  "experience.leadership.hardest",
+  "experience.failure.kind",
+  "experience.failure.what_i_did",
+  "experience.failure.changed_after",
+  "experience.impact.metric",
+  "experience.impact.from",
+  "experience.impact.to",
+  "experience.impact.window",
+  "experience.impact.contribution",
+  "skills.strengths.top",
+  "skills.strengths.shows_up_as",
+  "skills.weaknesses.working_on",
+  "skills.weaknesses.doing_about_it",
+
+  /*
+   * How the person writes, chosen from three sample sentences rather than typed.
+   * It steers a draft's register and contains nothing about them.
+   */
+  "voice.register",
 ];
 
 /** Families of keys that are sendable wholesale. */

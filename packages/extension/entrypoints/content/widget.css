@@ -1,4 +1,18 @@
 @import "tailwindcss";
+@import "@personal-md/brand/brio.css";
+
+/*
+ * Sources, declared rather than detected.
+ *
+ * Tailwind v4 infers what to scan from the stylesheet's own directory, and this
+ * one lives three levels down inside one workspace package while the markup it
+ * styles lives in `components/widget`. Detection happened to reach it from the
+ * extension build's root and did not from the preview harness's, which is the
+ * worst kind of dependency: the sheet was correct in one build and silently
+ * empty in the other. Naming them makes both builds the same build.
+ */
+@source "../../components/widget";
+@source "../../test/widget-preview.tsx";
 
 /*
  * Spacing and radii in absolute units, not rem.
@@ -83,7 +97,7 @@
   display: flex;
   justify-content: flex-end;
 
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--font-sans);
   font-size: 14px;
   line-height: 1.45;
   font-weight: 400;
@@ -113,11 +127,11 @@
  * single pixel of what is below.
  */
 .pmd-more {
-  background: linear-gradient(to bottom, rgba(15, 23, 42, 0), rgba(15, 23, 42, 0.92) 60%);
+  background: linear-gradient(to bottom, rgba(18, 18, 16, 0), rgba(18, 18, 16, 0.92) 60%);
 }
 
 .pmd-mono {
-  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  font-family: var(--font-mono);
 }
 
 /*
