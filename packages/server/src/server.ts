@@ -12,6 +12,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from "node:ht
 
 import { bearerFrom, loadOrCreateToken, tokenMatches } from "./auth.ts";
 import { claudeAuth } from "./claude-auth.ts";
+import { ClaudeError } from "./claude.ts";
 import type { AnswerInput } from "./store.ts";
 import { handleDraft, type DraftRequest } from "./draft-route.ts";
 import { handleMatch, type MatchRequest } from "./match-route.ts";
@@ -27,6 +28,17 @@ type Handler = (
   res: ServerResponse,
   ctx: { store: Store; body: unknown },
 ) => Promise<void>;
+
+/**
+ * "The CLI is not signed in" is the one model failure the user can fix, so it
+ * gets its own stage rather than being folded into a generic model error. The
+ * client keys off `stage`, not off prose, so the wording stays free to change.
+ */
+function claudeStage(err: unknown, fallback: string): string {
+  return err instanceof ClaudeError && err.kind === "unauthenticated"
+    ? "claude-signed-out"
+    : fallback;
+}
 
 function json(res: ServerResponse, status: number, payload: unknown): void {
   const body = JSON.stringify(payload);
@@ -221,7 +233,7 @@ const routes: Record<string, Handler> = {
       // A model failure is a normal outcome here, not a server fault: the
       // extension still has its local matches and can fall back to drafting.
       const message = err instanceof Error ? err.message : "unknown error";
-      json(res, 502, { error: message, stage: "classify" });
+      json(res, 502, { error: message, stage: claudeStage(err, "classify") });
     }
   },
 
@@ -258,16 +270,9 @@ const routes: Record<string, Handler> = {
       // they need completely different things from the user.
       const message = err instanceof Error ? err.message : "unknown error";
       const blocked = err instanceof Error && err.name === "EgressBlockedError";
-      // A signed-out CLI is its own stage, not a generic model failure: the
-      // extension holds the request and retries it once the session is back,
-      // which it can only do if it can tell this case apart by shape rather
-      // than by matching on the wording of a message.
-      const signedOut =
-        err instanceof Error && err.name === "ClaudeError" &&
-        (err as { kind?: string }).kind === "unauthenticated";
       json(res, blocked ? 422 : 502, {
         error: message,
-        stage: blocked ? "egress-blocked" : signedOut ? "claude-signed-out" : "draft",
+        stage: blocked ? "egress-blocked" : claudeStage(err, "draft"),
         ...(blocked ? { hits: (err as { hits?: unknown }).hits } : {}),
       });
     }

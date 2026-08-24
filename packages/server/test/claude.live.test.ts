@@ -4,29 +4,48 @@
  *
  *   PERSONAL_MD_LIVE=1 node --test packages/server/test/claude.live.test.ts
  *
- * On per-call overhead, and a measurement mistake worth recording so nobody
- * repeats it:
+ * On per-call overhead. These numbers go stale fast, so they carry dates.
  *
- * An early hand measurement read `cache_creation_input_tokens` (5,730) as the
- * total input for a call and concluded the isolated cwd cut overhead 4.5x. It
- * does not. That figure was the cold-cache *write* portion only. Measured
- * properly, across three identical back-to-back calls:
+ * Measured 24-ago-2026, CLI 2.1.241, with `ask` passing
+ * --disable-slash-commands and --setting-sources project,local:
  *
- *     fresh_input=10   cache_write=0   cache_read=25,931   total=25,941
+ *     haiku   23,989 total input   repeat call read=23,979  $0.0028
+ *     opus    25,611 total input   repeat call read=25,609  $0.0129
  *
- * So the real picture is:
- *   - Claude Code injects ~26k input tokens of scaffolding per call.
- *   - Essentially all of it is a cache READ, billed at roughly a tenth of fresh
- *     input, which is why a call costs ~$0.003 on Haiku rather than ~$0.03.
- *   - The isolated cwd plus --strict-mcp-config plus --settings takes it from
- *     ~29.9k to ~25.9k. A real 13% saving, not a 4.5x one. Worth keeping
- *     because it is free, but it is not the thing that makes this affordable.
- *     Prompt caching is.
+ * Before those two flags, the same day, same machine: 29,358 on haiku and
+ * 39,650 on opus, with a real draft prompt putting opus at 41,081-41,102. The
+ * difference was the CLI putting the user's whole skill and agent inventory in
+ * every prompt - names only on haiku (~14k chars), full descriptions on opus
+ * (~34k chars), which was most of the gap between the two models. Both listings
+ * come from user-level settings, which is what --setting-sources now excludes.
  *
- * The two invariants pinned below follow from that. Total input must not blow
- * out (which would mean something large is being pulled into the prompt), and
- * repeated calls must actually hit the cache - if cache_read ever goes to zero,
- * every call silently costs ~10x more.
+ * Superseded numbers, kept so the drift stays visible: this header once stated
+ * 25,941 total with cache_read=25,931, measured on haiku on 22-ago-2026. (An
+ * even earlier note claimed the isolated cwd cut overhead 4.5x, from misreading
+ * cache_creation_input_tokens as the total. It does not; that was the
+ * cold-cache write portion only.)
+ *
+ * Prompt caching is still the whole cost story. Three identical opus calls
+ * back-to-back before the flags went in: $0.1610, then $0.0199, then $0.0199.
+ * A miss is not neutral - it writes the entire prefix at the 1h TTL, which is
+ * dearer than fresh input.
+ *
+ * Two notes on the assertions below:
+ *
+ *   - The probes call haiku, so the ceiling is a haiku ceiling. That is a cost
+ *     decision, not an oversight. It bounds opus only by proxy now: both paths
+ *     sit within a few thousand tokens of each other, which was not true before
+ *     the flags.
+ *
+ *   - The cache test used to be able to fail for a reason that was not a
+ *     regression. The cached prefix only holds while the prompt is
+ *     byte-identical, and the skill/agent inventory was re-read from disk and
+ *     from plugin marketplaces on every invocation: on 24-ago-2026 a
+ *     local-directory marketplace gained two skills between 11:41 and 11:42
+ *     (134 -> 135) and both calls came back with cache_read=0, writing the full
+ *     41,079 - $0.39 for a single draft against $0.02 warm. Excluding user
+ *     settings is what removed that failure mode. If this test starts failing
+ *     again, check first whether the flags still do what they did here.
  */
 
 import assert from "node:assert/strict";
@@ -35,17 +54,26 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
 
-import { ask, askForJson, extractJson, totalInputTokens } from "../src/claude.ts";
+import { ask, askForJson, extractJson, readCliResult, totalInputTokens } from "../src/claude.ts";
 import { Store } from "../src/store.ts";
 
 const LIVE = process.env["PERSONAL_MD_LIVE"] === "1";
 
 /**
- * Measured at ~25.9k total input per call. The ceiling leaves room for CLI
- * version drift while still catching a real regression, such as a CLAUDE.md or
- * a memory file being pulled into every prompt.
+ * Haiku measured at 23,989 on 24-ago-2026, so this leaves ~13% headroom.
+ *
+ * Deliberately tighter than the 40,000 it replaces. That number was chosen when
+ * the prompt carried the user's plugin inventory and could legitimately grow by
+ * thousands of tokens between runs; now that it does not, a wide ceiling would
+ * wave through exactly the regression worth catching. Losing either flag in
+ * claude.ts puts haiku back at 26,030-29,358 and opus at 28,645-39,650, and
+ * every one of those trips this.
+ *
+ * If it goes red after a CLI upgrade, check whether the flags still do what
+ * they did before assuming something in this repo pulled a file into the
+ * prompt.
  */
-const TOTAL_INPUT_CEILING = 40_000;
+const TOTAL_INPUT_CEILING = 27_000;
 
 before(async () => {
   process.env["PERSONAL_MD_HOME"] = await mkdtemp(join(tmpdir(), "personal-md-live-"));
@@ -93,9 +121,11 @@ describe("claude CLI bridge (live)", { skip: LIVE ? false : "set PERSONAL_MD_LIV
   });
 
   it("hits the prompt cache on a repeat call, which is what makes this cheap", async () => {
-    // Not a micro-optimisation: the ~26k of scaffolding is billed at about a
-    // tenth of fresh-input price only while it is a cache read. If this ever
-    // fails, every call in the app just got roughly 10x more expensive.
+    // Not a micro-optimisation: the ~29k of scaffolding on haiku (~40k on opus)
+    // is billed at about a tenth of fresh-input price only while it is a cache
+    // read. Miss it and you pay a 1h-TTL write instead, which is dearer than
+    // fresh input, not cheaper: $0.0199 -> $0.39 on an opus draft, measured
+    // 24-ago-2026.
     const opts = {
       system: "Reply with exactly one word.",
       prompt: "Say OK.",
@@ -183,5 +213,62 @@ describe("JSON extraction", () => {
 
   it("throws when there is no object at all", () => {
     assert.throws(() => extractJson("no json here"), /no JSON object/);
+  });
+});
+
+/**
+ * The CLI reports its own failures in-band - exit 0, is_error, reason in
+ * `result` - so this mapping is the only thing standing between a real cause and
+ * a shrug. The payloads below are trimmed from actual CLI output.
+ */
+describe("reading the CLI envelope", () => {
+  it("returns the text on success", () => {
+    const read = readCliResult({ is_error: false, result: "PONG", subtype: "success" });
+    assert.equal(read.ok, true);
+    assert.equal(read.ok && read.text, "PONG");
+  });
+
+  it("names an expired login instead of repeating the CLI's misleading subtype", () => {
+    // Captured 24-ago-2026 on CLI 2.1.241. Note subtype: "success" on a failure -
+    // the old code printed "claude reported an error (success)" from it.
+    const read = readCliResult({
+      is_error: true,
+      subtype: "success",
+      terminal_reason: "api_error",
+      result: "Failed to authenticate: OAuth session expired and could not be refreshed",
+    });
+    assert.equal(read.ok, false);
+    if (read.ok) return;
+    assert.equal(read.error.kind, "unauthenticated");
+    assert.match(read.error.message, /not signed in/);
+    assert.match(read.error.message, /claude auth login/, "the message must say how to fix it");
+    assert.doesNotMatch(read.error.message, /success/, "the CLI's subtype is not a cause");
+    assert.match(read.error.detail, /OAuth session expired/, "keep the CLI's own words too");
+  });
+
+  it("quotes the reason for a failure it does not recognise", () => {
+    const read = readCliResult({
+      is_error: true,
+      subtype: "error_max_turns",
+      result: "Something went sideways\nsecond line",
+    });
+    assert.equal(read.ok, false);
+    if (read.ok) return;
+    assert.equal(read.error.kind, "failed");
+    assert.match(read.error.message, /Something went sideways/);
+    assert.doesNotMatch(read.error.message, /second line/, "message is one line; detail has both");
+  });
+
+  it("falls back to the subtype when there is no reason at all", () => {
+    const read = readCliResult({ is_error: true, subtype: "error_during_execution" });
+    assert.equal(read.ok, false);
+    if (read.ok) return;
+    assert.equal(read.error.kind, "failed");
+    assert.match(read.error.message, /error_during_execution/);
+  });
+
+  it("treats a missing result as a failure rather than an empty draft", () => {
+    const read = readCliResult({ is_error: false });
+    assert.equal(read.ok, false);
   });
 });

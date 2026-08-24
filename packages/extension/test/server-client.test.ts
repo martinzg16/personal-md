@@ -180,6 +180,30 @@ describe("profile round-trip through the extension client", () => {
     await assert.rejects(() => server.getProfile(), /no server token/);
     await settings.setToken(realToken);
   });
+
+  it("surfaces the server's own sentence, not the JSON envelope around it", async () => {
+    // Whatever the panel shows the user comes from this message. Routes answer
+    // with {error, stage}, so pasting the raw body in would put braces and a
+    // status code in front of the one sentence that explains anything - and the
+    // sentence that matters most here is "the claude CLI is not signed in".
+    await assert.rejects(
+      () =>
+        server.draftAnswer({
+          question: "",
+          canonicalKey: null,
+          language: "en",
+          genre: "other",
+          maxWords: null,
+          maxChars: null,
+          registerHint: "a web form",
+        }),
+      (err: Error) => {
+        assert.equal(err.message, "question is required");
+        assert.doesNotMatch(err.message, /[{}]|server returned/, "no envelope in the message");
+        return true;
+      },
+    );
+  });
 });
 
 describe("the mirror is what makes filling work with the server down", () => {

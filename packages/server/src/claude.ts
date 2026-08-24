@@ -10,17 +10,65 @@
  *    put in front of short-field suggestions, which is why those are matched
  *    deterministically and never reach this file.
  *
- *  - Claude Code injects ~26k input tokens of its own scaffolding per call, and
- *    that does not go away. What makes it affordable is that essentially all of
- *    it comes back as a prompt-cache READ (measured: fresh_input=10,
- *    cache_read=25,931), billed at roughly a tenth of fresh input - so a call
- *    lands around $0.003 on Haiku rather than $0.03.
+ *  - Claude Code injects its own scaffolding into every prompt, and it is by
+ *    far the largest thing in the request. Our own system prompt and draft
+ *    prompt together are ~1.4k tokens; the scaffolding is 25-40k. Re-measured
+ *    24-ago-2026 on CLI 2.1.241, with 135 skills and 28 agents enabled in the
+ *    user's global config:
  *
- *    The isolated cwd plus --strict-mcp-config plus --settings takes the total
- *    from ~29.9k to ~25.9k: a real 13% saving, worth keeping because it costs
- *    nothing, but not the thing that makes this viable. (An earlier note here
- *    claimed 4.5x, from misreading cache_creation_input_tokens as the total.
- *    See the header of test/claude.live.test.ts.)
+ *        haiku   29,358 total input   (skill listing arrives as names only)
+ *        opus    39,650 total input   (skill listing arrives with full
+ *                                      descriptions - 34k chars on its own)
+ *
+ *    A real draft prompt puts the opus path at 41,081-41,102. The numbers this
+ *    header used to carry (25,941 total, fresh=10, cache_read=25,931) were
+ *    measured on haiku on 22-ago-2026. Against them the haiku path has grown
+ *    13% in two days and the opus path - the one drafting actually uses - is
+ *    53% higher and was never what those numbers described.
+ *
+ *  - Prompt caching still works, and is still the only reason this is
+ *    affordable. Three identical opus calls back-to-back, 24-ago-2026:
+ *
+ *        #1  fresh=2  write=14,844  read=24,804   $0.1610
+ *        #2  fresh=2  write=0       read=39,648   $0.0199
+ *        #3  fresh=2  write=0       read=39,648   $0.0199
+ *
+ *    What the cache does not survive is the scaffolding changing underneath
+ *    it. The skill and agent inventory is read live from the user's global
+ *    settings and plugin marketplaces on every invocation, so editing a
+ *    local-directory marketplace, or a git marketplace refreshing, rewrites
+ *    the prefix. Observed that morning: 134 skills at 11:41, 135 at 11:42,
+ *    cache_read=0 on both, the full 41,079 written at the 1h-TTL rate - $0.39
+ *    for one draft against $0.02 warm. The ledger's first 10 calls average
+ *    $0.18, which is what that mix costs in aggregate.
+ *
+ *    The isolated cwd does not defend against this: the scaffolding comes from
+ *    user-level config, not from the cwd. It still earns its keep by keeping
+ *    CLAUDE.md and auto-memory out of the prompt. (An older note here claimed
+ *    the isolated cwd was a 4.5x saving, from misreading
+ *    cache_creation_input_tokens as the total. It is not.)
+ *
+ *  - Two flags do defend against it, and `ask` now passes both. Measured
+ *    24-ago-2026, one call per variant:
+ *
+ *                                          haiku             opus
+ *        (neither)                         29,358            39,650
+ *        --disable-slash-commands          26,030            28,645
+ *        --setting-sources project,local   26,325            28,850
+ *        both together                     23,989            25,611
+ *
+ *    On opus that is a 35% cut, and the warm cost of a draft goes from $0.0199
+ *    to $0.0129. But the token count is the smaller half of the argument.
+ *    `--setting-sources project,local` stops the CLI reading user-level
+ *    settings, which is where `enabledPlugins` lives - so the skill and agent
+ *    listings leave the prompt entirely, and with them the thing that kept
+ *    invalidating the cache. Editing a plugin marketplace no longer reprices
+ *    the next draft.
+ *
+ *    `--disable-slash-commands` is still worth its own line on top of that:
+ *    some skills ship with the CLI rather than coming from user config, and
+ *    that flag is what removes those. Neither flag costs anything here - we ask
+ *    for plain text with `--allowedTools ""` and never invoke a skill.
  *
  *  - `--bare` would cut more still, but it forces ANTHROPIC_API_KEY auth and
  *    never reads OAuth or the keychain, so it cannot be used here at all.
@@ -89,12 +137,17 @@ export interface AskOptions {
   /**
    * Thinking depth.
    *
-   * Available, but measured to be counterproductive on this workload: setting it
-   * changes the request shape enough to invalidate the cached ~26k-token prefix,
-   * and the resulting cache write costs far more than the thinking tokens a
-   * lower effort saves. Drafting the same prompt came to $0.023 warm-cache with
-   * no effort flag and $0.380 with `--effort low`. Measure before reaching for
-   * this.
+   * Left unset on every production path, but the reason is narrower than this
+   * comment used to claim. It read: passing --effort invalidates the cached
+   * prefix, $0.023 warm versus $0.380 with `--effort low`. The $0.380 is what
+   * ANY first call with a changed request shape costs - a full cold write at
+   * the 1h-TTL rate - so that measurement showed a cold cache, not a price of
+   * thinking. Note also that the CLI already applies effort=high to opus by
+   * default (visible in the transcripts as `effort: high`) without this flag,
+   * and those calls warm to $0.0199. So the honest position as of
+   * 24-ago-2026: changing this flag costs one cold write, and whether a
+   * steady state at a different effort is cheaper or dearer was not
+   * re-measured. Measure two identical calls, not one, before concluding.
    */
   effort?: Effort;
   /** Generous by default: a long draft at higher effort can genuinely take a while. */
@@ -103,10 +156,11 @@ export interface AskOptions {
   skipEgressCheck?: boolean;
 }
 
-interface CliJson {
+export interface CliJson {
   is_error?: boolean;
   result?: string;
   subtype?: string;
+  /** Set to "api_error" when the CLI never reached the model at all. */
   terminal_reason?: string;
   total_cost_usd?: number;
   duration_ms?: number;
@@ -200,13 +254,21 @@ export async function ask(opts: AskOptions): Promise<ClaudeResult> {
     // No tools: we want text back, not an agent loop.
     "--allowedTools",
     "",
-    // Skip MCP server startup entirely. Part of the 26k -> 5.7k reduction.
+    // Skip MCP server startup entirely. Worth a few hundred tokens and a
+    // little latency; it is not where the 40k of scaffolding comes from.
     "--strict-mcp-config",
     "--mcp-config",
     isolatedFiles.mcp,
     // Disables hooks and project MCP servers.
     "--settings",
     isolatedFiles.settings,
+    // The two lines that actually hold the prompt down. Between them they cut
+    // total input per opus call from 39,650 to 25,611 - 35% - and, more to the
+    // point, they take the user's global plugin config out of the prompt, which
+    // is what was invalidating the cache. See the header.
+    "--disable-slash-commands",
+    "--setting-sources",
+    "project,local",
     "--output-format",
     "json",
   ];
@@ -274,6 +336,60 @@ export async function ask(opts: AskOptions): Promise<ClaudeResult> {
       cacheReadInputTokens: u.cache_read_input_tokens ?? 0,
       costUsd: parsed.total_cost_usd ?? 0,
     },
+  };
+}
+
+/**
+ * Read the CLI's JSON envelope: either the answer, or an error that says what
+ * actually went wrong.
+ *
+ * Exported so the mapping can be tested against real captured payloads without
+ * spawning anything.
+ *
+ * The CLI signals its own failures in-band: exit code 0, `is_error: true`, and
+ * the human-readable reason in `result` - the same field a successful call puts
+ * the answer in. `subtype` is not a usable substitute. An expired OAuth session
+ * arrives as `subtype: "success"`, which is how the predecessor of this function
+ * came to raise the message "claude reported an error (success)" while throwing
+ * away the CLI's own sentence: "Failed to authenticate: OAuth session expired
+ * and could not be refreshed" (observed 24-ago-2026, CLI 2.1.241).
+ *
+ * Losing that mattered. Signing in again is the one failure here the user can
+ * actually fix, and nothing in the old message pointed at it.
+ */
+export function readCliResult(
+  parsed: CliJson,
+): { ok: true; text: string } | { ok: false; error: ClaudeError } {
+  if (!parsed.is_error && typeof parsed.result === "string") {
+    return { ok: true, text: parsed.result };
+  }
+
+  const detail = typeof parsed.result === "string" ? parsed.result.slice(0, 2000) : "";
+
+  // Matched on the CLI's own wording, not on model output, so a loose pattern is
+  // safe here. Covers OAuth expiry, a missing login and a rejected key alike.
+  if (/authenticat|oauth|log ?in|credential|api[ -]?key/i.test(detail)) {
+    return {
+      ok: false,
+      error: new ClaudeError(
+        "unauthenticated",
+        "the `claude` CLI is not signed in, so nothing can be drafted; " +
+          "run `claude auth login` in a terminal and try again",
+        detail,
+      ),
+    };
+  }
+
+  const firstLine = (detail.split("\n")[0] ?? detail).slice(0, 300);
+  return {
+    ok: false,
+    error: new ClaudeError(
+      "failed",
+      firstLine
+        ? `claude reported an error: ${firstLine}`
+        : `claude reported an error (${parsed.subtype ?? "unknown"})`,
+      detail,
+    ),
   };
 }
 
