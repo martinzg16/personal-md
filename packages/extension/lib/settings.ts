@@ -19,6 +19,7 @@ const KEYS = {
   mirror: "profile.mirror",
   dismissed: "sites.dismissed",
   pending: "learn.pending",
+  opened: "document.opened",
 } as const;
 
 export const DEFAULT_PORT = 8787;
@@ -42,6 +43,17 @@ export const settings = {
 
   getPort: () => get<number>(KEYS.port, DEFAULT_PORT),
   setPort: (port: number) => chrome.storage.local.set({ [KEYS.port]: port }),
+
+  /**
+   * Whether the cover has ever been opened.
+   *
+   * The options page opens on a closed cover the first time and on the data page
+   * every time after. Onboarding that replays itself is the single most common
+   * way a first-run experience becomes an irritation, so this is persisted rather
+   * than held in component state.
+   */
+  getOpened: () => get<boolean>(KEYS.opened, false),
+  setOpened: () => chrome.storage.local.set({ [KEYS.opened]: true }),
 
   getMirror: () => get<ProfileMirror | null>(KEYS.mirror, null),
   setMirror: (mirror: ProfileMirror) => chrome.storage.local.set({ [KEYS.mirror]: mirror }),

@@ -42,11 +42,13 @@ export const paths = {
   /**
    * An empty directory used as the cwd for every `claude` invocation.
    *
-   * Keeps CLAUDE.md discovery and auto-memory out of the prompt. Measured with
-   * MCP and hooks also disabled, this takes total input per call from ~29.9k to
-   * ~25.9k tokens. Worth having, but modest: the ~26k of Claude Code scaffolding
-   * remains, and what actually makes it cheap is that it is served as a prompt
-   * cache read. See the header of test/claude.live.test.ts.
+   * Keeps CLAUDE.md discovery and auto-memory out of the prompt. That is all it
+   * does, and it is worth having for that alone. It does NOT hold down the bulk
+   * of the per-call input: the skill and agent listings come from the user's
+   * global config, which the cwd has no bearing on. Re-measured 24-ago-2026 on
+   * CLI 2.1.241, total input per call is 29,358 on haiku and 39,650 on opus,
+   * not the ~25.9k this comment used to claim. What makes it cheap is the
+   * prompt cache. See the header of test/claude.live.test.ts.
    */
   get isolated(): string {
     return join(root(), "isolated");

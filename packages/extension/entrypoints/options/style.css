@@ -1,1 +1,698 @@
 @import "tailwindcss";
+@import "./fonts.css";
+
+/*
+ * Sources, declared rather than detected.
+ *
+ * Tailwind v4 infers what to scan from the stylesheet's own directory, and this
+ * stylesheet lives four levels down inside one workspace package - so detection
+ * found nothing and every utility on the surface silently did not exist, which
+ * looks exactly like a broken grid rather than like a missing scan. Naming them
+ * is also correct for a monorepo: the extension's markup is the only markup that
+ * should be able to add a class to this sheet.
+ */
+@source "../../components";
+@source "../../entrypoints";
+@source "../../lib";
+@source "../../test/preview";
+
+/*
+ * PERSONAL.md - the document.
+ *
+ * The world is a machine-readable personal document: a burgundy-black cover, and
+ * under it one cold laminate plane that holds the user's own words. Three rules
+ * carry it, and every token below serves one of them.
+ *
+ *  1. THE LAMINATE IS YOURS. The single light surface on the surface is the page
+ *     your words are printed on. Nothing structural, nothing chrome, and nothing
+ *     belonging to the tool is ever laminate-coloured. This is inherited on
+ *     purpose from the in-page widget, where `slate-50` means the same thing.
+ *
+ *  2. DATA IS SET IN THE MACHINE FACE. Martian Mono, caps, is for values, codes,
+ *     dates and the MRZ - things a machine reads. Literata is for prose the user
+ *     wrote, and appears nowhere else on the surface. Archivo carries every label
+ *     and every piece of the tool's own voice. You can tell who authored a string
+ *     by the face it is set in.
+ *
+ *  3. GOLD IS THE COVER'S ONLY. Foil appears on the closed cover and on nothing
+ *     else. Gold-on-burgundy everywhere would be the cliche this world is one bad
+ *     decision away from.
+ */
+
+@theme {
+  /* The cover. Deep burgundy pushed to near-black, because the physical scene is
+     one person at their own desk at eleven at night and the screen is the
+     brightest thing in the room. */
+  --color-cover-900: #200d16;
+  --color-cover-850: #2a111d;
+  --color-cover-800: #351526;
+  --color-cover-700: #471e33;
+  --color-cover-600: #5d2843;
+
+  /* Foil. Cover only. */
+  --color-foil-500: #c9a227;
+  --color-foil-300: #e6cd7a;
+
+  /* The laminate. Cold, with a green cast - a laminated card, never paper cream.
+     Landing this on cream is the single most likely way to lose this world. */
+  --color-laminate-050: #eef1ea;
+  --color-laminate-100: #e3e8de;
+  --color-laminate-200: #ccd4c8;
+  --color-laminate-300: #aeb8a9;
+
+  /* Intaglio ink. Values, rules, the guilloche. */
+  --color-intaglio-900: #131e35;
+  --color-intaglio-700: #26375a;
+  --color-intaglio-500: #4e5f82;
+  --color-intaglio-400: #6d7d9e;
+
+  /* Iris print: the three inks a security background bleeds between. */
+  --color-iris-cyan: #74a9b4;
+  --color-iris-lilac: #a396c2;
+  --color-iris-mint: #93b998;
+
+  /* Stamp inks. Three, because real stamps are never all one colour. */
+  --color-stamp-blue: #2c5c8a;
+  --color-stamp-green: #1d6a49;
+  --color-stamp-violet: #6a3d85;
+
+  /* The endorsement band: a record that is never transmitted. */
+  --color-endorse-600: #a52f1c;
+  --color-endorse-400: #d4674f;
+  --color-endorse-100: #f7ded8;
+
+  --font-sans: "Archivo", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: "Martian Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-serif: "Literata", Georgia, ui-serif, serif;
+
+  --radius-page: 10px;
+  --radius-window: 3px;
+}
+
+@layer base {
+  :root {
+    color-scheme: dark;
+
+    /* The cover ground: burgundy leather, grained. Two very low-contrast
+       repeating gradients at an angle to each other; the grain is felt at
+       reading distance rather than seen, which is the point of a grain. */
+    --grain:
+      repeating-linear-gradient(
+        62deg,
+        rgba(255, 255, 255, 0.014) 0 1px,
+        transparent 1px 3px
+      ),
+      repeating-linear-gradient(
+        151deg,
+        rgba(0, 0, 0, 0.05) 0 1px,
+        transparent 1px 4px
+      );
+  }
+
+  html,
+  body {
+    height: 100%;
+  }
+
+  body {
+    margin: 0;
+    background-color: var(--color-cover-900);
+    background-image:
+      var(--grain),
+      radial-gradient(120% 90% at 50% -10%, var(--color-cover-800) 0%, var(--color-cover-900) 62%);
+    color: var(--color-laminate-100);
+    font-family: var(--font-sans);
+    font-synthesis-weight: none;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* The tool never uses the browser's focus ring, because the ring has to read
+     on both the cover and the laminate. One ring, two grounds, declared once. */
+  :focus-visible {
+    outline: 2px solid var(--color-iris-cyan);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background: var(--color-iris-lilac);
+    color: var(--color-intaglio-900);
+  }
+}
+
+@layer components {
+  /* ---------------------------------------------------------------- LEGENDS */
+
+  /*
+   * The ICAO dual label: the field name in Spanish over English, in tracked
+   * micro-caps at a narrow width. This is the one component that made this world
+   * the right one for this product - `interview.ts` has stored every label as an
+   * {en, es} pair since before the redesign, and a data page prints both by
+   * construction. The language toggle that used to swap labels is gone: there is
+   * nothing left for it to swap.
+   */
+  .pmd-legend {
+    font-family: var(--font-sans);
+    font-size: 8.5px;
+    font-weight: 600;
+    font-stretch: 78%;
+    letter-spacing: 0.13em;
+    line-height: 1.35;
+    text-transform: uppercase;
+    color: var(--color-intaglio-500);
+  }
+
+  .pmd-legend--secondary {
+    font-weight: 400;
+    color: var(--color-intaglio-400);
+  }
+
+  /* The same legend, on the cover rather than the laminate. */
+  .pmd-legend--dark {
+    color: color-mix(in oklab, var(--color-laminate-200) 62%, transparent);
+  }
+
+  /* ------------------------------------------------------------------- DATA */
+
+  /*
+   * Values, codes, dates. Caps, because a data page has no lowercase in its
+   * fields, and at a narrow width so a long employer name does not wrap out of
+   * its ruled field.
+   */
+  .pmd-data {
+    font-family: var(--font-mono);
+    font-stretch: 82%;
+    font-size: 14px;
+    letter-spacing: 0.01em;
+    text-transform: uppercase;
+    color: var(--color-intaglio-900);
+  }
+
+  /*
+   * A value whose capitals mean something.
+   *
+   * `.pmd-data` sets everything in caps, which is right for a name or a city and
+   * wrong for a path: the repository line rendered as `~/.personal-md/personal.md`
+   * and the filename the whole product is named after lost its capitals on the one
+   * page that exists to state where the file is.
+   */
+  .pmd-data--verbatim {
+    text-transform: none;
+  }
+
+  /* ------------------------------------------------------------------- PAGE */
+
+  .pmd-page {
+    position: relative;
+    background-color: var(--color-laminate-050);
+    border-radius: var(--radius-page);
+    color: var(--color-intaglio-900);
+    /* The laminate's own thickness: a bright top edge, a shadow below, and the
+       cover's colour in the cast rather than black - a black shadow under a card
+       on burgundy reads as a sticker dropped on it. */
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.75),
+      inset 0 0 0 1px rgba(19, 30, 53, 0.09),
+      0 1px 2px rgba(32, 13, 22, 0.4),
+      0 18px 44px -14px rgba(15, 5, 10, 0.7);
+  }
+
+  /* The laminate's specular sheen: a single wide highlight raked across the
+     page, fixed relative to the page and not the pointer, because a highlight
+     that follows the cursor is a gimmick and this one is meant to be furniture. */
+  .pmd-page::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background: linear-gradient(
+      104deg,
+      transparent 26%,
+      rgba(255, 255, 255, 0.42) 42%,
+      rgba(255, 255, 255, 0.1) 50%,
+      transparent 58%
+    );
+    mix-blend-mode: soft-light;
+  }
+
+  /* --------------------------------------------------------- RULED FIELDS */
+
+  /*
+   * A field on a data page is a ruled baseline, not a box. The rule is the
+   * hairline the value sits on; focus thickens it and takes the iris ink, which
+   * is the only place iris appears as a line rather than as print.
+   */
+  .pmd-field {
+    width: 100%;
+    background: transparent;
+    border: 0;
+    border-bottom: 1px solid var(--color-laminate-300);
+    padding: 3px 1px 5px;
+    font-family: var(--font-mono);
+    font-stretch: 82%;
+    font-size: 14px;
+    letter-spacing: 0.01em;
+    text-transform: uppercase;
+    color: var(--color-intaglio-900);
+    transition:
+      border-color 140ms ease,
+      box-shadow 140ms ease;
+  }
+
+  .pmd-field::placeholder {
+    color: var(--color-laminate-300);
+    text-transform: uppercase;
+  }
+
+  .pmd-field:hover:not(:focus) {
+    border-color: var(--color-intaglio-400);
+  }
+
+  .pmd-field:focus {
+    outline: none;
+    border-color: var(--color-iris-cyan);
+    box-shadow: 0 1px 0 0 var(--color-iris-cyan);
+  }
+
+  /*
+   * A value whose case the user has to be able to verify.
+   *
+   * A data page sets every field in caps and this one does too - except where
+   * case carries meaning. An email shown back as MARTIN@TAXDOWN.ES when it was
+   * typed in lower case makes the user doubt what actually reached the file, and
+   * the one thing this surface cannot afford is doubt about what it stored.
+   */
+  .pmd-field--exact {
+    text-transform: none;
+    letter-spacing: 0;
+  }
+
+  .pmd-field--exact::placeholder {
+    text-transform: none;
+  }
+
+  /* A field whose value is never transmitted. The endorsement is a printed
+     condition on the document, not a grey pill bolted onto a label. */
+  .pmd-field--endorsed {
+    border-bottom-style: dashed;
+    border-bottom-color: var(--color-endorse-400);
+  }
+
+  .pmd-field--endorsed:focus {
+    border-color: var(--color-endorse-600);
+    box-shadow: 0 1px 0 0 var(--color-endorse-600);
+  }
+
+  /* ------------------------------------------------------------ THE PROSE */
+
+  /*
+   * The tool's own voice: instructions, blurbs, endorsement text, everything the
+   * surface says rather than everything the holder said. Archivo, like every
+   * other label on the page.
+   *
+   * This class exists because the first build set both this and the holder's
+   * prose in Literata, which quietly broke the one typographic rule the surface
+   * has - that you can tell who wrote a string from the face it is set in. If the
+   * reading face also carries the tool talking, it marks nothing.
+   */
+  .pmd-note {
+    font-family: var(--font-sans);
+    font-size: 13.5px;
+    line-height: 1.6;
+    color: var(--color-intaglio-700);
+  }
+
+  /*
+   * The holder speaking, verbatim, and nowhere else on the surface: the answer
+   * they are typing, and that same answer printed back on the observations page.
+   * Everything machine-readable is in the mono, everything the tool says is in
+   * Archivo, and this is the one face that means a person is talking.
+   */
+  .pmd-prose {
+    font-family: var(--font-serif);
+    font-optical-sizing: auto;
+    font-size: 15px;
+    line-height: 1.62;
+    color: var(--color-intaglio-900);
+  }
+
+  textarea.pmd-prose {
+    width: 100%;
+    background: color-mix(in oklab, var(--color-laminate-100) 74%, white);
+    border: 1px solid var(--color-laminate-200);
+    border-radius: var(--radius-window);
+    padding: 12px 14px;
+    resize: vertical;
+    transition:
+      border-color 140ms ease,
+      box-shadow 140ms ease;
+  }
+
+  textarea.pmd-prose:focus {
+    outline: none;
+    border-color: var(--color-iris-cyan);
+    box-shadow: inset 0 0 0 1px var(--color-iris-cyan);
+  }
+
+  /* ------------------------------------------------------------- CONTROLS */
+
+  /*
+   * Two tones and no third, as the widget has. Primary is intaglio ink on the
+   * laminate - the darkest thing on the page, which is what makes it read as the
+   * action. Quiet carries no fill until it is hovered.
+   */
+  .pmd-action {
+    font-family: var(--font-sans);
+    font-size: 11px;
+    font-weight: 600;
+    font-stretch: 88%;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    border-radius: 2px;
+    padding: 7px 14px;
+    transition:
+      background-color 140ms ease,
+      color 140ms ease,
+      opacity 140ms ease;
+    cursor: pointer;
+  }
+
+  .pmd-action--primary {
+    background: var(--color-intaglio-900);
+    color: var(--color-laminate-050);
+  }
+
+  .pmd-action--primary:hover:not(:disabled) {
+    background: var(--color-intaglio-700);
+  }
+
+  /* Disabled, not illegible. The first version put laminate-300 on
+     laminate-200, which measured under 1.5:1 - the label was gone, so the
+     control said nothing about what it would do once it was available. */
+  .pmd-action--primary:disabled {
+    background: var(--color-laminate-200);
+    color: var(--color-intaglio-500);
+    cursor: not-allowed;
+  }
+
+  .pmd-action--quiet {
+    color: var(--color-intaglio-700);
+    background: transparent;
+  }
+
+  .pmd-action--quiet:hover:not(:disabled) {
+    background: var(--color-laminate-200);
+  }
+
+  .pmd-action--quiet:disabled {
+    color: var(--color-intaglio-400);
+    cursor: not-allowed;
+  }
+
+  /* On the cover, where there is no laminate to sit on. */
+  .pmd-action--foil {
+    background: transparent;
+    color: var(--color-foil-300);
+    border: 1px solid color-mix(in oklab, var(--color-foil-500) 52%, transparent);
+    padding: 11px 26px;
+    letter-spacing: 0.22em;
+  }
+
+  .pmd-action--foil:hover {
+    background: color-mix(in oklab, var(--color-foil-500) 13%, transparent);
+    border-color: var(--color-foil-500);
+  }
+
+  /* ------------------------------------------------------------------ MRZ */
+
+  /*
+   * Forty-four characters per line, and they must never wrap or shrink out of
+   * legibility - so the size comes from the container through a custom property
+   * the component measures, not from a media query guessing at it.
+   */
+  .pmd-mrz {
+    font-family: var(--font-mono);
+    font-stretch: 75%;
+    font-size: var(--mrz-size, 15px);
+    letter-spacing: 0.04em;
+    line-height: 1.55;
+    white-space: pre;
+    color: var(--color-intaglio-900);
+    tab-size: 1;
+    /* `max-content` plus a scrolling parent, rather than shrinking to fit. On a
+       375px viewport, fitting forty-four characters put the line at 8px, and a
+       machine-readable zone nobody can read is a worse outcome than one you
+       swipe - which is also how you read the real thing. */
+    min-width: max-content;
+  }
+
+  /* The scroller the line sits in. Never the page: only this block scrolls. */
+  .pmd-mrz-scroll {
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    padding-bottom: 2px;
+  }
+
+  /* Filler. Present, legible, and quiet: it is the honest report that a field is
+     empty, so it may not be invisible, and it may not shout either. */
+  .pmd-mrz-filler {
+    color: var(--color-laminate-300);
+  }
+
+  /* The span a focused field feeds. */
+  .pmd-mrz-live {
+    background: color-mix(in oklab, var(--color-iris-cyan) 34%, transparent);
+    border-radius: 1px;
+  }
+
+  /* ---------------------------------------------------------------- STAMPS */
+
+  /*
+   * A stamp is an impression, so it is never crisp: the ink is uneven, the press
+   * is off-square, and it sits over the page rather than in it. The rotation is
+   * derived from the record it marks, so a given answer always stamps at the
+   * same angle - a stamp that moved on every render would be an animation, not a
+   * record.
+   */
+  .pmd-stamp {
+    --stamp-ink: var(--color-stamp-blue);
+    position: relative;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1px;
+    padding: 6px 12px 5px;
+    border: 1.5px solid var(--stamp-ink);
+    border-radius: 2px;
+    color: var(--stamp-ink);
+    transform: rotate(var(--stamp-angle, -3deg));
+    opacity: 0.88;
+    /* Uneven ink: a mask that eats a little of the impression, unevenly. */
+    -webkit-mask-image: radial-gradient(
+        118% 132% at 22% 8%,
+        rgba(0, 0, 0, 1) 52%,
+        rgba(0, 0, 0, 0.62) 78%,
+        rgba(0, 0, 0, 0.86) 100%
+      ),
+      repeating-linear-gradient(
+        41deg,
+        rgba(0, 0, 0, 1) 0 2px,
+        rgba(0, 0, 0, 0.78) 2px 3px
+      );
+    -webkit-mask-composite: source-in;
+    mask-image: radial-gradient(
+        118% 132% at 22% 8%,
+        rgba(0, 0, 0, 1) 52%,
+        rgba(0, 0, 0, 0.62) 78%,
+        rgba(0, 0, 0, 0.86) 100%
+      ),
+      repeating-linear-gradient(
+        41deg,
+        rgba(0, 0, 0, 1) 0 2px,
+        rgba(0, 0, 0, 0.78) 2px 3px
+      );
+    mask-composite: intersect;
+  }
+
+  .pmd-stamp__title {
+    font-family: var(--font-sans);
+    font-size: 10px;
+    font-weight: 700;
+    font-stretch: 88%;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .pmd-stamp__date {
+    font-family: var(--font-mono);
+    font-stretch: 78%;
+    font-size: 9px;
+    letter-spacing: 0.06em;
+  }
+
+  .pmd-stamp--green { --stamp-ink: var(--color-stamp-green); }
+  .pmd-stamp--violet { --stamp-ink: var(--color-stamp-violet); }
+  .pmd-stamp--endorse { --stamp-ink: var(--color-endorse-600); }
+
+  /* The press: a fast arrival that stops dead.
+     This was an elastic curve first, which contradicted the comment right above
+     it - ink meeting paper decelerates hard and does not spring back, and an
+     overshoot on a stamp reads as a notification badge popping in. Same
+     ease-out-expo the panel and the rows arrive on. */
+  .pmd-stamp--press {
+    animation: pmd-press 240ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  /* ----------------------------------------------------------------- RAIL */
+
+  /*
+   * The thumb edge. A closed passport shows the stack of its pages, and which of
+   * them have been stamped, before you open any of them - so the rail is both
+   * the navigation and the only progress indicator on the surface.
+   */
+  .pmd-rail-item {
+    position: relative;
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    width: 100%;
+    padding: 7px 10px 7px 14px;
+    text-align: left;
+    border-left: 2px solid transparent;
+    color: color-mix(in oklab, var(--color-laminate-200) 66%, transparent);
+    transition:
+      background-color 140ms ease,
+      color 140ms ease,
+      border-color 140ms ease;
+    cursor: pointer;
+  }
+
+  .pmd-rail-item:hover {
+    background: color-mix(in oklab, var(--color-cover-700) 52%, transparent);
+    color: var(--color-laminate-100);
+  }
+
+  .pmd-rail-item[aria-current="page"] {
+    background: color-mix(in oklab, var(--color-cover-700) 74%, transparent);
+    border-left-color: var(--color-foil-500);
+    color: var(--color-laminate-050);
+  }
+
+  /*
+   * The rail, narrow.
+   *
+   * Below the two-column breakpoint the vertical list was 719px tall on a 375px
+   * viewport - fourteen entries to scroll past before reaching a single field,
+   * which is the whole surface's first impression spent on a table of contents.
+   * So it becomes what a closed booklet actually shows edge-on: one row of folio
+   * numbers you swipe along, each carrying its own stamped-or-not mark.
+   */
+  .pmd-rail-strip {
+    display: flex;
+    gap: 2px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x proximity;
+    padding-bottom: 4px;
+  }
+
+  .pmd-rail-tab {
+    flex: none;
+    scroll-snap-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    min-width: 44px;
+    padding: 8px 9px 7px;
+    border-bottom: 2px solid transparent;
+    color: color-mix(in oklab, var(--color-laminate-200) 60%, transparent);
+    transition:
+      background-color 140ms ease,
+      color 140ms ease,
+      border-color 140ms ease;
+    cursor: pointer;
+  }
+
+  .pmd-rail-tab[aria-current="page"] {
+    background: color-mix(in oklab, var(--color-cover-700) 72%, transparent);
+    border-bottom-color: var(--color-foil-500);
+    color: var(--color-laminate-050);
+  }
+
+  /* ------------------------------------------------------------- ANIMATION */
+
+  @keyframes pmd-press {
+    from {
+      opacity: 0;
+      transform: rotate(var(--stamp-angle, -3deg)) scale(1.5);
+    }
+    to {
+      opacity: 0.88;
+      transform: rotate(var(--stamp-angle, -3deg)) scale(1);
+    }
+  }
+
+  /* The cover turning. The one large authored motion on the surface. */
+  @keyframes pmd-turn {
+    from {
+      transform: perspective(1800px) rotateY(0deg);
+      transform-origin: left center;
+    }
+    to {
+      transform: perspective(1800px) rotateY(-96deg);
+      transform-origin: left center;
+    }
+  }
+
+  @keyframes pmd-page-in {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  /* Ink drying into the laminate: a printed line arriving. */
+  @keyframes pmd-print {
+    from {
+      opacity: 0;
+      transform: translateY(2px) scale(1.014);
+      filter: blur(1.4px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+      filter: none;
+    }
+  }
+
+  @keyframes pmd-draw {
+    from { stroke-dashoffset: var(--draw-length, 2400); }
+    to { stroke-dashoffset: 0; }
+  }
+
+  .pmd-turn { animation: pmd-turn 620ms cubic-bezier(0.62, 0.02, 0.34, 1) both; }
+  .pmd-page-in { animation: pmd-page-in 260ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+  .pmd-print { animation: pmd-print 300ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+  /*
+   * Reduced motion cancels the animations and keeps every final state. Each
+   * keyframe above runs with `both` and ends on the resting value, so a client
+   * that never runs them shows a finished document rather than an invisible one.
+   */
+  @media (prefers-reduced-motion: reduce) {
+    .pmd-turn,
+    .pmd-page-in,
+    .pmd-print,
+    .pmd-stamp--press,
+    .pmd-guilloche path {
+      animation: none !important;
+    }
+  }
+}

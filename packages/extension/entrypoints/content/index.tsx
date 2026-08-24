@@ -24,8 +24,14 @@ import {
 import { buildScanResult, findByStamp, scanFields } from "../../lib/scan/scanner.ts";
 import type { ScannedField } from "../../lib/scan/types.ts";
 import { send } from "../../lib/protocol.ts";
-import type { DraftResponse, MirrorPayload } from "../../lib/protocol.ts";
-import { settings } from "../../lib/settings.ts";
+import {
+  extractLinkedInProfile,
+  isEmptyProfile,
+  isOwnProfile,
+  isProfilePage,
+} from "../../lib/linkedin/extract.ts";
+import type { DraftResponse, ImportProposal, MirrorPayload } from "../../lib/protocol.ts";
+import { settings, storageKeys } from "../../lib/settings.ts";
 import Widget, { type Row } from "../../components/widget/Widget.tsx";
 import "./widget.css";
 
@@ -57,12 +63,16 @@ export default defineContentScript({
       byId.clear();
       for (const f of fields) byId.set(f.id, f);
 
+      refreshImportOffer();
+
       const payload = await send<MirrorPayload>({ kind: "getMirror" }).catch(() => null);
       serverUp = payload?.connection.kind === "ok";
       const mirror = payload?.mirror;
       if (!mirror) {
+        // No profile yet is the case importing exists for, so this must still be
+        // able to mount rather than only render into an already-mounted panel.
         rows = [];
-        render();
+        renderAndMount();
         return;
       }
 
@@ -119,6 +129,16 @@ export default defineContentScript({
     /** The row whose fill is currently at the top of the undo stack. */
     let lastAppliedRowId: string | null = null;
 
+    /**
+     * Every row filled by the last bulk action.
+     *
+     * Undo is batch-wide, so a single Undo after "fill all" reverses every field
+     * it wrote. Clearing only the last row's flag would leave seven rows saying
+     * "Filled" over fields that are now empty again - the panel lying about the
+     * page, which is the one thing this design exists to prevent.
+     */
+    let bulkApplied: string[] = [];
+
     /*
      * What this form has offered that the file does not hold.
      *
@@ -127,6 +147,21 @@ export default defineContentScript({
      * it again on this page), what they corrected (their version wins over the
      * page's), and whether a submit has been attempted.
      */
+    /*
+     * Importing this page as the user's own profile.
+     *
+     * Offered only on their own LinkedIn profile, and only as an offer. The read
+     * happens on a click, in their own logged-in session, over rendered DOM -
+     * there is no request to LinkedIn that this extension initiates and no
+     * credential anywhere. A profile that is not theirs is refused outright:
+     * "it was on screen" is not consent to file someone else's history.
+     */
+    let importOffer: {
+      state: "idle" | "reading" | "error";
+      error?: string;
+      unreadable?: number;
+    } | null = null;
+
     let batch: PendingBatch = emptyBatch();
     const declined = new Set<string>();
     const edited = new Map<string, string>();
@@ -135,6 +170,71 @@ export default defineContentScript({
     // Restore anything this domain noticed before a navigation tore us down.
     const restored = await settings.getPending(domain);
     if (restored) batch = restored;
+
+    /** Re-decide whether this page can offer an import. */
+    function refreshImportOffer(): void {
+      if (!isProfilePage(location.href)) {
+        importOffer = null;
+        return;
+      }
+      // Keep an error or an in-flight read on screen rather than resetting it
+      // every time the SPA mutates the DOM underneath us.
+      if (importOffer && importOffer.state !== "idle") return;
+      importOffer = isOwnProfile(doc) ? { state: "idle" } : null;
+    }
+
+    async function readThisProfile(): Promise<void> {
+      if (!isOwnProfile(doc)) {
+        importOffer = { state: "error", error: copy[lang].notYours };
+        render();
+        return;
+      }
+      const raw = extractLinkedInProfile(doc, location.href);
+      if (isEmptyProfile(raw)) {
+        importOffer = { state: "error", error: copy[lang].importEmpty };
+        render();
+        return;
+      }
+
+      importOffer = { state: "reading" };
+      render();
+      try {
+        const { proposal } = await send<{ proposal: ImportProposal }>({
+          kind: "importProfile",
+          profile: { ...raw, profileUrl: location.href },
+        });
+
+        // The proposal becomes a pending batch, so an import is reviewed and
+        // edited in the same panel as anything else new. Nothing is written by
+        // reading a page.
+        batch = {
+          facts: proposal.facts.map((f) => ({
+            fieldId: `import:${f.key}`,
+            key: f.key,
+            label: f.label,
+            value: f.value,
+          })),
+          answers: proposal.answers.map((a) => ({
+            fieldId: `import:${a.canonicalKey}`,
+            canonicalKey: a.canonicalKey,
+            question: a.question,
+            text: a.text,
+          })),
+        };
+        await settings.setPending(domain, batch);
+        importOffer = raw.warnings.length > 0
+          ? { state: "idle", unreadable: raw.warnings.length }
+          : { state: "idle" };
+        submitAttempted = true; // open straight into the review
+        renderAndMount();
+      } catch (err) {
+        importOffer = {
+          state: "error",
+          error: err instanceof Error ? err.message : copy[lang].importFailed,
+        };
+        render();
+      }
+    }
 
     async function recomputePending(profile: Parameters<typeof collectPendingFacts>[2]): Promise<void> {
       const fresh = collectPendingFacts(fields, doc, profile);
@@ -151,6 +251,9 @@ export default defineContentScript({
 
     const copy = {
       en: {
+        notYours: "This is someone else's profile. Only your own is imported.",
+        importEmpty: "Nothing readable on this page. Try scrolling it fully first.",
+        importFailed: "Could not read this profile.",
         fillFailed: "That field is no longer on the page. Reload and try again.",
         refused: "This kind of field is never filled.",
         noOption: "None of that field's options match your stored value.",
@@ -158,6 +261,9 @@ export default defineContentScript({
         notFillable: "That field cannot be filled.",
       },
       es: {
+        notYours: "Este perfil es de otra persona. Solo se importa el tuyo.",
+        importEmpty: "No hay nada legible en esta página. Prueba a bajar hasta el final primero.",
+        importFailed: "No se pudo leer este perfil.",
         fillFailed: "Ese campo ya no está en la página. Recarga e inténtalo otra vez.",
         refused: "Este tipo de campo nunca se rellena.",
         noOption: "Ninguna opción de ese campo coincide con tu valor guardado.",
@@ -209,6 +315,10 @@ export default defineContentScript({
       const outcome = fillField(el, value);
       if (outcome.ok) {
         lastAppliedRowId = rowId;
+        // A single fill starts its own undo batch, so any previous bulk set is
+        // no longer what Undo would reverse. Leaving it would make Undo clear
+        // the flags of rows it did not touch.
+        bulkApplied = [];
         markApplied(rowId);
       } else {
         setRowError(rowId, reasonText(outcome.reason));
@@ -281,6 +391,43 @@ export default defineContentScript({
                   apply(row.suggestion.fieldId, row.suggestion.text, row.id);
                 }
               },
+              onFillAll: (batchRows: Row[]) => {
+                /*
+                 * One beginBatch for the whole set, so one Undo puts every one
+                 * of them back. Filling them as separate batches would leave the
+                 * user undoing eight times to reverse one click, which is the
+                 * kind of asymmetry that makes a bulk action feel unsafe.
+                 *
+                 * Each fill still goes through the same path as a single one, so
+                 * a field that has gone from the page, or that the last line of
+                 * defence in apply.ts refuses, reports its own failure on its own
+                 * row rather than failing the batch silently.
+                 */
+                beginBatch();
+                let last: string | null = null;
+                for (const row of batchRows) {
+                  if (row.kind !== "fact") continue;
+                  const el = findByStamp(row.suggestion.fieldId, doc);
+                  if (!el) {
+                    setRowError(row.id, translate("fillFailed"));
+                    continue;
+                  }
+                  const outcome = fillField(el, row.suggestion.value);
+                  if (outcome.ok) {
+                    last = row.id;
+                    rows = rows.map((r) =>
+                      r.id === row.id ? { ...r, applied: true, fillError: undefined } : r,
+                    );
+                  } else {
+                    setRowError(row.id, reasonText(outcome.reason));
+                  }
+                }
+                // Undo is batch-wide, but the row flag has to be cleared for the
+                // whole set - so remember the batch, not just the last row.
+                lastAppliedRowId = last;
+                bulkApplied = batchRows.filter((r) => r.kind === "fact").map((r) => r.id);
+                render();
+              },
               onDraft: (row: Row, instruction?: string) => void draft(row, instruction),
               onInsertDraft: (row: Row, text: string) => {
                 if (row.kind !== "unanswered") return;
@@ -296,10 +443,17 @@ export default defineContentScript({
                 // re-offer Fill on them - the panel's own state lying about the
                 // page, which is the failure this design exists to prevent.
                 const undone = undoLastFill();
-                if (undone > 0 && lastAppliedRowId) {
-                  const id = lastAppliedRowId;
-                  rows = rows.map((r) => (r.id === id ? { ...r, applied: false } : r));
+                if (undone > 0) {
+                  const ids = new Set(
+                    bulkApplied.length > 0
+                      ? bulkApplied
+                      : lastAppliedRowId
+                        ? [lastAppliedRowId]
+                        : [],
+                  );
+                  rows = rows.map((r) => (ids.has(r.id) ? { ...r, applied: false } : r));
                   lastAppliedRowId = null;
+                  bulkApplied = [];
                 }
                 render();
               },
@@ -307,6 +461,8 @@ export default defineContentScript({
                 void settings.dismissSite(domain).then(() => ui.remove());
               },
               pending: batch,
+              importOffer,
+              onImport: () => void readThisProfile(),
               submitAttempted,
               onSaveBatch: async (confirmed) => {
                 try {
@@ -382,7 +538,17 @@ export default defineContentScript({
     let mounted = false;
     const mountIfWorthIt = () => {
       if (mounted) return;
-      if (rows.length === 0 && batch.facts.length === 0 && batch.answers.length === 0) return;
+      // An offer to read this profile is reason enough to appear: a LinkedIn
+      // profile has no fillable fields at all, so waiting for rows would mean
+      // the import could never be offered.
+      if (
+        rows.length === 0 &&
+        batch.facts.length === 0 &&
+        batch.answers.length === 0 &&
+        !importOffer
+      ) {
+        return;
+      }
       mounted = true;
       ui.mount();
     };
@@ -392,8 +558,45 @@ export default defineContentScript({
       if (mounted) render();
     };
 
+    /*
+     * Watch before looking.
+     *
+     * The observer used to be attached *after* the first recompute, and that
+     * first recompute awaits a message round-trip to the background worker. On a
+     * client-rendered page - Greenhouse, Workday, any React ATS - the form can be
+     * rendered entirely inside that await window, so the observer was attached
+     * too late to ever see a mutation and nothing triggered a second look. The
+     * result was a page with twenty-seven fields and no widget, permanently,
+     * until some unrelated DOM change happened to wake it up.
+     */
+    let settle: ReturnType<typeof setTimeout> | undefined;
+    const observer = new MutationObserver(() => {
+      clearTimeout(settle);
+      settle = setTimeout(() => void recompute(), 700);
+    });
+    observer.observe(doc.body, { childList: true, subtree: true });
+
     await recompute();
     mountIfWorthIt();
+
+    /*
+     * A bounded backstop, for the case the observer cannot cover.
+     *
+     * A single-shot render that completes before observe() is called produces no
+     * mutation at all, so there is nothing for the observer to react to. These
+     * re-scans stop as soon as there is something to show, and stop regardless
+     * after the last one - a widget that keeps polling a page forever is a
+     * battery cost with no upside.
+     */
+    const backstops: ReturnType<typeof setTimeout>[] = [];
+    for (const delay of [600, 1800, 4000]) {
+      backstops.push(
+        setTimeout(() => {
+          if (mounted) return;
+          void recompute();
+        }, delay),
+      );
+    }
 
     /*
      * Noticing what the user typed.
@@ -442,21 +645,31 @@ export default defineContentScript({
       true,
     );
 
-    // Single-page apps swap forms without a navigation. Re-scan on a settled DOM
-    // rather than on every mutation.
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const observer = new MutationObserver(() => {
-      clearTimeout(timer);
-      timer = setTimeout(() => void recompute(), 700);
-    });
-    observer.observe(doc.body, { childList: true, subtree: true });
+    /*
+     * The profile changed somewhere else.
+     *
+     * Rows are computed on load, and a page with nothing to offer does not
+     * mount. That left a hole: run the interview, or save a batch, in another
+     * tab, and every already-open form kept showing nothing - the panel was
+     * right when it decided and never learned otherwise. A form open in the
+     * background is the normal case, not the edge one, so waiting for the user
+     * to reload was the tool failing quietly.
+     */
+    const onMirrorChanged = (changes: Record<string, chrome.storage.StorageChange>): void => {
+      if (!(storageKeys.mirror in changes)) return;
+      void recompute();
+    };
+    chrome.storage.onChanged.addListener(onMirrorChanged);
+
     ctx.onInvalidated(() => {
       observer.disconnect();
-      clearTimeout(timer);
+      clearTimeout(settle);
+      for (const t of backstops) clearTimeout(t);
       clearTimeout(typeTimer);
       doc.removeEventListener("input", onEdit, true);
       doc.removeEventListener("change", onEdit, true);
       doc.removeEventListener("submit", noteSubmit, true);
+      chrome.storage.onChanged.removeListener(onMirrorChanged);
     });
   },
 });

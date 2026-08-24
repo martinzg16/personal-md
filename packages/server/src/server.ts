@@ -14,6 +14,7 @@ import { bearerFrom, loadOrCreateToken, tokenMatches } from "./auth.ts";
 import type { AnswerInput } from "./store.ts";
 import { handleDraft, type DraftRequest } from "./draft-route.ts";
 import { handleMatch, type MatchRequest } from "./match-route.ts";
+import { handleImport } from "./import-route.ts";
 import { Store } from "./store.ts";
 import { paths } from "./paths.ts";
 
@@ -119,6 +120,21 @@ const routes: Record<string, Handler> = {
    * has to be honoured atomically. Anything the request does not name is left
    * alone - this is not a replace.
    */
+  /**
+   * Map a LinkedIn profile onto a proposal. Writes nothing.
+   *
+   * The result goes back to the widget, which puts it through the same
+   * confirm-to-learn panel as anything else new - so an import is reviewed and
+   * edited before it lands, like every other value.
+   */
+  "POST /import": async (_req, res, { body }) => {
+    const o = (body ?? {}) as Record<string, unknown>;
+    const profile = (o["profile"] ?? null) as Record<string, unknown> | null;
+    if (!profile) return json(res, 400, { error: "expected { profile: {...} }" });
+    const { proposal, model } = await handleImport(profile as never);
+    json(res, 200, { ok: true, proposal, model });
+  },
+
   "POST /learn": async (_req, res, { store, body }) => {
     const o = (body ?? {}) as Record<string, unknown>;
     const rawFacts = Array.isArray(o["facts"]) ? (o["facts"] as unknown[]) : [];

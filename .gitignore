@@ -19,3 +19,6 @@ secrets.json
 #   cp packages/extension/.output/chrome-mv3/content-scripts/content.css packages/extension/test/widget.css
 packages/extension/test/widget-preview.js
 packages/extension/test/widget.css
+
+# Assembled public demo. Rebuild: node packages/extension/test/build-demo.mjs
+packages/extension/test/personal-md-demo.html

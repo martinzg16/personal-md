@@ -62,6 +62,23 @@ export interface WidgetProps {
   onUndo: () => void;
   onDismissSite: () => void;
   /**
+   * Fill every row that can be filled without a judgement call, as one
+   * undoable batch. Given the rows to fill, already filtered by the panel.
+   */
+  onFillAll?: (rows: Row[]) => void;
+  /**
+   * Offer to read this page as the user's own profile.
+   *
+   * Present only on their own LinkedIn profile, and only ever as an offer - the
+   * panel does not read a page because it recognised it.
+   */
+  importOffer?: {
+    state: "idle" | "reading" | "error";
+    error?: string;
+    unreadable?: number;
+  } | null;
+  onImport?: () => void;
+  /**
    * What this form has offered that the file does not already hold, noticed
    * quietly while it was filled. Null when there is nothing to ask about.
    */
@@ -136,6 +153,19 @@ const t = {
     saved: "Saved to your file",
     saveFailed: "Could not save. Your file is unchanged.",
     answerFor: "your answer to",
+    importTitle: "This is your LinkedIn profile",
+    importBody: "Read what is on this page and turn it into facts and answers you can review.",
+    importAction: "Read this profile",
+    importReading: "Reading",
+    importFailed: "Could not read this profile.",
+    importNotYours: "This is someone else's profile. Only your own is imported.",
+    importEmpty: "Nothing readable on this page. Try scrolling it fully first.",
+    importPartial: (n: number) => `${n} ${n === 1 ? "thing" : "things"} could not be read`,
+    fillAll: (n: number) => `Fill ${n} from your file`,
+    fillAllGuard: (n: number) =>
+      `${n} left for you: already filled, or worked out rather than stored`,
+    fillAllDone: (n: number) => `Filled ${n}`,
+    fillAllNote: "Drafts are never included - those need reading first.",
   },
   es: {
     pill: (n: number) => `${n} de tu fichero`,
@@ -187,6 +217,19 @@ const t = {
     saved: "Guardado en tu fichero",
     saveFailed: "No se pudo guardar. Tu fichero no ha cambiado.",
     answerFor: "tu respuesta a",
+    importTitle: "Este es tu perfil de LinkedIn",
+    importBody: "Lee lo que hay en esta página y conviértelo en datos y respuestas que puedas revisar.",
+    importAction: "Leer este perfil",
+    importReading: "Leyendo",
+    importFailed: "No se pudo leer este perfil.",
+    importNotYours: "Este perfil es de otra persona. Solo se importa el tuyo.",
+    importEmpty: "No hay nada legible en esta página. Prueba a bajar hasta el final primero.",
+    importPartial: (n: number) => `${n} ${n === 1 ? "cosa" : "cosas"} no se pudieron leer`,
+    fillAll: (n: number) => `Rellenar ${n} de tu fichero`,
+    fillAllGuard: (n: number) =>
+      `${n} se quedan para ti: ya rellenos, o deducidos y no guardados`,
+    fillAllDone: (n: number) => `Rellenados ${n}`,
+    fillAllNote: "Las redacciones nunca se incluyen: esas hay que leerlas.",
   },
 } as const;
 
@@ -334,7 +377,7 @@ function FactRow({
   const hidden = s.localOnly && !shown;
 
   return (
-    <li className="px-4 py-3">
+    <li className="px-4 py-2.5">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           {/*
@@ -416,7 +459,7 @@ function AnswerRow({
   const long = s.text.length > 130;
 
   return (
-    <li className="px-4 py-3">
+    <li className="px-4 py-2.5">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <Quoted lead>{open || !long ? s.text : `${s.text.slice(0, 127)}...`}</Quoted>
@@ -489,7 +532,7 @@ function UnansweredRow({
   }, [row.draft?.draft, row.state]);
 
   return (
-    <li className="px-4 py-3">
+    <li className="px-4 py-2.5">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           {/*
@@ -676,6 +719,50 @@ export default function Widget(props: WidgetProps) {
 
   const unapplied = useMemo(() => rows.filter((r) => !r.applied).length, [rows]);
 
+  /*
+   * What "fill all" is allowed to touch: only values actually stored, verbatim.
+   *
+   * Deliberately narrow, because a bulk action is where a wrong value stops
+   * being reviewed - it gets submitted. Five things are excluded, and each stays
+   * available as a per-row decision:
+   *
+   *  - anything derived rather than stored. A first name split out of a full
+   *    name is a heuristic, and the Spanish two-surname split especially so, so
+   *    it is not something to write into eight fields unread.
+   *  - anything below full confidence, for the same reason.
+   *  - a field that already holds a value, because overwriting is a choice.
+   *  - a draft or a stored answer, because those have to be read first.
+   *  - a row whose last fill failed, because the reason is still on screen.
+   */
+  const bulk = useMemo(
+    () =>
+      rows.filter(
+        (r): r is Extract<Row, { kind: "fact" }> =>
+          r.kind === "fact" &&
+          !r.applied &&
+          !r.fillError &&
+          !r.suggestion.currentValue &&
+          r.suggestion.derivedFrom === undefined &&
+          r.suggestion.confidence >= 1,
+      ),
+    [rows],
+  );
+
+  /** Fact rows the bulk action deliberately will not touch. */
+  const guarded = useMemo(
+    () =>
+      rows.filter(
+        (r) =>
+          r.kind === "fact" &&
+          !r.applied &&
+          !r.fillError &&
+          (!!r.suggestion.currentValue ||
+            r.suggestion.derivedFrom !== undefined ||
+            r.suggestion.confidence < 1),
+      ).length,
+    [rows],
+  );
+
   const batch = props.pending ?? null;
   const toSave = batch ? batchSize(batch) : 0;
   const [view, setView] = useState<"ledger" | "confirm">("ledger");
@@ -753,7 +840,7 @@ export default function Widget(props: WidgetProps) {
     <div
       role="region"
       aria-label={c.region(domain)}
-      className="pmd-enter pointer-events-auto flex max-h-[min(70vh,560px)] w-[min(380px,calc(100vw-2rem))] flex-col overflow-hidden rounded-lg bg-slate-900 shadow-[0_16px_48px_-12px_rgba(15,23,42,0.6)] ring-1 ring-slate-700/80"
+      className="pmd-enter pointer-events-auto flex max-h-[min(84vh,760px)] w-[min(420px,calc(100vw-2rem))] flex-col overflow-hidden rounded-lg bg-slate-900 shadow-[0_16px_48px_-12px_rgba(15,23,42,0.6)] ring-1 ring-slate-700/80"
     >
       <header className="flex items-start justify-between gap-3 border-b border-slate-700/70 px-4 py-3">
         <div className="flex min-w-0 items-center gap-2">
@@ -790,6 +877,51 @@ export default function Widget(props: WidgetProps) {
         </p>
       )}
 
+      {view === "ledger" && props.importOffer && props.onImport && (
+        <div className="border-b border-slate-700/70 bg-slate-800/40 px-4 py-3">
+          <p className="text-[12px] font-medium leading-snug text-slate-100">{c.importTitle}</p>
+          <p className="mt-1 text-[11px] leading-relaxed text-slate-400">{c.importBody}</p>
+          {props.importOffer.state === "error" && (
+            <div className="mt-2">
+              <Failure>{props.importOffer.error ?? c.importFailed}</Failure>
+            </div>
+          )}
+          {props.importOffer.unreadable ? (
+            <p className="mt-2">
+              <Caution>{c.importPartial(props.importOffer.unreadable)}</Caution>
+            </p>
+          ) : null}
+          <div className="mt-2 flex justify-end">
+            {props.importOffer.state === "reading" ? (
+              <span className="inline-flex items-center gap-2 text-xs text-slate-300">
+                <span className="pmd-pulse h-1.5 w-1.5 rounded-full bg-sky-400" />
+                {c.importReading}
+                <span className="text-slate-400">- {c.draftingNote}</span>
+              </span>
+            ) : (
+              <Action onClick={() => props.onImport?.()}>
+                <Mark className="h-3.5 w-3.5" />
+                {c.importAction}
+              </Action>
+            )}
+          </div>
+        </div>
+      )}
+
+      {view === "ledger" && bulk.length >= 2 && props.onFillAll && (
+        <div className="flex items-center justify-between gap-3 border-b border-slate-700/70 bg-slate-800/40 px-4 py-2">
+          <div className="min-w-0">
+            <p className="text-[11px] leading-snug text-slate-300">
+              {guarded > 0 ? c.fillAllGuard(guarded) : c.fillAllNote}
+            </p>
+          </div>
+          <Action onClick={() => props.onFillAll?.(bulk)}>
+            <Insert className="h-3.5 w-3.5" />
+            {c.fillAll(bulk.length)}
+          </Action>
+        </div>
+      )}
+
       {view === "confirm" && batch ? (
         <>
           <div className="border-b border-slate-700/70 px-4 py-3">
@@ -799,11 +931,11 @@ export default function Widget(props: WidgetProps) {
             <p className="mt-1 text-[11px] leading-relaxed text-slate-400">{c.confirmNote}</p>
           </div>
 
-          <div className="relative min-h-0">
+          <div className="relative flex min-h-0 flex-1 flex-col">
           <ul
             ref={listRef}
             onScroll={measureOverflow}
-            className="divide-y divide-slate-700/50 overflow-y-auto"
+            className="min-h-0 flex-1 divide-y divide-slate-700/50 overflow-y-auto overscroll-contain"
           >
             {batch.facts.map((item) => (
               <PendingFactRow
@@ -894,11 +1026,11 @@ export default function Widget(props: WidgetProps) {
           </p>
         </div>
       ) : (
-        <div className="relative min-h-0">
+        <div className="relative flex min-h-0 flex-1 flex-col">
         <ul
           ref={listRef}
           onScroll={measureOverflow}
-          className="divide-y divide-slate-700/50 overflow-y-auto"
+          className="min-h-0 flex-1 divide-y divide-slate-700/50 overflow-y-auto overscroll-contain"
         >
           {rows.map((row) =>
             row.kind === "fact" ? (

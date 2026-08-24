@@ -273,3 +273,53 @@ describe("undo", () => {
     assert.equal(pendingUndoCount(), 0);
   });
 });
+
+describe("filling a whole batch at once", () => {
+  const dom = () =>
+    new JSDOM(`<html><body><form>
+      <input id="a" value="">
+      <input id="b" value="">
+      <input id="c" value="keep me">
+      <input id="p" type="password" value="">
+    </form></body></html>`).window.document;
+
+  it("reverses every field in the batch with one undo", () => {
+    // The asymmetry this prevents: filling eight fields in one click and then
+    // needing eight clicks to put them back.
+    const doc = dom();
+    const a = doc.getElementById("a") as HTMLInputElement;
+    const b = doc.getElementById("b") as HTMLInputElement;
+
+    beginBatch();
+    assert.equal(fillField(a, "Martin").ok, true);
+    assert.equal(fillField(b, "Madrid").ok, true);
+    assert.equal(a.value, "Martin");
+    assert.equal(b.value, "Madrid");
+
+    const restored = undoLastFill();
+    assert.equal(restored, 2, "both fields should be restored by one undo");
+    assert.equal(a.value, "");
+    assert.equal(b.value, "");
+  });
+
+  it("still refuses a password inside a batch", () => {
+    // The bulk path must not become a way around the last line of defence.
+    const doc = dom();
+    beginBatch();
+    const outcome = fillField(doc.getElementById("p") as HTMLElement, "hunter2");
+    assert.deepEqual(outcome, { ok: false, reason: "refused" });
+    assert.equal((doc.getElementById("p") as HTMLInputElement).value, "");
+  });
+
+  it("undo restores a field's previous value rather than blanking it", () => {
+    // The panel excludes non-empty fields from a bulk fill, but fillField itself
+    // must still be reversible if one is ever passed in.
+    const doc = dom();
+    const c = doc.getElementById("c") as HTMLInputElement;
+    beginBatch();
+    fillField(c, "overwritten");
+    assert.equal(c.value, "overwritten");
+    undoLastFill();
+    assert.equal(c.value, "keep me");
+  });
+});

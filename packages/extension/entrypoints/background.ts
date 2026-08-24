@@ -123,6 +123,10 @@ async function handle(request: Request): Promise<unknown> {
       return draft;
     }
 
+    case "importProfile":
+      // A proposal only. The mirror is untouched because nothing was written.
+      return server.importProfile(request.profile);
+
     case "learnBatch": {
       const result = await server.learn({ facts: request.facts, answers: request.answers });
       // Write-through: the panel that just saved these should stop offering them.

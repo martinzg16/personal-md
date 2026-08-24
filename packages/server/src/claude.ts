@@ -10,17 +10,53 @@
  *    put in front of short-field suggestions, which is why those are matched
  *    deterministically and never reach this file.
  *
- *  - Claude Code injects ~26k input tokens of its own scaffolding per call, and
- *    that does not go away. What makes it affordable is that essentially all of
- *    it comes back as a prompt-cache READ (measured: fresh_input=10,
- *    cache_read=25,931), billed at roughly a tenth of fresh input - so a call
- *    lands around $0.003 on Haiku rather than $0.03.
+ *  - Claude Code injects its own scaffolding into every prompt, and it is by
+ *    far the largest thing in the request. Our own system prompt and draft
+ *    prompt together are ~1.4k tokens; the scaffolding is 25-40k. Re-measured
+ *    24-ago-2026 on CLI 2.1.241, with 135 skills and 28 agents enabled in the
+ *    user's global config:
  *
- *    The isolated cwd plus --strict-mcp-config plus --settings takes the total
- *    from ~29.9k to ~25.9k: a real 13% saving, worth keeping because it costs
- *    nothing, but not the thing that makes this viable. (An earlier note here
- *    claimed 4.5x, from misreading cache_creation_input_tokens as the total.
- *    See the header of test/claude.live.test.ts.)
+ *        haiku   29,358 total input   (skill listing arrives as names only)
+ *        opus    39,650 total input   (skill listing arrives with full
+ *                                      descriptions - 34k chars on its own)
+ *
+ *    A real draft prompt puts the opus path at 41,081-41,102. The numbers this
+ *    header used to carry (25,941 total, fresh=10, cache_read=25,931) were
+ *    measured on haiku on 22-ago-2026. Against them the haiku path has grown
+ *    13% in two days and the opus path - the one drafting actually uses - is
+ *    53% higher and was never what those numbers described.
+ *
+ *  - Prompt caching still works, and is still the only reason this is
+ *    affordable. Three identical opus calls back-to-back, 24-ago-2026:
+ *
+ *        #1  fresh=2  write=14,844  read=24,804   $0.1610
+ *        #2  fresh=2  write=0       read=39,648   $0.0199
+ *        #3  fresh=2  write=0       read=39,648   $0.0199
+ *
+ *    What the cache does not survive is the scaffolding changing underneath
+ *    it. The skill and agent inventory is read live from the user's global
+ *    settings and plugin marketplaces on every invocation, so editing a
+ *    local-directory marketplace, or a git marketplace refreshing, rewrites
+ *    the prefix. Observed that morning: 134 skills at 11:41, 135 at 11:42,
+ *    cache_read=0 on both, the full 41,079 written at the 1h-TTL rate - $0.39
+ *    for one draft against $0.02 warm. The ledger's first 10 calls average
+ *    $0.18, which is what that mix costs in aggregate.
+ *
+ *    The isolated cwd does not defend against this: the scaffolding comes from
+ *    user-level config, not from the cwd. It still earns its keep by keeping
+ *    CLAUDE.md and auto-memory out of the prompt. (An older note here claimed
+ *    the isolated cwd was a 4.5x saving, from misreading
+ *    cache_creation_input_tokens as the total. It is not.)
+ *
+ *    Two flags do cut the scaffolding, measured on haiku the same day:
+ *
+ *        --disable-slash-commands           29,358 -> 26,030
+ *        --setting-sources project,local    29,358 -> 26,325
+ *        both together                      29,358 -> 23,989
+ *
+ *    Not adopted here yet. The saving on opus should be larger, since that is
+ *    the path where the skill listing carries full descriptions, but that was
+ *    not measured - each opus measurement spends real subscription quota.
  *
  *  - `--bare` would cut more still, but it forces ANTHROPIC_API_KEY auth and
  *    never reads OAuth or the keychain, so it cannot be used here at all.
@@ -88,12 +124,17 @@ export interface AskOptions {
   /**
    * Thinking depth.
    *
-   * Available, but measured to be counterproductive on this workload: setting it
-   * changes the request shape enough to invalidate the cached ~26k-token prefix,
-   * and the resulting cache write costs far more than the thinking tokens a
-   * lower effort saves. Drafting the same prompt came to $0.023 warm-cache with
-   * no effort flag and $0.380 with `--effort low`. Measure before reaching for
-   * this.
+   * Left unset on every production path, but the reason is narrower than this
+   * comment used to claim. It read: passing --effort invalidates the cached
+   * prefix, $0.023 warm versus $0.380 with `--effort low`. The $0.380 is what
+   * ANY first call with a changed request shape costs - a full cold write at
+   * the 1h-TTL rate - so that measurement showed a cold cache, not a price of
+   * thinking. Note also that the CLI already applies effort=high to opus by
+   * default (visible in the transcripts as `effort: high`) without this flag,
+   * and those calls warm to $0.0199. So the honest position as of
+   * 24-ago-2026: changing this flag costs one cold write, and whether a
+   * steady state at a different effort is cheaper or dearer was not
+   * re-measured. Measure two identical calls, not one, before concluding.
    */
   effort?: Effort;
   /** Generous by default: a long draft at higher effort can genuinely take a while. */
@@ -151,7 +192,8 @@ export async function ask(opts: AskOptions): Promise<ClaudeResult> {
     // No tools: we want text back, not an agent loop.
     "--allowedTools",
     "",
-    // Skip MCP server startup entirely. Part of the 26k -> 5.7k reduction.
+    // Skip MCP server startup entirely. Worth a few hundred tokens and a
+    // little latency; it is not where the 40k of scaffolding comes from.
     "--strict-mcp-config",
     "--mcp-config",
     isolatedFiles.mcp,

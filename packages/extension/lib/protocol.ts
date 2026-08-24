@@ -8,7 +8,7 @@
  */
 
 import type { Fact, Genre, Lang, Profile } from "@personal-md/core";
-import type { ConnectionState, DraftResponse, MatchQuestionResponse } from "./server-client.ts";
+import type { ConnectionState, DraftResponse, ImportProposal, MatchQuestionResponse } from "./server-client.ts";
 import type { ProfileMirror } from "./settings.ts";
 
 export type Request =
@@ -47,6 +47,8 @@ export type Request =
       facts: { key: string; label: string; value: string }[];
       answers: { canonicalKey: string; question: string; text: string; language: Lang; genre: Genre }[];
     }
+  /** Map a read profile onto a proposal. Nothing is stored by this call. */
+  | { kind: "importProfile"; profile: unknown }
   | {
       kind: "saveAnswer";
       canonicalKey: string;
@@ -58,7 +60,7 @@ export type Request =
 
 export type Response<T = unknown> = { ok: true; data: T } | { ok: false; error: string };
 
-export type { DraftResponse, MatchQuestionResponse };
+export type { DraftResponse, ImportProposal, MatchQuestionResponse };
 
 export interface MirrorPayload {
   mirror: ProfileMirror | null;
