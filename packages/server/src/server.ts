@@ -11,6 +11,7 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 
 import { bearerFrom, loadOrCreateToken, tokenMatches } from "./auth.ts";
+import { ClaudeError } from "./claude.ts";
 import type { AnswerInput } from "./store.ts";
 import { handleDraft, type DraftRequest } from "./draft-route.ts";
 import { handleMatch, type MatchRequest } from "./match-route.ts";
@@ -26,6 +27,17 @@ type Handler = (
   res: ServerResponse,
   ctx: { store: Store; body: unknown },
 ) => Promise<void>;
+
+/**
+ * "The CLI is not signed in" is the one model failure the user can fix, so it
+ * gets its own stage rather than being folded into a generic model error. The
+ * client keys off `stage`, not off prose, so the wording stays free to change.
+ */
+function claudeStage(err: unknown, fallback: string): string {
+  return err instanceof ClaudeError && err.kind === "not_authenticated"
+    ? "not-authenticated"
+    : fallback;
+}
 
 function json(res: ServerResponse, status: number, payload: unknown): void {
   const body = JSON.stringify(payload);
@@ -220,7 +232,7 @@ const routes: Record<string, Handler> = {
       // A model failure is a normal outcome here, not a server fault: the
       // extension still has its local matches and can fall back to drafting.
       const message = err instanceof Error ? err.message : "unknown error";
-      json(res, 502, { error: message, stage: "classify" });
+      json(res, 502, { error: message, stage: claudeStage(err, "classify") });
     }
   },
 
@@ -259,7 +271,7 @@ const routes: Record<string, Handler> = {
       const blocked = err instanceof Error && err.name === "EgressBlockedError";
       json(res, blocked ? 422 : 502, {
         error: message,
-        stage: blocked ? "egress-blocked" : "draft",
+        stage: blocked ? "egress-blocked" : claudeStage(err, "draft"),
         ...(blocked ? { hits: (err as { hits?: unknown }).hits } : {}),
       });
     }
