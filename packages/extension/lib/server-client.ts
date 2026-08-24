@@ -75,10 +75,21 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     );
   }
   if (!res.ok) {
-    const detail = await res.text().catch(() => "");
+    // Routes answer errors as {error, stage}, so read that rather than pasting
+    // the raw body into the message. It is the difference between the user
+    // seeing `server returned 502: {"error":"the \`claude\` CLI is not signed
+    // in...","stage":"not-authenticated"}` and seeing the sentence itself.
+    const body = await res.text().catch(() => "");
+    let reason = body;
+    try {
+      const parsed = JSON.parse(body) as { error?: unknown };
+      if (typeof parsed.error === "string" && parsed.error) reason = parsed.error;
+    } catch {
+      // Not JSON. Fall back to the raw body, which is better than nothing.
+    }
     throw new ServerError(
-      { kind: "error", message: detail || res.statusText },
-      `server returned ${res.status}: ${detail || res.statusText}`,
+      { kind: "error", message: reason || res.statusText },
+      reason || `server returned ${res.status}: ${res.statusText}`,
     );
   }
   return (await res.json()) as T;

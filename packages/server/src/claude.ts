@@ -105,7 +105,7 @@ export interface ClaudeResult {
 }
 
 export class ClaudeError extends Error {
-  readonly kind: "not_installed" | "timeout" | "failed" | "unparseable";
+  readonly kind: "not_installed" | "not_authenticated" | "timeout" | "failed" | "unparseable";
   readonly detail: string;
   constructor(kind: ClaudeError["kind"], message: string, detail = "") {
     super(message);
@@ -143,10 +143,12 @@ export interface AskOptions {
   skipEgressCheck?: boolean;
 }
 
-interface CliJson {
+export interface CliJson {
   is_error?: boolean;
   result?: string;
   subtype?: string;
+  /** Set to "api_error" when the CLI never reached the model at all. */
+  terminal_reason?: string;
   total_cost_usd?: number;
   duration_ms?: number;
   usage?: {
@@ -235,13 +237,12 @@ export async function ask(opts: AskOptions): Promise<ClaudeResult> {
     throw new ClaudeError("unparseable", "claude did not return JSON", stdout.slice(0, 2000));
   }
 
-  if (parsed.is_error || typeof parsed.result !== "string") {
-    throw new ClaudeError("failed", `claude reported an error (${parsed.subtype ?? "unknown"})`);
-  }
+  const read = readCliResult(parsed);
+  if (!read.ok) throw read.error;
 
   const u = parsed.usage ?? {};
   return {
-    text: parsed.result,
+    text: read.text,
     model,
     durationMs: parsed.duration_ms ?? Date.now() - started,
     usage: {
@@ -251,6 +252,60 @@ export async function ask(opts: AskOptions): Promise<ClaudeResult> {
       cacheReadInputTokens: u.cache_read_input_tokens ?? 0,
       costUsd: parsed.total_cost_usd ?? 0,
     },
+  };
+}
+
+/**
+ * Read the CLI's JSON envelope: either the answer, or an error that says what
+ * actually went wrong.
+ *
+ * Exported so the mapping can be tested against real captured payloads without
+ * spawning anything.
+ *
+ * The CLI signals its own failures in-band: exit code 0, `is_error: true`, and
+ * the human-readable reason in `result` - the same field a successful call puts
+ * the answer in. `subtype` is not a usable substitute. An expired OAuth session
+ * arrives as `subtype: "success"`, which is how the predecessor of this function
+ * came to raise the message "claude reported an error (success)" while throwing
+ * away the CLI's own sentence: "Failed to authenticate: OAuth session expired
+ * and could not be refreshed" (observed 24-ago-2026, CLI 2.1.241).
+ *
+ * Losing that mattered. Signing in again is the one failure here the user can
+ * actually fix, and nothing in the old message pointed at it.
+ */
+export function readCliResult(
+  parsed: CliJson,
+): { ok: true; text: string } | { ok: false; error: ClaudeError } {
+  if (!parsed.is_error && typeof parsed.result === "string") {
+    return { ok: true, text: parsed.result };
+  }
+
+  const detail = typeof parsed.result === "string" ? parsed.result.slice(0, 2000) : "";
+
+  // Matched on the CLI's own wording, not on model output, so a loose pattern is
+  // safe here. Covers OAuth expiry, a missing login and a rejected key alike.
+  if (/authenticat|oauth|log ?in|credential|api[ -]?key/i.test(detail)) {
+    return {
+      ok: false,
+      error: new ClaudeError(
+        "not_authenticated",
+        "the `claude` CLI is not signed in, so nothing can be drafted; " +
+          "run `claude auth login` in a terminal and try again",
+        detail,
+      ),
+    };
+  }
+
+  const firstLine = (detail.split("\n")[0] ?? detail).slice(0, 300);
+  return {
+    ok: false,
+    error: new ClaudeError(
+      "failed",
+      firstLine
+        ? `claude reported an error: ${firstLine}`
+        : `claude reported an error (${parsed.subtype ?? "unknown"})`,
+      detail,
+    ),
   };
 }
 
