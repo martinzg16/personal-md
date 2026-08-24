@@ -22,3 +22,8 @@ packages/extension/test/widget.css
 
 # Assembled public demo. Rebuild: node packages/extension/test/build-demo.mjs
 packages/extension/test/personal-md-demo.html
+
+# Copied from packages/brand/fonts by each consumer's `sync-fonts` script, so
+# the canonical copy is the one in packages/brand and these cannot drift.
+packages/site/public/fonts/
+packages/extension/public/fonts/instrument*.woff2
