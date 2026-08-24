@@ -1,27 +1,22 @@
 /**
- * The document.
+ * Brío — the app.
  *
- * This surface is where a profile comes from, so everything downstream is empty
- * until something happens here - and the old version of this page was a settings
- * form with an "Interview" tab bolted onto it, which is the wrong shape for the
- * most important thing the product does.
+ * Five places, one file underneath all of them, and one rule shared with the
+ * panel: nothing is written until you say so, and everything written is visible.
  *
- * It is now one document with numbered folios: four data pages of facts, eight
- * visa pages of open questions, an observations page holding the file as it
- * stands, the issuing bureau, and the issuance sequence at the end. The two rules
- * that shaped the old interview survive intact, because they were right:
+ * The state here is deliberately boring, because the interesting decisions are
+ * all in the screens. Two things are worth knowing:
  *
- *   - nothing is required, since a document with four facts and one answer is
- *     already more useful than an empty one, and a mandatory wizard just gets
- *     abandoned;
- *   - every page records on its own, so closing the tab halfway through loses
- *     nothing.
+ *   - `draft` wins over what is stored, so a half-typed section is not wiped by
+ *     a refetch landing underneath it. It is cleared key by key on save, not
+ *     wholesale, because a second section may be half-typed at the same time.
  *
- * What the language toggle controls has narrowed, and that is a consequence of
- * the form rather than a decision taken separately. Field labels are printed in
- * both languages on every page, the way a data page prints them, so there is
- * nothing left to swap: the toggle now sets only which language the user's own
- * prose is written in, which is the one thing it was ever really choosing.
+ *   - a save is one message for one section, because it is one decision by the
+ *     user and it has to be one write on disk. This is the same rule the panel's
+ *     confirm-to-learn batch follows, for the same reason.
+ *
+ * This replaced a passport-styled "document" surface, which was removed once
+ * Brío shipped rather than left to rot beside it. It is in the history.
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -30,53 +25,52 @@ import {
   INTERVIEW_DECLARATIONS,
   INTERVIEW_SECTIONS,
   REGISTER_FACT,
-  declarationProgress,
   type Lang,
 } from "@personal-md/core";
 
-import Bureau from "../../components/document/Bureau.tsx";
-import Cover from "../../components/document/Cover.tsx";
-import DataPage from "../../components/document/DataPage.tsx";
-import Declaration from "../../components/document/Declaration.tsx";
-import Exemplars from "../../components/document/Exemplars.tsx";
-import Issuance from "../../components/document/Issuance.tsx";
-import Observations from "../../components/document/Observations.tsx";
-import PageRail, { type RailPage } from "../../components/document/PageRail.tsx";
-import { readDossier } from "../../lib/document/dossier.ts";
-import { encodeMrz } from "../../lib/document/mrz.ts";
+import Activity from "../../components/app/Activity.tsx";
+import Connections from "../../components/app/Connections.tsx";
+import Context from "../../components/app/Context.tsx";
+import Onboarding from "../../components/app/Onboarding.tsx";
+import Privacy from "../../components/app/Privacy.tsx";
+import Settings from "../../components/app/Settings.tsx";
+import Shell, { type Tab } from "../../components/app/Shell.tsx";
 import { send } from "../../lib/protocol.ts";
 import type { MirrorPayload } from "../../lib/protocol.ts";
 import { DEFAULT_PORT, settings } from "../../lib/settings.ts";
 
-const folio = (n: number) => String(n + 1).padStart(2, "0");
+const EMPTY_LEDGER = { calls: 0, inputTokens: 0, outputTokens: 0, costUsd: 0 };
 
-export default function App() {
+export default function BrioApp() {
   const [payload, setPayload] = useState<MirrorPayload | null>(null);
+  const [loaded, setLoaded] = useState(false);
   const [token, setToken] = useState("");
   const [port, setPort] = useState(DEFAULT_PORT);
-  const [busy, setBusy] = useState(false);
   const [note, setNote] = useState("");
   const [error, setError] = useState("");
   const [lang, setLang] = useState<Lang>("es");
 
-  // `null` while we do not yet know whether the cover has been opened. Rendering
-  // the cover before that answer arrives would flash it at every returning user.
-  const [opened, setOpened] = useState<boolean | null>(null);
-  const [turning, setTurning] = useState(false);
-
-  const [page, setPage] = useState("s-identity");
+  const [tab, setTab] = useState<Tab>("context");
   const [draft, setDraft] = useState<Record<string, string>>({});
-  const [savingSection, setSavingSection] = useState<string | null>(null);
-  const [stamped, setStamped] = useState<string | null>(null);
+  const [savingId, setSavingId] = useState<string | null>(null);
+  const [savedId, setSavedId] = useState<string | null>(null);
+
+  /*
+   * Whether onboarding has been dismissed for good.
+   *
+   * `null` while we do not yet know. Rendering the app before that answer
+   * arrives would flash onboarding at every returning user, which is the single
+   * most common way a first-run experience becomes an irritation.
+   */
+  const [past, setPast] = useState<boolean | null>(null);
 
   const load = useCallback(async () => {
-    setBusy(true);
     try {
       setPayload(await send<MirrorPayload>({ kind: "getMirror" }));
     } catch (err) {
       setError(err instanceof Error ? err.message : "could not reach the background worker");
     } finally {
-      setBusy(false);
+      setLoaded(true);
     }
   }, []);
 
@@ -84,49 +78,23 @@ export default function App() {
     void (async () => {
       setToken(await settings.getToken());
       setPort(await settings.getPort());
-      setOpened(await settings.getOpened());
+      setPast(await settings.getOpened());
       await load();
     })();
   }, [load]);
 
   const profile = payload?.mirror?.profile ?? null;
   const connection = payload?.connection ?? { kind: "no_token" as const };
+  const facts = useMemo(() => profile?.facts ?? [], [profile]);
+  const answers = useMemo(() => profile?.answers ?? [], [profile]);
   const withheld = useMemo(
     () => new Set(payload?.mirror?.withheldKeys ?? []),
     [payload],
   );
 
-  // The draft is part of what the document currently says, so it goes in here:
-  // the machine-readable line has to fill as the user types, not when they save.
-  const dossier = useMemo(
-    () => readDossier(profile, payload?.mirror?.withheldKeys ?? [], lang, draft),
-    [profile, payload, lang, draft],
-  );
+  const stored = useMemo(() => new Map(facts.map((f) => [f.key, f])), [facts]);
 
-  const mrz = useMemo(
-    () =>
-      encodeMrz({
-        fullName: dossier.holder ?? "",
-        language: dossier.language,
-        firstRecordedAt: dossier.firstRecordedAt,
-        revisedAt: dossier.revisedAt,
-        facts: dossier.extent.facts,
-        answers: dossier.extent.declarations,
-        words: dossier.extent.words,
-      }),
-    [dossier],
-  );
-
-  const stored = useMemo(
-    () => new Map((profile?.facts ?? []).map((f) => [f.key, f])),
-    [profile],
-  );
-
-  /**
-   * Draft wins over stored, so a half-answered page is not overwritten by a
-   * refetch. Sections, declaration atoms and the register all live in one map,
-   * because they are all ordinary facts and the save path is the same for each.
-   */
+  /** Draft first, then what is on disk, for every key the interview knows. */
   const values = useMemo(() => {
     const out: Record<string, string> = {};
     const put = (key: string) => {
@@ -138,178 +106,163 @@ export default function App() {
     return out;
   }, [draft, stored]);
 
-  /**
-   * Save an arbitrary set of keys. One message, because it is one decision by
-   * the user and it has to be one write on disk - the same rule the confirm-to-
-   * learn batch follows.
-   */
-  const saveKeys = async (id: string, facts: { key: string; label: string }[]) => {
-    const pending = facts.filter((f) => draft[f.key] !== undefined);
-    if (pending.length === 0) return;
+  const dirty = useCallback(
+    (keys: readonly string[]) => keys.some((k) => draft[k] !== undefined),
+    [draft],
+  );
 
-    setSavingSection(id);
-    setError("");
-    try {
-      await send({
-        kind: "saveFacts",
-        facts: pending.map((f) => ({
-          key: f.key,
-          label: f.label,
-          value: (draft[f.key] ?? "").trim(),
-        })),
-      });
-      setDraft((d) => {
-        const next = { ...d };
-        for (const f of pending) delete next[f.key];
-        return next;
-      });
-      await load();
-      setStamped(id);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "could not save");
-    } finally {
-      setSavingSection(null);
-    }
-  };
+  const onChange = useCallback((key: string, value: string) => {
+    setSavedId(null);
+    setDraft((d) => ({ ...d, [key]: value }));
+  }, []);
 
+  const onSave = useCallback(
+    (id: string, group: { key: string; label: string }[]) => {
+      void (async () => {
+        const pending = group.filter((f) => draft[f.key] !== undefined);
+        if (pending.length === 0) return;
 
+        setSavingId(id);
+        setError("");
+        try {
+          await send({
+            kind: "saveFacts",
+            facts: pending.map((f) => ({
+              key: f.key,
+              label: f.label,
+              value: (draft[f.key] ?? "").trim(),
+            })),
+          });
+          setDraft((d) => {
+            const next = { ...d };
+            for (const f of pending) delete next[f.key];
+            return next;
+          });
+          await load();
+          setSavedId(id);
+        } catch (err) {
+          setError(err instanceof Error ? err.message : "could not save");
+        } finally {
+          setSavingId(null);
+        }
+      })();
+    },
+    [draft, load],
+  );
 
-  const openCover = () => {
-    setTurning(true);
-    void settings.setOpened();
-    window.setTimeout(() => setOpened(true), 560);
-  };
+  const leave = useCallback(
+    (to: Tab) => {
+      void settings.setOpened();
+      setPast(true);
+      setTab(to);
+    },
+    [],
+  );
 
-  if (opened === null) {
-    // One frame of nothing rather than a flash of the wrong surface.
-    return <div className="min-h-screen" />;
-  }
+  // One frame of nothing rather than a flash of the wrong surface.
+  if (!loaded || past === null) return <div className="min-h-screen bg-bone-050" />;
 
-  if (!opened) {
+  const empty = facts.length === 0 && answers.length === 0;
+  if (!past && empty) {
     return (
-      <Cover holder={dossier.holder} onOpen={openCover} turning={turning} lang={lang} />
+      <Onboarding
+        lang={lang}
+        state={connection}
+        onGoToSettings={() => leave("settings")}
+        onGoToContext={() => leave("context")}
+        onSkip={() => leave("context")}
+      />
     );
   }
 
-  const sectionPages: RailPage[] = INTERVIEW_SECTIONS.map((section, i) => ({
-    id: `s-${section.id}`,
-    folio: folio(i),
-    title: section.title,
-    stamped: section.facts.some((f) => (stored.get(f.key)?.value ?? "").trim() !== ""),
-  }));
-
-  const declarationPages: RailPage[] = INTERVIEW_DECLARATIONS.map((declaration, i) => ({
-    id: `d-${i}`,
-    folio: folio(INTERVIEW_SECTIONS.length + i),
-    // The rail cannot carry a whole question, so it carries it without its
-    // punctuation - which is also roughly what the file calls it.
-    title: {
-      es: declaration.prompt.es.replace(/[¿?.]/g, "").trim(),
-      en: declaration.prompt.en.replace(/[?.]/g, "").trim(),
-    },
-    stamped: declarationProgress(
-      declaration,
-      (key) => (stored.get(key)?.value ?? "").trim() !== "",
-    ).complete,
-  }));
-
-  const voicePage: RailPage = {
-    id: "voice",
-    folio: folio(INTERVIEW_SECTIONS.length + INTERVIEW_DECLARATIONS.length),
-    title: { es: "Cómo escribes tú", en: "How you write" },
-    // Marked when there is something to model a voice on. The register alone is
-    // not enough to claim this page is done, and saying otherwise would hide the
-    // one gap that makes drafts read generically.
-    stamped: (profile?.answers ?? []).some((a) => a.text.trim()),
-  };
-
-  const asidePages: RailPage[] = [
-    {
-      id: "observations",
-      folio: "—",
-      title: { es: "Observaciones", en: "Observations" },
-      stamped: false,
-      aside: true,
-    },
-    {
-      id: "bureau",
-      folio: "—",
-      title: { es: "Autoridad emisora", en: "Issuing bureau" },
-      stamped: false,
-      aside: true,
-    },
-  ];
-
-  const issuancePage: RailPage = {
-    id: "issuance",
-    folio: "★",
-    title: { es: "Expedición", en: "Issuance" },
-    stamped: dossier.complete,
-    aside: true,
-  };
-
-  /**
-   * Where to send someone who asks what is still missing.
+  /*
+   * What the Privacy badge counts.
    *
-   * Facts first, then questions, in the document's own order - so the answer is
-   * always the earliest folio that still has something on it to do.
+   * `withheld` is every key the policy would withhold, which includes keys the
+   * file does not hold. Counting those made the rail say 5 while the screen it
+   * points at said 3 — two numbers for one idea, on the same screen. The badge
+   * counts what the screen counts: withheld keys you actually have a value for.
    */
-  const outstandingPage = ((): string | null => {
-    const first = dossier.outstanding[0];
-    if (first) {
-      const section = INTERVIEW_SECTIONS.find((s) =>
-        s.facts.some((f) => f.key === first.key),
-      );
-      if (section) return `s-${section.id}`;
-    }
-    const declaration = INTERVIEW_DECLARATIONS.findIndex(
-      (d) =>
-        !declarationProgress(d, (key) => (stored.get(key)?.value ?? "").trim() !== "").complete,
-    );
-    if (declaration !== -1) return `d-${declaration}`;
-    // Everything is declared; what is left is a voice to model drafts on.
-    return (profile?.answers ?? []).some((a) => a.text.trim()) ? null : "voice";
+  const heldWithheld = facts.filter((f) => f.value.trim() && withheld.has(f.key)).length;
+
+  const lastEditedAt = ((): Date | null => {
+    const stamps = [
+      ...facts.map((f) => new Date(f.updatedAt).getTime()),
+      ...answers.map((a) => new Date(a.writtenAt).getTime()),
+    ].filter((n) => !Number.isNaN(n));
+    return stamps.length ? new Date(Math.max(...stamps)) : null;
   })();
 
-  /**
-   * When any of these keys was last written, from the file.
-   *
-   * Generalised from sections to any set of keys, because a declaration's stamp
-   * is the same idea over a different group: the date on the impression has to be
-   * a date the file actually holds, not the moment the page rendered.
-   */
-  const factSavedAt = (keys: readonly string[]): Date | null => {
-    const stamps = keys
-      .map((key) => stored.get(key))
-      .filter((f): f is NonNullable<typeof f> => Boolean(f && f.value.trim()))
-      .map((f) => new Date(f.updatedAt).getTime())
-      .filter((t) => !Number.isNaN(t));
-    return stamps.length ? new Date(Math.max(...stamps)) : null;
-  };
+  return (
+    <Shell
+      tab={tab}
+      onTab={setTab}
+      lang={lang}
+      onLang={setLang}
+      connection={connection}
+      port={port}
+      badge={heldWithheld || null}
+    >
+      {error && (
+        <p
+          role="alert"
+          className="mb-6 rounded-r-md border-l-2 border-brio-500 bg-brio-050 px-4 py-3 text-[13.5px] text-brio-700"
+        >
+          {error}
+        </p>
+      )}
 
-  const body = () => {
-    if (page === "observations") {
-      return (
-        <Observations
-          profile={profile}
-          dossier={dossier}
-          withheld={withheld}
-          fetchedAt={payload?.mirror?.fetchedAt ?? null}
+      {tab === "context" && (
+        <Context
           lang={lang}
-          busy={busy}
-          onRefresh={() => void load()}
+          values={values}
+          withheld={withheld}
+          answers={answers}
+          dirty={dirty}
+          savingId={savingId}
+          savedId={savedId}
+          onChange={onChange}
+          onSave={onSave}
+          factCount={facts.filter((f) => f.value.trim()).length}
+          lastEditedAt={lastEditedAt}
         />
-      );
-    }
+      )}
 
-    if (page === "bureau") {
-      return (
-        <Bureau
+      {tab === "activity" && (
+        <Activity
+          lang={lang}
+          facts={facts}
+          answers={answers}
+          withheld={withheld}
+          siteMemory={payload?.mirror?.siteMemory ?? {}}
+        />
+      )}
+
+      {tab === "connections" && (
+        <Connections lang={lang} onGoToContext={() => setTab("context")} />
+      )}
+
+      {tab === "privacy" && (
+        <Privacy
+          lang={lang}
+          facts={facts}
+          withheld={withheld}
+          ledger={payload?.mirror?.ledger ?? EMPTY_LEDGER}
+        />
+      )}
+
+      {tab === "settings" && (
+        <Settings
+          lang={lang}
           state={connection}
           token={token}
           port={port}
           note={note}
-          lang={lang}
+          // The companion does not report where it keeps the file, so this is
+          // the default it uses rather than a reading of the live one. If
+          // PERSONAL_MD_HOME is set, this line is wrong and should be fed from
+          // the server instead of guessed.
+          filePath={null}
           onToken={setToken}
           onPort={setPort}
           onSave={() => {
@@ -322,199 +275,7 @@ export default function App() {
           }}
           onRetry={() => void load()}
         />
-      );
-    }
-
-    if (page === "issuance") {
-      return (
-        <Issuance
-          profile={profile}
-          dossier={dossier}
-          lang={lang}
-          outstandingPage={outstandingPage}
-          onGoTo={setPage}
-        />
-      );
-    }
-
-    if (page === "voice") {
-      return (
-        <Exemplars
-          answers={profile?.answers ?? []}
-          register={values[REGISTER_FACT.key] ?? ""}
-          lang={lang}
-          savedAt={factSavedAt([REGISTER_FACT.key])}
-          justStamped={stamped === "voice"}
-          dirty={draft[REGISTER_FACT.key] !== undefined}
-          saving={savingSection === "voice"}
-          onChange={(value) => {
-            setStamped(null);
-            setDraft((d) => ({ ...d, [REGISTER_FACT.key]: value }));
-          }}
-          onSave={() =>
-            void saveKeys("voice", [
-              { key: REGISTER_FACT.key, label: REGISTER_FACT.label.en },
-            ])
-          }
-        />
-      );
-    }
-
-    if (page.startsWith("d-")) {
-      const index = Number(page.slice(2));
-      const declaration = INTERVIEW_DECLARATIONS[index];
-      if (!declaration) return null;
-      return (
-        <Declaration
-          key={declaration.canonicalKey}
-          declaration={declaration}
-          folio={folio(INTERVIEW_SECTIONS.length + index)}
-          values={values}
-          withheld={withheld}
-          lang={lang}
-          seed={dossier.holder ?? ""}
-          dirty={declaration.atoms.some((a) => draft[a.key] !== undefined)}
-          saving={savingSection === declaration.canonicalKey}
-          savedAt={factSavedAt(declaration.atoms.map((a) => a.key))}
-          justStamped={stamped === declaration.canonicalKey}
-          onChange={(key, value) => {
-            setStamped(null);
-            setDraft((d) => ({ ...d, [key]: value }));
-          }}
-          onSave={() =>
-            void saveKeys(
-              declaration.canonicalKey,
-              declaration.atoms.map((a) => ({ key: a.key, label: a.label.en })),
-            )
-          }
-        />
-      );
-    }
-
-    const sectionId = page.slice(2);
-    const index = INTERVIEW_SECTIONS.findIndex((s) => s.id === sectionId);
-    const section = INTERVIEW_SECTIONS[index];
-    if (!section) return null;
-
-    return (
-      <DataPage
-        key={section.id}
-        section={section}
-        primary={index === 0}
-        folio={folio(index)}
-        values={values}
-        withheld={withheld}
-        dossier={dossier}
-        mrz={mrz}
-        lang={lang}
-        dirty={section.facts.some((f) => draft[f.key] !== undefined)}
-        saving={savingSection === section.id}
-        savedAt={factSavedAt(section.facts.map((f) => f.key))}
-        justStamped={stamped === section.id}
-        onChange={(key, value) => {
-          setStamped(null);
-          setDraft((d) => ({ ...d, [key]: value }));
-        }}
-        onSave={() =>
-          void saveKeys(
-            section.id,
-            section.facts.map((f) => ({ key: f.key, label: f.label.en })),
-          )
-        }
-      />
-    );
-  };
-
-  return (
-    <div className="mx-auto max-w-[1240px] px-4 py-7 sm:px-7 sm:py-10">
-      <header className="mb-7 flex flex-wrap items-end justify-between gap-x-8 gap-y-4">
-        <div>
-          <h1
-            className="font-sans leading-none"
-            style={{
-              color: "var(--color-foil-300)",
-              fontSize: "17px",
-              fontWeight: 700,
-              fontStretch: "112%",
-              letterSpacing: "0.07em",
-            }}
-          >
-            PERSONAL.md
-          </h1>
-          <p className="pmd-legend pmd-legend--dark mt-1.5">
-            {dossier.holder
-              ? `${dossier.holder} · ${dossier.number}`
-              : "Documento sin titular · Unissued document"}
-          </p>
-        </div>
-
-        <div className="flex items-center gap-5">
-          <span className="pmd-legend pmd-legend--dark hidden sm:inline">
-            {lang === "es" ? "Escribes en" : "You write in"}
-          </span>
-          {/* Two states, both always visible, because this is a choice about the
-              user's own prose and not a mode they should have to discover. */}
-          <div
-            className="flex overflow-hidden"
-            style={{
-              borderRadius: "2px",
-              boxShadow: "inset 0 0 0 1px color-mix(in oklab, var(--color-cover-600) 90%, transparent)",
-            }}
-          >
-            {(["es", "en"] as const).map((id) => (
-              <button
-                key={id}
-                onClick={() => setLang(id)}
-                aria-pressed={lang === id}
-                className="pmd-action"
-                style={{
-                  background:
-                    lang === id ? "var(--color-cover-600)" : "transparent",
-                  color:
-                    lang === id
-                      ? "var(--color-laminate-050)"
-                      : "color-mix(in oklab, var(--color-laminate-200) 62%, transparent)",
-                  padding: "6px 12px",
-                }}
-              >
-                {id === "es" ? "Español" : "English"}
-              </button>
-            ))}
-          </div>
-        </div>
-      </header>
-
-      {error && (
-        <p
-          className="mb-6 border-l-2 px-4 py-3 font-sans text-[13px]"
-          style={{
-            borderColor: "var(--color-endorse-400)",
-            background: "color-mix(in oklab, var(--color-endorse-600) 16%, transparent)",
-            color: "var(--color-endorse-100)",
-          }}
-        >
-          {error}
-        </p>
       )}
-
-      {/*
-        `minmax(0,1fr)` on the single-column layout too, not just the two-column
-        one. An implicit `auto` track is sized by its content's max-content width,
-        and the widest thing in here is a forty-four character machine-readable
-        line that declares `min-width: max-content` on purpose - so on a 336px
-        viewport the track grew to 699px and the whole document overflowed
-        sideways. The track has to refuse to grow; the line scrolls inside itself.
-      */}
-      <div className="grid grid-cols-[minmax(0,1fr)] gap-7 lg:grid-cols-[236px_minmax(0,1fr)] lg:gap-9">
-        <PageRail
-          pages={[...sectionPages, ...declarationPages, voicePage, ...asidePages]}
-          feature={issuancePage}
-          current={page}
-          onSelect={setPage}
-          lang={lang}
-        />
-        <main className="min-w-0">{body()}</main>
-      </div>
-    </div>
+    </Shell>
   );
 }

@@ -1,26 +1,27 @@
+/**
+ * The popup answers one question: is this thing working right now, and on this
+ * site? Anything that needs reading or editing belongs in the app, which has
+ * room for it.
+ *
+ * It shares its stylesheet with the app, and that is worth stating because the
+ * surface this replaced learned it the hard way: a shared stylesheet is a shared
+ * brand, and moving one without the other leaves the second rendering its old
+ * classes against the new ground. Change one, look at both.
+ *
+ * Every state names what still works rather than what broke. "Server stopped"
+ * on its own reads as "nothing works", and everything except drafting does.
+ */
+
 import { useEffect, useState } from "react";
 
 import { send } from "../../lib/protocol.ts";
 import type { MirrorPayload } from "../../lib/protocol.ts";
 import { settings } from "../../lib/settings.ts";
 
-/**
- * The popup answers one question: is this thing working right now, and on this
- * site? Anything that needs reading or editing belongs in the options page,
- * which has room for it.
- *
- * It is dressed as the call slip - the small paper you fill in to ask for a
- * document rather than the document itself. That is the honest shape for it: it
- * holds the extent and the endorsement and nothing you can edit, and the one
- * action on it opens the real thing.
- *
- * It shares `options/style.css`, which is what forced this rewrite: when that
- * sheet became a burgundy ground with a laminate plane, the popup's Tailwind
- * slate classes were still written for white cards, so a change two directories
- * away left this surface as grey text on a dark red field. A shared stylesheet is
- * a shared brand, and both surfaces have to be moved together.
- */
-export default function App() {
+const RING =
+  "outline-none focus-visible:ring-2 focus-visible:ring-brio-500 focus-visible:ring-offset-2 focus-visible:ring-offset-bone-050";
+
+export default function BrioPopup() {
   const [payload, setPayload] = useState<MirrorPayload | null>(null);
   const [domain, setDomain] = useState("");
   const [dismissed, setDismissed] = useState(false);
@@ -47,107 +48,96 @@ export default function App() {
   const profile = payload?.mirror?.profile;
   const connection = payload?.connection;
 
-  /*
-   * One line per state, each naming what still works rather than what broke -
-   * the same rule the options page's bureau panel follows, because "server
-   * stopped" on its own reads as "nothing works" and everything except drafting
-   * does.
-   */
   const status = (() => {
-    if (!connection) return { text: "Comprobando · Checking", ink: "var(--color-intaglio-500)" };
+    if (!connection) return { text: "Comprobando · Checking", good: null };
     switch (connection.kind) {
       case "ok":
-        return { text: "En servicio · In service", ink: "var(--color-stamp-green)" };
+        return { text: "En marcha · Running", good: true };
       case "server_down":
-        return {
-          text: "Proceso parado · rellenar sigue funcionando",
-          ink: "var(--color-intaglio-700)",
-        };
+        return { text: "Parado · rellenar sigue funcionando", good: false };
       case "no_token":
-        return { text: "Falta la credencial · Credential missing", ink: "var(--color-stamp-blue)" };
+        return { text: "Falta el token · Token missing", good: false };
       case "unauthorised":
-        return { text: "Credencial rechazada · Refused", ink: "var(--color-endorse-600)" };
+        return { text: "Token rechazado · Refused", good: false };
       case "claude_signed_out":
-        return {
-          text: "Sesión de Claude caducada · redactar no funciona",
-          ink: "var(--color-intaglio-700)",
-        };
+        return { text: "Claude desconectado · redactar no", good: false };
       default:
-        return { text: "Error", ink: "var(--color-endorse-600)" };
+        return { text: "Error", good: false };
     }
   })();
 
   const row = (es: string, en: string, value: number) => (
-    <div
-      className="flex items-baseline justify-between gap-4 py-1.5"
-      style={{ borderTop: "1px solid var(--color-laminate-200)" }}
-    >
-      <dt>
-        <span className="pmd-legend block">{es}</span>
-        <span className="pmd-legend pmd-legend--secondary block">{en}</span>
+    <div className="flex items-baseline justify-between gap-4 border-t border-rule-200 py-2">
+      <dt className="min-w-0">
+        <span className="block text-[13px] font-medium">{es}</span>
+        <span className="brio-mono block text-graphite-300">{en}</span>
       </dt>
-      <dd className="pmd-data tabular-nums">{value}</dd>
+      <dd className="font-display text-[22px] leading-none tabular-nums">{value}</dd>
     </div>
   );
 
   return (
-    <div className="w-[268px] p-3">
-      <div className="pmd-page px-4 pb-4 pt-4">
-        <div className="relative">
-          {/*
-            The wordmark leads and the identity line follows it. Set above it, the
-            identity line was an eyebrow - the one pattern the floor bans outright,
-            and the exact thing that was stripped off all four folios in the same
-            pass that built this. A line under a heading is a subtitle; the same
-            line over it is a kicker.
-          */}
-          <h1
-            className="font-sans leading-none"
-            style={{ fontSize: "15px", fontWeight: 700, fontStretch: "108%", letterSpacing: "0.03em" }}
-          >
-            PERSONAL.md
-          </h1>
-          <p className="pmd-legend pmd-legend--secondary mt-1.5">
-            PM · OWN · Documento personal legible por máquina
-          </p>
-
-          <p className="pmd-legend mt-2.5" style={{ color: status.ink }}>
-            {status.text}
-          </p>
-
-          <dl className="mt-3.5">
-            {row("Datos", "Facts", profile?.facts.length ?? 0)}
-            {row("Respuestas", "Answers", profile?.answers.length ?? 0)}
-          </dl>
-
-          {domain && (
-            <label
-              className="mt-3.5 flex cursor-pointer items-start gap-2 pt-3"
-              style={{ borderTop: "1px solid var(--color-laminate-200)" }}
-            >
-              <input
-                type="checkbox"
-                checked={dismissed}
-                onChange={() => void toggleSite()}
-                className="pmd-endorse-check"
-              />
-              <span className="pmd-endorse-box mt-0.5" aria-hidden="true" />
-              <span className="pmd-legend pmd-legend--secondary normal-case tracking-[0.02em] leading-snug">
-                No aparecer nunca en{" "}
-                <span className="pmd-data pmd-data--verbatim text-[10px]">{domain}</span>
-                <span className="block">Never appear on this site</span>
-              </span>
-            </label>
-          )}
-
-          <button
-            onClick={() => void chrome.runtime.openOptionsPage()}
-            className="pmd-action pmd-action--primary mt-4 w-full"
-          >
-            Abrir el documento
-          </button>
-        </div>
+    <div className="w-[272px] bg-bone-050 p-3.5 font-sans text-graphite-900 antialiased">
+      <div className="flex items-center gap-2.5">
+        <span
+          aria-hidden="true"
+          className="inline-flex h-[22px] w-[22px] items-center justify-center rounded-full bg-brio-500 font-display text-[13px] leading-none text-white"
+        >
+          B
+        </span>
+        <span className="font-display text-[19px] leading-none">Brío</span>
       </div>
+
+      <p
+        className={`mt-3 flex items-center gap-2 text-[12.5px] font-semibold ${
+          status.good === null
+            ? "text-graphite-400"
+            : status.good
+              ? "text-jade-600"
+              : "text-brio-700"
+        }`}
+      >
+        <span
+          aria-hidden="true"
+          className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+            status.good === null
+              ? "bg-graphite-300"
+              : status.good
+                ? "bg-jade-600"
+                : "bg-brio-500"
+          }`}
+        />
+        {status.text}
+      </p>
+
+      <dl className="mt-3">
+        {row("Datos", "Facts", profile?.facts.length ?? 0)}
+        {row("Respuestas", "Answers", profile?.answers.length ?? 0)}
+      </dl>
+
+      {domain && (
+        <label className="mt-3 flex cursor-pointer items-start gap-2.5 border-t border-rule-200 pt-3">
+          <input
+            type="checkbox"
+            checked={dismissed}
+            onChange={() => void toggleSite()}
+            className={`mt-0.5 h-3.5 w-3.5 shrink-0 accent-brio-500 ${RING}`}
+          />
+          <span className="text-[12.5px] leading-snug text-graphite-600">
+            No aparecer nunca en{" "}
+            <span className="brio-mono text-graphite-900">{domain}</span>
+            <span className="brio-mono block text-graphite-300">Never appear on this site</span>
+          </span>
+        </label>
+      )}
+
+      <button
+        type="button"
+        onClick={() => void chrome.runtime.openOptionsPage()}
+        className={`mt-4 w-full rounded-full bg-ink-900 px-4 py-2.5 text-[13px] font-semibold text-bone-050 transition-colors hover:bg-brio-500 ${RING}`}
+      >
+        Abrir tu fichero
+      </button>
     </div>
   );
 }

@@ -1,8 +1,8 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
 
-import App from "./BrioApp.tsx";
-import "../options/brio.css";
+import App from "./App.tsx";
+import "../options/style.css";
 
 const root = document.getElementById("root");
 if (root) createRoot(root).render(<React.StrictMode><App /></React.StrictMode>);

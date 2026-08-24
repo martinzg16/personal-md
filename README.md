@@ -287,10 +287,10 @@ The product is called Brío; the file it keeps is still `PERSONAL.md`.
 
 The extension ships in the Brío design system — bone ground, ink chrome, one
 orange event, Instrument Serif and Instrument Sans — documented in
-[packages/brand/DESIGN.md](packages/brand/DESIGN.md). The earlier document
-surface (the passport world) is still in the tree, still builds, and is reachable
-in the harness with `?document=1`; `DESIGN.md` explains the split and what it
-costs. That is an intermediate state, not a resting place.
+[DESIGN.md](DESIGN.md), with the tokens in
+[packages/brand](packages/brand/brio.css) so all three surfaces read the same
+palette. The passport-world design that preceded it was removed once Brío
+shipped; it is in the history if it is ever wanted back.
 
 ```bash
 npm run site                                          # the landing, :5602
@@ -298,5 +298,6 @@ npm run preview --workspace @personal-md/extension    # the app and the panel, :
 ```
 
 In the harness: `/` is the app, `/widget.html` is every panel state at once,
-`/?popup=1` is the popup, and `/?empty=1&cover=1` is first run. `PORT` overrides
-the port when something else already has 5601.
+`/?popup=1` is the popup, and `/?empty=1&cover=1` is first run. `?conn=down` and
+`?conn=signedout` are the two ways the companion fails. `PORT` overrides the port
+when something else already has 5601.
