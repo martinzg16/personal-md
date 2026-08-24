@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Brío's landing page. The only surface of this product that talks to someone who does not have it yet.",
   "scripts": {
-    "sync-fonts": "cp ../brand/fonts/*.woff2 public/fonts/",
+    "sync-fonts": "mkdir -p public/fonts && cp ../brand/fonts/*.woff2 public/fonts/",
     "predev": "npm run sync-fonts",
     "prebuild": "npm run sync-fonts",
     "dev": "vite",

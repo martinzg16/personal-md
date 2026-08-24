@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "brio-site",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "site"],
+      "port": 5602
+    },
+    {
+      "name": "brio-surfaces",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "preview", "--workspace", "@personal-md/extension"],
+      "port": 5601
+    }
+  ]
+}

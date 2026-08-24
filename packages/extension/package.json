@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "sync-fonts": "cp ../brand/fonts/*.woff2 public/fonts/",
+    "sync-fonts": "mkdir -p public/fonts && cp ../brand/fonts/*.woff2 public/fonts/",
     "predev": "npm run sync-fonts",
     "prebuild": "npm run sync-fonts",
     "dev": "wxt",

@@ -274,7 +274,29 @@ field that must stay empty.
 ## Layout
 
 ```
+packages/brand       Brío: palette, faces, motion — declared once for every surface
 packages/core        the PERSONAL.md format: types, parse, serialise
 packages/server      companion process, claude bridge, egress guard
 packages/extension   Chrome MV3 extension (WXT + React + Tailwind)
+packages/site        the landing page (Vite + React)
 ```
+
+## Brío
+
+The product is called Brío; the file it keeps is still `PERSONAL.md`.
+
+The extension ships in the Brío design system — bone ground, ink chrome, one
+orange event, Instrument Serif and Instrument Sans — documented in
+[packages/brand/DESIGN.md](packages/brand/DESIGN.md). The earlier document
+surface (the passport world) is still in the tree, still builds, and is reachable
+in the harness with `?document=1`; `DESIGN.md` explains the split and what it
+costs. That is an intermediate state, not a resting place.
+
+```bash
+npm run site                                          # the landing, :5602
+npm run preview --workspace @personal-md/extension    # the app and the panel, :5601
+```
+
+In the harness: `/` is the app, `/widget.html` is every panel state at once,
+`/?popup=1` is the popup, and `/?empty=1&cover=1` is first run. `PORT` overrides
+the port when something else already has 5601.

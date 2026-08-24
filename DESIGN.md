@@ -2,6 +2,67 @@
 name: personal-md
 description: A machine-readable personal document you issue to yourself — and, over other people's forms, that same file projected onto their form.
 colors:
+  # ---------------------------------------------------------------------------
+  # Brío. The world the extension ships in as of the Brío build: bone ground, ink
+  # chrome, one orange event. Declared in packages/brand/brio.css, documented in
+  # packages/brand/DESIGN.md, and listed here so the design hooks know these are
+  # deliberate rather than stray values.
+  #
+  # The document palette below it is still in the tree and still builds; see
+  # "Two worlds" at the end of this file.
+  # ---------------------------------------------------------------------------
+  ink-900: "#121210"
+  ink-850: "#171613"
+  ink-800: "#1c1b18"
+  ink-700: "#2a2926"
+  ink-600: "#333230"
+  bone-050: "#f8f8f6"
+  bone-100: "#fafaf8"
+  bone-200: "#f1f1ee"
+  bone-250: "#f1f1ec"
+  bone-300: "#f0f0eb"
+  rule-100: "#f4f4f0"
+  rule-200: "#efefea"
+  rule-250: "#edede8"
+  rule-300: "#ebebe4"
+  rule-400: "#e6e6e1"
+  rule-500: "#dfded6"
+  rule-600: "#d5d4cb"
+  graphite-900: "#121210"
+  graphite-700: "#46453f"
+  graphite-600: "#55544d"
+  graphite-500: "#65645c"
+  graphite-400: "#86857c"
+  graphite-300: "#96958b"
+  graphite-200: "#a3a299"
+  paper-050: "#f7f7f4"
+  paper-200: "#e6e6e1"
+  paper-400: "#c9c8c0"
+  paper-500: "#a9a8a0"
+  brio-050: "#fff5f1"
+  brio-100: "#ffede6"
+  brio-150: "#ffe1d6"
+  brio-200: "#ffebe4"
+  brio-300: "#ffd3c4"
+  brio-400: "#ff8557"
+  brio-500: "#ff4e1e"
+  brio-600: "#e63f12"
+  brio-700: "#c2350c"
+  brio-950: "#2e0f06"
+  lapis-100: "#e7ebff"
+  lapis-500: "#2440ff"
+  lapis-700: "#1e34c8"
+  amber-100: "#fff6d9"
+  amber-150: "#fff2d6"
+  amber-300: "#ffb259"
+  amber-700: "#9a6300"
+  amber-800: "#8a6100"
+  amber-950: "#3a2410"
+  jade-100: "#dff7ee"
+  jade-300: "#3fdd97"
+  jade-600: "#00875a"
+  jade-950: "#0f2a1f"
+  # --- the document world, below ---
   cover-900: "#200d16"
   cover-850: "#2a111d"
   cover-800: "#351526"
@@ -49,6 +110,107 @@ colors:
   widget-amber-200: "oklch(92.4% 0.12 95.746)"
   widget-rose-300: "oklch(81% 0.117 11.638)"
 typography:
+  # --- Brío. Instrument Serif states, Instrument Sans argues, mono measures. ---
+  brio-display-hero:
+    fontFamily: "Instrument Serif, Georgia, Times New Roman, serif"
+    fontSize: "clamp(44px, 8vw, 82px)"
+    fontWeight: 400
+    lineHeight: "0.98"
+    letterSpacing: "-0.02em"
+  brio-display-page:
+    fontFamily: "Instrument Serif, Georgia, Times New Roman, serif"
+    fontSize: "clamp(32px, 4vw, 44px)"
+    fontWeight: 400
+    lineHeight: "1.05"
+    letterSpacing: "-0.015em"
+  brio-display-section:
+    fontFamily: "Instrument Serif, Georgia, Times New Roman, serif"
+    fontSize: "clamp(26px, 2.6vw, 30px)"
+    fontWeight: 400
+    lineHeight: "1.1"
+    letterSpacing: "-0.01em"
+  brio-display-card:
+    fontFamily: "Instrument Serif, Georgia, Times New Roman, serif"
+    fontSize: "22px"
+    fontWeight: 400
+    lineHeight: "1.2"
+  brio-figure:
+    fontFamily: "Instrument Serif, Georgia, Times New Roman, serif"
+    fontSize: "30px"
+    fontWeight: 400
+    lineHeight: "1"
+  brio-lead:
+    fontFamily: "Instrument Sans, ui-sans-serif, system-ui, sans-serif"
+    fontSize: "16.5px"
+    fontWeight: 400
+    lineHeight: "1.55"
+  brio-body:
+    fontFamily: "Instrument Sans, ui-sans-serif, system-ui, sans-serif"
+    fontSize: "14.5px"
+    fontWeight: 400
+    lineHeight: "1.6"
+  brio-body-sm:
+    fontFamily: "Instrument Sans, ui-sans-serif, system-ui, sans-serif"
+    fontSize: "13.5px"
+    fontWeight: 400
+    lineHeight: "1.55"
+  brio-strong:
+    fontFamily: "Instrument Sans, ui-sans-serif, system-ui, sans-serif"
+    fontSize: "14.5px"
+    fontWeight: 600
+    lineHeight: "1.4"
+  brio-action:
+    fontFamily: "Instrument Sans, ui-sans-serif, system-ui, sans-serif"
+    fontSize: "13px"
+    fontWeight: 600
+    lineHeight: "1.3"
+  brio-mono:
+    fontFamily: "ui-monospace, SFMono-Regular, SF Mono, Menlo, monospace"
+    fontSize: "10.5px"
+    fontWeight: 400
+    letterSpacing: "0.06em"
+  # --- Brío, the panel. -------------------------------------------------------
+  # A second, tighter ramp, and deliberately so: the panel is 392px wide and
+  # sits over someone else's page, where the app's 14.5/16.5 body sizes read as
+  # shouting. Nothing on this ramp appears in the app, and nothing on the app's
+  # ramp appears here. See packages/brand/DESIGN.md, "Two ramps".
+  brio-panel-title:
+    fontFamily: "Instrument Sans, ui-sans-serif, system-ui, sans-serif"
+    fontSize: "14px"
+    fontWeight: 600
+    lineHeight: "1.25"
+  brio-panel-lead:
+    fontFamily: "Instrument Sans, ui-sans-serif, system-ui, sans-serif"
+    fontSize: "14px"
+    fontWeight: 400
+    lineHeight: "1.375"
+  brio-panel-body:
+    fontFamily: "Instrument Sans, ui-sans-serif, system-ui, sans-serif"
+    fontSize: "13px"
+    fontWeight: 400
+    lineHeight: "1.45"
+  brio-panel-action:
+    fontFamily: "Instrument Sans, ui-sans-serif, system-ui, sans-serif"
+    fontSize: "12px"
+    fontWeight: 500
+    lineHeight: "1.333"
+  brio-panel-support:
+    fontFamily: "Instrument Sans, ui-sans-serif, system-ui, sans-serif"
+    fontSize: "11px"
+    fontWeight: 400
+    lineHeight: "1.25"
+  brio-panel-label:
+    fontFamily: "ui-monospace, SFMono-Regular, SF Mono, Menlo, monospace"
+    fontSize: "10px"
+    fontWeight: 400
+    letterSpacing: "0.06em"
+  brio-eyebrow:
+    fontFamily: "ui-monospace, SFMono-Regular, SF Mono, Menlo, monospace"
+    fontSize: "10.5px"
+    fontWeight: 400
+    letterSpacing: "0.14em"
+    textTransform: "uppercase"
+  # --- the document world, below ---
   foil:
     fontFamily: "Archivo, ui-sans-serif, system-ui, -apple-system, sans-serif"
     fontSize: "clamp(21px, 6.4vw, 31px)"
@@ -1332,3 +1494,50 @@ Each of these is an absence with a reason.
   workspaces.
 
 ---
+
+---
+
+## Two worlds, and which one ships
+
+As of the Brío build this repository carries **two complete design systems**, and
+that is a stated intermediate state rather than an accident.
+
+| | Brío | The document |
+|---|---|---|
+| Ships as | the extension, and the landing site | still in the tree, unmounted |
+| App entry | `entrypoints/options/BrioApp.tsx` | `entrypoints/options/App.tsx` |
+| Popup entry | `entrypoints/popup/BrioApp.tsx` | `entrypoints/popup/App.tsx` |
+| Stylesheet | `entrypoints/options/brio.css` | `entrypoints/options/style.css` |
+| Tokens | `packages/brand/brio.css` | the `@theme` block in `style.css` |
+| Documented in | `packages/brand/DESIGN.md` | this file, above |
+| Harness | `npm run preview` | `npm run preview` + `?document=1` |
+
+The two sheets **cannot both be on a page**. Both declare a Tailwind v4 `@theme`,
+and two `@theme` blocks in one document merge rather than scope — so whichever
+loads second wins every name they share, `--font-sans` included. That is why
+there are two stylesheets and two entry components rather than one of each with a
+flag, and why the preview harness loads exactly one of them per request.
+
+Nothing of the document world was deleted in the Brío build. Every component
+under `components/document/` still compiles and still renders under
+`?document=1`. Switching the extension back is two import lines:
+`entrypoints/options/main.tsx` and `entrypoints/popup/main.tsx`.
+
+**This is not a stable resting place.** Two design systems means every change to
+shared logic has to be looked at twice, and the second look is the one that gets
+skipped. Whichever world wins, the other should be deleted rather than left to
+rot — and the deletion is the cheap part; deciding is the work.
+
+### What Brío inherited rather than reinvented
+
+Three rules survived the change of world intact, because they were never about
+the world:
+
+- **the panel never opens itself and never takes focus** on a page you may only
+  be skimming;
+- **nothing is written until you confirm it**, and a confirmed batch is one write
+  on disk, because it was one decision;
+- **every fill is reversible on its own line**, and the panel never claims a
+  state the page does not actually hold.
+
+A design system that changed any of those would not be a reskin.
