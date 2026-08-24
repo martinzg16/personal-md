@@ -339,60 +339,6 @@ export async function ask(opts: AskOptions): Promise<ClaudeResult> {
   };
 }
 
-/**
- * Read the CLI's JSON envelope: either the answer, or an error that says what
- * actually went wrong.
- *
- * Exported so the mapping can be tested against real captured payloads without
- * spawning anything.
- *
- * The CLI signals its own failures in-band: exit code 0, `is_error: true`, and
- * the human-readable reason in `result` - the same field a successful call puts
- * the answer in. `subtype` is not a usable substitute. An expired OAuth session
- * arrives as `subtype: "success"`, which is how the predecessor of this function
- * came to raise the message "claude reported an error (success)" while throwing
- * away the CLI's own sentence: "Failed to authenticate: OAuth session expired
- * and could not be refreshed" (observed 24-ago-2026, CLI 2.1.241).
- *
- * Losing that mattered. Signing in again is the one failure here the user can
- * actually fix, and nothing in the old message pointed at it.
- */
-export function readCliResult(
-  parsed: CliJson,
-): { ok: true; text: string } | { ok: false; error: ClaudeError } {
-  if (!parsed.is_error && typeof parsed.result === "string") {
-    return { ok: true, text: parsed.result };
-  }
-
-  const detail = typeof parsed.result === "string" ? parsed.result.slice(0, 2000) : "";
-
-  // Matched on the CLI's own wording, not on model output, so a loose pattern is
-  // safe here. Covers OAuth expiry, a missing login and a rejected key alike.
-  if (/authenticat|oauth|log ?in|credential|api[ -]?key/i.test(detail)) {
-    return {
-      ok: false,
-      error: new ClaudeError(
-        "unauthenticated",
-        "the `claude` CLI is not signed in, so nothing can be drafted; " +
-          "run `claude auth login` in a terminal and try again",
-        detail,
-      ),
-    };
-  }
-
-  const firstLine = (detail.split("\n")[0] ?? detail).slice(0, 300);
-  return {
-    ok: false,
-    error: new ClaudeError(
-      "failed",
-      firstLine
-        ? `claude reported an error: ${firstLine}`
-        : `claude reported an error (${parsed.subtype ?? "unknown"})`,
-      detail,
-    ),
-  };
-}
-
 /** Total input tokens the call consumed, however they were counted. */
 export function totalInputTokens(u: ClaudeUsage): number {
   return u.inputTokens + u.cacheCreationInputTokens + u.cacheReadInputTokens;
