@@ -33,5 +33,5 @@ hairline weights exist because this design carries separation entirely with
 lines, but there is exactly one accent, and a screen with two accents on it has a
 design problem that a new token will not fix.
 
-If you do: add it here, add it to `DESIGN.md`, and use it in at least two places.
+If you do: add it here, add it to `DESIGN.md` at the repo root, and use it in at least two places.
 A token used once is a hardcoded value with extra steps.

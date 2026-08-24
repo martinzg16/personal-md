@@ -17,11 +17,8 @@ import { createRoot } from "react-dom/client";
 import type { Profile } from "@personal-md/core";
 
 /*
- * The stylesheet is loaded below rather than here, because there are now two of
- * them and they cannot both be on the page. Brío and the document surface each
- * declare a Tailwind `@theme`, and two `@theme` blocks in one document merge
- * rather than scope — so whichever loaded second would silently reset shared
- * names like `--font-sans` for both.
+ * The harness for the extension's own pages: the real component tree against a
+ * stubbed `chrome`, so a save round-trips and the busy states are visible.
  */
 
 const now = "2026-08-20T18:04:00.000Z";
@@ -191,27 +188,20 @@ const mirror = () => {
 };
 
 /*
- * Three surfaces share this harness and its stubbed `chrome`:
+ * Two surfaces share this harness and its stubbed `chrome`:
  *
- *   (default)     Brío, which is what ships
- *   ?document=1   the document surface, still in the tree and still building
- *   ?popup=1      the browser-action popup, which rides the document sheet
+ *   (default)   the app
+ *   ?popup=1    the browser-action popup, which rides the same stylesheet
  *
- * Each pulls its own stylesheet with it. Whenever one of these changes, the
- * other two are worth a look: they are the same data through three designs.
+ * They are the same data through two densities, so whenever one changes the
+ * other is worth a look. `?empty=1` gives both an empty file, which is what
+ * first run actually looks like; `?conn=down` and `?conn=signedout` are the two
+ * ways the companion fails.
  */
-const mode = new URLSearchParams(location.search);
-const popup = mode.get("popup") === "1";
-const document_ = mode.get("document") === "1";
+import "../../entrypoints/options/style.css";
 
-if (document_) await import("../../entrypoints/options/style.css");
-else await import("../../entrypoints/options/brio.css");
-
+const popup = new URLSearchParams(location.search).get("popup") === "1";
 const { default: App } = popup
-  ? document_
-    ? await import("../../entrypoints/popup/App.tsx")
-    : await import("../../entrypoints/popup/BrioApp.tsx")
-  : document_
-    ? await import("../../entrypoints/options/App.tsx")
-    : await import("../../entrypoints/options/BrioApp.tsx");
+  ? await import("../../entrypoints/popup/App.tsx")
+  : await import("../../entrypoints/options/App.tsx");
 createRoot(document.getElementById("root")!).render(<App />);
