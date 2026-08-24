@@ -237,16 +237,22 @@ export async function handleDraft(
 
   // Opus, not Haiku: writing a paragraph in someone else's voice is the one job
   // here where the model tier is the product.
-  // Deliberately no `effort`. Measured on this workload, passing --effort makes a
-  // draft cost MORE, not less: it changes the request shape enough to invalidate
-  // the cached ~26k-token prefix, and a cache write at 1.25x dwarfs whatever
-  // thinking tokens a lower effort saves. Costs per draft, same prompt:
+  // Deliberately no `effort`, though not for the reason this comment used to
+  // give. Re-measured 24-ago-2026 on CLI 2.1.241, cost of one draft on opus:
   //
-  //     cold cache   $0.163
-  //     warm cache   $0.023   <- steady state
-  //     --effort low $0.380   (cache invalidated on every call)
+  //     warm cache                       $0.0199  <- steady state
+  //     first call after any change      $0.161
+  //     scaffolding changed underneath   $0.39    (41,079 written, read=0)
   //
-  // The cache is the whole cost story here, exactly as it is for input overhead.
+  // The old note read "--effort low $0.380, cache invalidated on every call".
+  // $0.38 is simply what a cold write costs at the 1h TTL, so that was one cold
+  // call, not a standing penalty; and the CLI already runs opus at effort=high
+  // by default here without the flag. The flag stays off because nothing has
+  // shown it helps, not because it is known to cost 16x.
+  //
+  // What does drive cost is whether the cached prefix survives between calls,
+  // and the thing most likely to break it is the user's skill/agent inventory
+  // changing. See the header of claude.ts.
   const first = await askForJson({
     system: DRAFT_SYSTEM,
     prompt,

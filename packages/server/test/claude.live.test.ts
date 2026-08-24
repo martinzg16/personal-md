@@ -4,29 +4,51 @@
  *
  *   PERSONAL_MD_LIVE=1 node --test packages/server/test/claude.live.test.ts
  *
- * On per-call overhead, and a measurement mistake worth recording so nobody
- * repeats it:
+ * On per-call overhead. These numbers go stale fast, so they carry dates.
  *
- * An early hand measurement read `cache_creation_input_tokens` (5,730) as the
- * total input for a call and concluded the isolated cwd cut overhead 4.5x. It
- * does not. That figure was the cold-cache *write* portion only. Measured
- * properly, across three identical back-to-back calls:
+ * Re-measured 24-ago-2026, CLI 2.1.241, 135 skills and 28 agents enabled in
+ * the user's global config. Six back-to-back haiku calls through `ask`:
  *
- *     fresh_input=10   cache_write=0   cache_read=25,931   total=25,941
+ *     total input 29,358-29,431
+ *     repeat of a byte-identical call:  fresh=10  write=0  read=29,348  $0.0032
+ *     new prompt, same scaffolding:     fresh=10  write=~6.4k  read=22,934
  *
- * So the real picture is:
- *   - Claude Code injects ~26k input tokens of scaffolding per call.
- *   - Essentially all of it is a cache READ, billed at roughly a tenth of fresh
- *     input, which is why a call costs ~$0.003 on Haiku rather than ~$0.03.
- *   - The isolated cwd plus --strict-mcp-config plus --settings takes it from
- *     ~29.9k to ~25.9k. A real 13% saving, not a 4.5x one. Worth keeping
- *     because it is free, but it is not the thing that makes this affordable.
- *     Prompt caching is.
+ * And three back-to-back opus calls, which is the path drafting actually uses:
  *
- * The two invariants pinned below follow from that. Total input must not blow
- * out (which would mean something large is being pulled into the prompt), and
- * repeated calls must actually hit the cache - if cache_read ever goes to zero,
- * every call silently costs ~10x more.
+ *     #1  fresh=2  write=14,844  read=24,804  total=39,650  $0.1610
+ *     #2  fresh=2  write=0       read=39,648  total=39,650  $0.0199
+ *     #3  fresh=2  write=0       read=39,648  total=39,650  $0.0199
+ *
+ * Superseded numbers, kept so the drift is visible: this header used to state
+ * 25,941 total with cache_read=25,931, measured on haiku on 22-ago-2026. Two
+ * days later haiku is +13% and opus is +53% against that figure. (An even
+ * earlier note claimed the isolated cwd cut overhead 4.5x, from misreading
+ * cache_creation_input_tokens as the total. It does not; that was the
+ * cold-cache write portion only.)
+ *
+ * Where the growth is: the CLI puts the user's whole skill and agent inventory
+ * in every prompt. On haiku that listing is names only (~14k chars); on opus it
+ * carries full descriptions (~34k chars), which is most of the ~10k-token gap
+ * between the two models. Both come from user-level config, so the isolated cwd
+ * does nothing about them.
+ *
+ * Two consequences for the assertions below:
+ *
+ *   - The ceiling is a HAIKU ceiling, because that is what these probes call.
+ *     Opus is already at 39,650-41,102 and would break a 40,000 ceiling. That
+ *     is deliberate, not an oversight: asserting it on opus would spend real
+ *     subscription quota on every live run. If drafting cost matters, measure
+ *     opus by hand rather than trusting this file to catch it.
+ *
+ *   - The cache test can fail for a reason that is not a regression. The cached
+ *     prefix only holds while the skill/agent inventory is byte-identical
+ *     between calls, and that inventory is re-read from disk and from plugin
+ *     marketplaces on every invocation. On 24-ago-2026 a local-directory
+ *     marketplace gained two skills between 11:41 and 11:42 (134 -> 135) and
+ *     both calls came back with cache_read=0, writing the full 41,079 at the
+ *     1h-TTL rate: $0.39 for a single draft against $0.02 warm. If this test
+ *     fails, check whether a plugin changed underneath it before concluding
+ *     that the code did.
  */
 
 import assert from "node:assert/strict";
@@ -41,9 +63,14 @@ import { Store } from "../src/store.ts";
 const LIVE = process.env["PERSONAL_MD_LIVE"] === "1";
 
 /**
- * Measured at ~25.9k total input per call. The ceiling leaves room for CLI
- * version drift while still catching a real regression, such as a CLAUDE.md or
- * a memory file being pulled into every prompt.
+ * Haiku measured at 29,358-29,431 total input per call on 24-ago-2026, up from
+ * 25,941 on 22-ago-2026. The ceiling keeps ~26% headroom over that, which is
+ * enough for CLI version drift and for a few more skills appearing in the
+ * user's global config, while still catching a real regression such as a
+ * CLAUDE.md or a memory file being pulled into every prompt.
+ *
+ * It does not bound the opus drafting path, which is already past it. See the
+ * file header.
  */
 const TOTAL_INPUT_CEILING = 40_000;
 
@@ -93,9 +120,11 @@ describe("claude CLI bridge (live)", { skip: LIVE ? false : "set PERSONAL_MD_LIV
   });
 
   it("hits the prompt cache on a repeat call, which is what makes this cheap", async () => {
-    // Not a micro-optimisation: the ~26k of scaffolding is billed at about a
-    // tenth of fresh-input price only while it is a cache read. If this ever
-    // fails, every call in the app just got roughly 10x more expensive.
+    // Not a micro-optimisation: the ~29k of scaffolding on haiku (~40k on opus)
+    // is billed at about a tenth of fresh-input price only while it is a cache
+    // read. Miss it and you pay a 1h-TTL write instead, which is dearer than
+    // fresh input, not cheaper: $0.0199 -> $0.39 on an opus draft, measured
+    // 24-ago-2026.
     const opts = {
       system: "Reply with exactly one word.",
       prompt: "Say OK.",
