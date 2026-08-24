@@ -24,7 +24,20 @@ import { cssEscape, isSelect, isToggle, tagNameOf } from "../scan/dom-util.ts";
 
 export type FillOutcome =
   | { ok: true; applied: string; truncated: boolean }
-  | { ok: false; reason: "refused" | "not-fillable" | "no-matching-option" | "disabled" };
+  | {
+      ok: false;
+      reason:
+        | "refused"
+        | "not-fillable"
+        | "no-matching-option"
+        | "disabled"
+        /**
+         * The field rejected what we wrote. A `<input type="number">` handed
+         * "70000 EUR" keeps none of it - the browser's sanitisation empties the
+         * field - so reporting success would tick a row that is still blank.
+         */
+        | "value-not-accepted";
+    };
 
 interface Snapshot {
   element: HTMLElement;
@@ -106,14 +119,81 @@ function snapshot(el: HTMLElement): Snapshot {
   return snap;
 }
 
+/**
+ * The number inside a written answer, as a numeric input will accept it.
+ *
+ * A stored salary reads "70.000 EUR" because that is how a person writes it,
+ * and a `<input type="number">` accepts none of that. Rather than give up on
+ * numeric fields, the figure is read out of the text - handling the European
+ * convention where a dot groups thousands and a comma is the decimal, and the
+ * other way round - and everything else is dropped.
+ *
+ * Returns null when there is no unambiguous number, which includes "45k": the
+ * magnitude is a guess, and guessing someone's salary by a factor of a thousand
+ * is worse than leaving the field for them.
+ */
+export function numericValue(text: string): string | null {
+  const match = /-?\d[\d.,]*/.exec(text);
+  if (!match) return null;
+
+  const after = text.slice(match.index + match[0].length);
+  // A letter against the digits is a unit or a magnitude: "45k", "3rd". A
+  // currency standing apart ("70000 EUR") is not, and must still fill.
+  if (/^[a-zA-Z]/.test(after)) return null;
+  if (/^\s*[km]\b/i.test(after)) return null;
+
+  const raw = match[0].replace(/[.,]+$/, "");
+  const lastDot = raw.lastIndexOf(".");
+  const lastComma = raw.lastIndexOf(",");
+
+  let normalised: string;
+  if (lastDot !== -1 && lastComma !== -1) {
+    // Whichever separator comes last is the decimal one.
+    const decimal = lastDot > lastComma ? "." : ",";
+    const grouping = decimal === "." ? "," : ".";
+    normalised = raw.split(grouping).join("").replace(decimal, ".");
+  } else {
+    const sep = lastDot !== -1 ? "." : lastComma !== -1 ? "," : "";
+    if (!sep) normalised = raw;
+    else {
+      const parts = raw.split(sep);
+      const grouped = parts.length > 2 || (parts[1] ?? "").length === 3;
+      normalised = grouped ? parts.join("") : parts.join(".");
+    }
+  }
+
+  return Number.isFinite(Number(normalised)) && normalised !== "" ? normalised : null;
+}
+
+/** Types whose value the browser silently discards unless it is well-formed. */
+const NUMERIC_TYPES = new Set(["number", "range"]);
+
 function setText(el: HTMLInputElement | HTMLTextAreaElement, value: string): FillOutcome {
+  const type = (el.getAttribute("type") ?? "").toLowerCase();
+  let wanted = value;
+  if (NUMERIC_TYPES.has(type)) {
+    const numeric = numericValue(value);
+    if (numeric === null) return { ok: false, reason: "value-not-accepted" };
+    wanted = numeric;
+  }
+
   const limit = Number.parseInt(el.getAttribute("maxlength") ?? "", 10);
-  const truncated = Number.isFinite(limit) && limit > 0 && value.length > limit;
-  const applied = truncated ? value.slice(0, limit) : value;
+  const truncated = Number.isFinite(limit) && limit > 0 && wanted.length > limit;
+  const applied = truncated ? wanted.slice(0, limit) : wanted;
 
   const set = nativeSetter(el);
   if (set) set(applied);
   else el.value = applied;
+
+  /*
+   * Read it back before claiming success.
+   *
+   * Date, colour and number fields run a sanitisation step that throws away
+   * anything they cannot parse, leaving the field empty and logging an error.
+   * Without this check the panel marked such a row "Filled" over a blank field -
+   * the one failure mode this whole design is meant not to have.
+   */
+  if (applied !== "" && el.value === "") return { ok: false, reason: "value-not-accepted" };
 
   // `input` is what frameworks listen to; `change` is what plain HTML forms and
   // some validation libraries use. No synthetic `blur`: it can trip validation

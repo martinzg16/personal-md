@@ -13,7 +13,7 @@ import assert from "node:assert/strict";
 import { JSDOM } from "jsdom";
 import { beforeEach, describe, it } from "node:test";
 
-import { beginBatch, fillField, pendingUndoCount, undoLastFill } from "../lib/fill/apply.ts";
+import { beginBatch, fillField, numericValue, pendingUndoCount, undoLastFill } from "../lib/fill/apply.ts";
 
 let dom: JSDOM;
 let doc: Document;
@@ -36,6 +36,7 @@ const html = `
   <input id="file" name="file" type="file" />
   <input id="disabled" name="disabled" type="text" disabled />
   <input id="ro" name="ro" type="text" value="keep" readonly />
+  <input id="salary" name="salary" type="number" />
 </form>
 <!-- Outside any form, as React apps often render radios -->
 <input id="loose1" name="loose" type="radio" value="a" />
@@ -321,5 +322,44 @@ describe("filling a whole batch at once", () => {
     assert.equal(c.value, "overwritten");
     undoLastFill();
     assert.equal(c.value, "keep me");
+  });
+});
+
+describe("a field that will not take the stored value", () => {
+  /*
+   * From the wild: a stored salary of "70000 EUR" written into Wellfound's
+   * <input type="number">. The browser discards the whole string, the field
+   * stays empty, and the panel used to report "Filled" over a blank box -
+   * while Chrome logged "The specified value ... cannot be parsed" against the
+   * extension.
+   */
+  it("reads the figure out of a written amount", () => {
+    const input = el("salary") as HTMLInputElement;
+    const outcome = fillField(input, "70000 EUR");
+    assert.equal(outcome.ok, true);
+    assert.equal(input.value, "70000");
+  });
+
+  it("understands both thousand-separator conventions", () => {
+    assert.equal(numericValue("70.000 EUR"), "70000");
+    assert.equal(numericValue("70,000"), "70000");
+    assert.equal(numericValue("1.234,56 €"), "1234.56");
+    assert.equal(numericValue("1,234.56"), "1234.56");
+    assert.equal(numericValue("45.5"), "45.5");
+  });
+
+  it("refuses to guess a magnitude rather than be wrong by a thousand", () => {
+    assert.equal(numericValue("45k"), null);
+    assert.equal(numericValue("negotiable"), null);
+  });
+
+  it("reports a refusal instead of claiming a blank field was filled", () => {
+    const input = el("salary") as HTMLInputElement;
+    const outcome = fillField(input, "negotiable");
+    assert.equal(outcome.ok, false);
+    if (!outcome.ok) assert.equal(outcome.reason, "value-not-accepted");
+    assert.equal(input.value, "");
+    // Nothing was written, so there is nothing to undo.
+    assert.equal(pendingUndoCount(), 0);
   });
 });
