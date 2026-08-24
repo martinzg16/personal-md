@@ -48,15 +48,27 @@
  *    the isolated cwd was a 4.5x saving, from misreading
  *    cache_creation_input_tokens as the total. It is not.)
  *
- *    Two flags do cut the scaffolding, measured on haiku the same day:
+ *  - Two flags do defend against it, and `ask` now passes both. Measured
+ *    24-ago-2026, one call per variant:
  *
- *        --disable-slash-commands           29,358 -> 26,030
- *        --setting-sources project,local    29,358 -> 26,325
- *        both together                      29,358 -> 23,989
+ *                                          haiku             opus
+ *        (neither)                         29,358            39,650
+ *        --disable-slash-commands          26,030            28,645
+ *        --setting-sources project,local   26,325            28,850
+ *        both together                     23,989            25,611
  *
- *    Not adopted here yet. The saving on opus should be larger, since that is
- *    the path where the skill listing carries full descriptions, but that was
- *    not measured - each opus measurement spends real subscription quota.
+ *    On opus that is a 35% cut, and the warm cost of a draft goes from $0.0199
+ *    to $0.0129. But the token count is the smaller half of the argument.
+ *    `--setting-sources project,local` stops the CLI reading user-level
+ *    settings, which is where `enabledPlugins` lives - so the skill and agent
+ *    listings leave the prompt entirely, and with them the thing that kept
+ *    invalidating the cache. Editing a plugin marketplace no longer reprices
+ *    the next draft.
+ *
+ *    `--disable-slash-commands` is still worth its own line on top of that:
+ *    some skills ship with the CLI rather than coming from user config, and
+ *    that flag is what removes those. Neither flag costs anything here - we ask
+ *    for plain text with `--allowedTools ""` and never invoke a skill.
  *
  *  - `--bare` would cut more still, but it forces ANTHROPIC_API_KEY auth and
  *    never reads OAuth or the keychain, so it cannot be used here at all.
@@ -200,6 +212,13 @@ export async function ask(opts: AskOptions): Promise<ClaudeResult> {
     // Disables hooks and project MCP servers.
     "--settings",
     isolatedFiles.settings,
+    // The two lines that actually hold the prompt down. Between them they cut
+    // total input per opus call from 39,650 to 25,611 - 35% - and, more to the
+    // point, they take the user's global plugin config out of the prompt, which
+    // is what was invalidating the cache. See the header.
+    "--disable-slash-commands",
+    "--setting-sources",
+    "project,local",
     "--output-format",
     "json",
   ];

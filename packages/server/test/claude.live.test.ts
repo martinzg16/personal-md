@@ -6,49 +6,46 @@
  *
  * On per-call overhead. These numbers go stale fast, so they carry dates.
  *
- * Re-measured 24-ago-2026, CLI 2.1.241, 135 skills and 28 agents enabled in
- * the user's global config. Six back-to-back haiku calls through `ask`:
+ * Measured 24-ago-2026, CLI 2.1.241, with `ask` passing
+ * --disable-slash-commands and --setting-sources project,local:
  *
- *     total input 29,358-29,431
- *     repeat of a byte-identical call:  fresh=10  write=0  read=29,348  $0.0032
- *     new prompt, same scaffolding:     fresh=10  write=~6.4k  read=22,934
+ *     haiku   23,989 total input   repeat call read=23,979  $0.0028
+ *     opus    25,611 total input   repeat call read=25,609  $0.0129
  *
- * And three back-to-back opus calls, which is the path drafting actually uses:
+ * Before those two flags, the same day, same machine: 29,358 on haiku and
+ * 39,650 on opus, with a real draft prompt putting opus at 41,081-41,102. The
+ * difference was the CLI putting the user's whole skill and agent inventory in
+ * every prompt - names only on haiku (~14k chars), full descriptions on opus
+ * (~34k chars), which was most of the gap between the two models. Both listings
+ * come from user-level settings, which is what --setting-sources now excludes.
  *
- *     #1  fresh=2  write=14,844  read=24,804  total=39,650  $0.1610
- *     #2  fresh=2  write=0       read=39,648  total=39,650  $0.0199
- *     #3  fresh=2  write=0       read=39,648  total=39,650  $0.0199
- *
- * Superseded numbers, kept so the drift is visible: this header used to state
- * 25,941 total with cache_read=25,931, measured on haiku on 22-ago-2026. Two
- * days later haiku is +13% and opus is +53% against that figure. (An even
- * earlier note claimed the isolated cwd cut overhead 4.5x, from misreading
+ * Superseded numbers, kept so the drift stays visible: this header once stated
+ * 25,941 total with cache_read=25,931, measured on haiku on 22-ago-2026. (An
+ * even earlier note claimed the isolated cwd cut overhead 4.5x, from misreading
  * cache_creation_input_tokens as the total. It does not; that was the
  * cold-cache write portion only.)
  *
- * Where the growth is: the CLI puts the user's whole skill and agent inventory
- * in every prompt. On haiku that listing is names only (~14k chars); on opus it
- * carries full descriptions (~34k chars), which is most of the ~10k-token gap
- * between the two models. Both come from user-level config, so the isolated cwd
- * does nothing about them.
+ * Prompt caching is still the whole cost story. Three identical opus calls
+ * back-to-back before the flags went in: $0.1610, then $0.0199, then $0.0199.
+ * A miss is not neutral - it writes the entire prefix at the 1h TTL, which is
+ * dearer than fresh input.
  *
- * Two consequences for the assertions below:
+ * Two notes on the assertions below:
  *
- *   - The ceiling is a HAIKU ceiling, because that is what these probes call.
- *     Opus is already at 39,650-41,102 and would break a 40,000 ceiling. That
- *     is deliberate, not an oversight: asserting it on opus would spend real
- *     subscription quota on every live run. If drafting cost matters, measure
- *     opus by hand rather than trusting this file to catch it.
+ *   - The probes call haiku, so the ceiling is a haiku ceiling. That is a cost
+ *     decision, not an oversight. It bounds opus only by proxy now: both paths
+ *     sit within a few thousand tokens of each other, which was not true before
+ *     the flags.
  *
- *   - The cache test can fail for a reason that is not a regression. The cached
- *     prefix only holds while the skill/agent inventory is byte-identical
- *     between calls, and that inventory is re-read from disk and from plugin
- *     marketplaces on every invocation. On 24-ago-2026 a local-directory
- *     marketplace gained two skills between 11:41 and 11:42 (134 -> 135) and
- *     both calls came back with cache_read=0, writing the full 41,079 at the
- *     1h-TTL rate: $0.39 for a single draft against $0.02 warm. If this test
- *     fails, check whether a plugin changed underneath it before concluding
- *     that the code did.
+ *   - The cache test used to be able to fail for a reason that was not a
+ *     regression. The cached prefix only holds while the prompt is
+ *     byte-identical, and the skill/agent inventory was re-read from disk and
+ *     from plugin marketplaces on every invocation: on 24-ago-2026 a
+ *     local-directory marketplace gained two skills between 11:41 and 11:42
+ *     (134 -> 135) and both calls came back with cache_read=0, writing the full
+ *     41,079 - $0.39 for a single draft against $0.02 warm. Excluding user
+ *     settings is what removed that failure mode. If this test starts failing
+ *     again, check first whether the flags still do what they did here.
  */
 
 import assert from "node:assert/strict";
@@ -63,16 +60,20 @@ import { Store } from "../src/store.ts";
 const LIVE = process.env["PERSONAL_MD_LIVE"] === "1";
 
 /**
- * Haiku measured at 29,358-29,431 total input per call on 24-ago-2026, up from
- * 25,941 on 22-ago-2026. The ceiling keeps ~26% headroom over that, which is
- * enough for CLI version drift and for a few more skills appearing in the
- * user's global config, while still catching a real regression such as a
- * CLAUDE.md or a memory file being pulled into every prompt.
+ * Haiku measured at 23,989 on 24-ago-2026, so this leaves ~13% headroom.
  *
- * It does not bound the opus drafting path, which is already past it. See the
- * file header.
+ * Deliberately tighter than the 40,000 it replaces. That number was chosen when
+ * the prompt carried the user's plugin inventory and could legitimately grow by
+ * thousands of tokens between runs; now that it does not, a wide ceiling would
+ * wave through exactly the regression worth catching. Losing either flag in
+ * claude.ts puts haiku back at 26,030-29,358 and opus at 28,645-39,650, and
+ * every one of those trips this.
+ *
+ * If it goes red after a CLI upgrade, check whether the flags still do what
+ * they did before assuming something in this repo pulled a file into the
+ * prompt.
  */
-const TOTAL_INPUT_CEILING = 40_000;
+const TOTAL_INPUT_CEILING = 27_000;
 
 before(async () => {
   process.env["PERSONAL_MD_HOME"] = await mkdtemp(join(tmpdir(), "personal-md-live-"));
