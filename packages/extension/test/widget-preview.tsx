@@ -166,6 +166,19 @@ const ROWS: Row[] = [
     state: "idle",
     applied: false,
   },
+  {
+    kind: "unanswered",
+    id: "j",
+    fieldId: "f13",
+    question: "¿Por qué quieres trabajar aquí?",
+    maxWords: 120,
+    draft: null,
+    // A request being held, not a failure: the CLI session lapsed and this row
+    // finishes itself once it is back. In the matrix because it is a state a
+    // real panel reaches, and one whose whole job is to look calm.
+    state: "waiting_session",
+    applied: false,
+  },
 ];
 
 const BATCH: PendingBatch = {

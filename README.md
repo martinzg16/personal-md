@@ -57,6 +57,36 @@ Two consequences worth knowing:
 `--bare` would cut overhead further but forces `ANTHROPIC_API_KEY` auth and never
 reads OAuth or the keychain, so it cannot be used here.
 
+### Keeping the session from lapsing
+
+Using your account means using its session, and an interactive one expires. When
+it does, drafting stops working - the CLI exits with
+`Failed to authenticate: OAuth session expired and could not be refreshed` and
+nothing else does. Three things now stand between that and a lost draft:
+
+- The server checks `claude auth status` before every call. It spends no quota,
+  answers in ~0.24s, and refuses up front instead of after the wait. If the check
+  itself cannot answer, the call goes ahead anyway - a broken probe must not
+  become an outage of its own.
+- `GET /health` reports the session, the extension polls it every five minutes,
+  and a lapsed one marks the extension icon. You find out without looking.
+- A draft refused for this reason is **held, not lost**. The row waits, and
+  finishes itself once you have signed in - up to five minutes, then it says so.
+
+To remove the expiry rather than survive it, swap the interactive session for a
+long-lived token:
+
+```bash
+claude setup-token                      # once, needs a subscription
+export CLAUDE_CODE_OAUTH_TOKEN=...      # in the shell that starts the server
+npm start --workspace @personal-md/server
+```
+
+`claude auth status` then reports `authMethod: "oauth_token"` instead of
+`"claude.ai"`, and the startup banner stops warning about expiry. The token is
+read from the environment by the CLI itself: this project never stores it, never
+puts it in a prompt, and the server does not read the keychain.
+
 ## Matching a question you have answered before
 
 Cross-lingual matching without a vector database, by canonicalising at *write*
@@ -178,7 +208,19 @@ npm run build             # builds the extension into packages/extension/.output
 ```
 
 Then load `packages/extension/.output/chrome-mv3` as an unpacked extension in
-Chrome, open the options page, and paste the token.
+Chrome and open the options page. It opens on the document's cover the first
+time; the token goes on the **Autoridad emisora / Issuing bureau** page, reachable
+from the page rail.
+
+```bash
+# Visual harness for the options document, in a real browser with the real
+# stylesheet and the chrome APIs stubbed. Not part of any build.
+npm run preview --workspace @personal-md/extension   # http://127.0.0.1:5601
+#   /            the document, mid-issuance
+#   /?cover=1    the closed cover (first run)
+#   /?popup=1    the browser-action popup, which shares the same stylesheet
+#   /?conn=down  the companion process stopped
+```
 
 ```bash
 npm test                  # the offline suite, across all three packages

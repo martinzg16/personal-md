@@ -14,6 +14,13 @@ import { settings } from "./settings.ts";
 
 export type ConnectionState =
   | { kind: "ok"; port: number }
+  /**
+   * The server is up and the token is fine, but the `claude` CLI it drives is
+   * signed out - so everything works except drafting. Distinct from every other
+   * state because the remedy is a different command in a different place, and
+   * because it is worth saying *before* an answer is typed and lost.
+   */
+  | { kind: "claude_signed_out"; port: number }
   | { kind: "no_token" }
   | { kind: "server_down"; port: number }
   | { kind: "unauthorised"; port: number }
@@ -32,10 +39,37 @@ async function base(): Promise<string> {
   return `http://127.0.0.1:${await settings.getPort()}`;
 }
 
+export interface HealthReport {
+  up: boolean;
+  /** What /health says about the CLI session. "unknown" when it could not tell. */
+  claude: "in" | "out" | "unknown";
+}
+
 /**
- * Is the server up? Deliberately unauthenticated, so it can tell "down" apart
- * from "wrong token" - which is the whole point of /health existing.
+ * Is the server up, and can it still draft? Deliberately unauthenticated, so it
+ * can tell "down" apart from "wrong token" - which is the whole point of /health
+ * existing - and now also apart from "signed out of claude".
+ *
+ * An older server answers /health without the `claude` field. That reads as
+ * "unknown" rather than "signed out", so a stale process degrades to the
+ * previous behaviour instead of showing a warning nobody can act on.
  */
+export async function healthReport(): Promise<HealthReport> {
+  try {
+    const res = await fetch(`${await base()}/health`, { cache: "no-store" });
+    if (!res.ok) return { up: false, claude: "unknown" };
+    const body = (await res.json().catch(() => ({}))) as { claude?: { signedIn?: unknown } };
+    const signedIn = body.claude?.signedIn;
+    return {
+      up: true,
+      claude: signedIn === "in" || signedIn === "out" ? signedIn : "unknown",
+    };
+  } catch {
+    return { up: false, claude: "unknown" };
+  }
+}
+
+/** The liveness half of {@link healthReport}, kept for callers that only need it. */
 export async function health(): Promise<boolean> {
   try {
     const res = await fetch(`${await base()}/health`, { cache: "no-store" });
@@ -75,11 +109,27 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     );
   }
   if (!res.ok) {
-    const detail = await res.text().catch(() => "");
-    throw new ServerError(
-      { kind: "error", message: detail || res.statusText },
-      `server returned ${res.status}: ${detail || res.statusText}`,
-    );
+    // Every error route answers with {error, stage}. Reading the field out
+    // rather than showing the raw body is the difference between the widget
+    // saying what went wrong and the widget showing a JSON blob: this string is
+    // rendered to the user verbatim.
+    const body = await res.text().catch(() => "");
+    let detail = "";
+    let stage = "";
+    try {
+      const parsed = JSON.parse(body) as { error?: unknown; stage?: unknown };
+      if (typeof parsed.error === "string") detail = parsed.error.trim();
+      if (typeof parsed.stage === "string") stage = parsed.stage;
+    } catch {
+      detail = body.trim();
+    }
+    const message = detail || body.trim() || res.statusText || `server returned ${res.status}`;
+    // Carried as a state rather than a message so callers can hold the request
+    // and resume it, instead of showing the user a dead end.
+    if (stage === "claude-signed-out") {
+      throw new ServerError({ kind: "claude_signed_out", port }, message);
+    }
+    throw new ServerError({ kind: "error", message }, message);
   }
   return (await res.json()) as T;
 }
@@ -138,14 +188,19 @@ export interface ProfileResponse {
 
 export const server = {
   health,
+  healthReport,
 
   /** Probe the whole path: process up, then token accepted. */
   async connection(): Promise<ConnectionState> {
     const port = await settings.getPort();
-    if (!(await health())) return { kind: "server_down", port };
+    const report = await healthReport();
+    if (!report.up) return { kind: "server_down", port };
     if (!(await settings.getToken())) return { kind: "no_token" };
     try {
       await request<ProfileResponse>("/profile");
+      // Checked last: a signed-out CLI is worth reporting only once everything
+      // else is known good, otherwise it would mask a wrong token.
+      if (report.claude === "out") return { kind: "claude_signed_out", port };
       return { kind: "ok", port };
     } catch (err) {
       if (err instanceof ServerError) return err.state;

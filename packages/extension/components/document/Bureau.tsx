@@ -15,23 +15,41 @@ import { DEFAULT_PORT } from "../../lib/settings.ts";
 
 function Endorsement({
   tone,
+  es,
   children,
 }: {
   tone: "open" | "limited" | "pending" | "refused";
+  es: boolean;
   children: React.ReactNode;
 }) {
   const ink = {
     open: "var(--color-stamp-green)",
     limited: "var(--color-intaglio-700)",
-    pending: "var(--color-iris-cyan)",
+    pending: "var(--color-iris-600)",
     refused: "var(--color-endorse-600)",
   }[tone];
 
+  /*
+   * A ruled block, not a coloured bar. This was a 2px tinted `border-left`, which
+   * is the alert-callout tell and belongs to no part of this world - a document
+   * rules a block off above and below and puts the ink in the endorsement line
+   * itself.
+   */
   return (
     <div
-      className="pmd-note border-l-2 pl-4"
-      style={{ borderColor: ink, color: "var(--color-intaglio-900)" }}
+      className="pmd-note py-3.5"
+      style={{
+        color: "var(--color-intaglio-900)",
+        borderTop: "1px solid var(--color-laminate-200)",
+        borderBottom: "1px solid var(--color-laminate-200)",
+      }}
     >
+      <span
+        className="pmd-legend mb-1.5 block"
+        style={{ color: ink }}
+      >
+        {es ? "Estado" : "Status"}
+      </span>
       {children}
     </div>
   );
@@ -63,7 +81,7 @@ export default function Bureau({
   const body = (() => {
     if (state.kind === "ok") {
       return (
-        <Endorsement tone="open">
+        <Endorsement tone="open" es={es}>
           <strong>{es ? "En servicio" : "In service"}</strong>{" "}
           {es
             ? `en el puerto ${state.port}. El fichero se lee y se escribe con normalidad.`
@@ -74,7 +92,7 @@ export default function Bureau({
 
     if (state.kind === "server_down") {
       return (
-        <Endorsement tone="limited">
+        <Endorsement tone="limited" es={es}>
           <strong>{es ? "El proceso no está en marcha." : "The process is not running."}</strong>
           <p className="mt-1.5">
             {es
@@ -98,7 +116,7 @@ export default function Bureau({
 
     if (state.kind === "no_token") {
       return (
-        <Endorsement tone="pending">
+        <Endorsement tone="pending" es={es}>
           <strong>{es ? "Falta la credencial." : "The credential is missing."}</strong>{" "}
           {es ? (
             <>
@@ -117,7 +135,7 @@ export default function Bureau({
 
     if (state.kind === "unauthorised") {
       return (
-        <Endorsement tone="refused">
+        <Endorsement tone="refused" es={es}>
           <strong>{es ? "Credencial rechazada." : "Credential refused."}</strong>{" "}
           {es ? (
             <>
@@ -134,8 +152,34 @@ export default function Bureau({
       );
     }
 
+    if (state.kind === "claude_signed_out") {
+      return (
+        <Endorsement tone="limited" es={es}>
+          <strong>
+            {es ? "La sesión de Claude ha caducado." : "The Claude session has lapsed."}
+          </strong>
+          <p className="mt-1.5">
+            {es
+              ? "El proceso está en marcha y tu fichero se lee y se escribe con normalidad: rellenar no necesita la sesión. Solo la redacción la necesita, y fallaría hasta que vuelvas a entrar."
+              : "The process is running and your file is read and written normally: filling needs no session. Only drafting does, and it would fail until you sign in again."}
+          </p>
+          <pre
+            className="mt-3 overflow-x-auto p-2.5 font-mono text-[11px]"
+            style={{
+              background: "var(--color-laminate-100)",
+              color: "var(--color-intaglio-900)",
+              borderRadius: "var(--radius-window)",
+              fontStretch: "82%",
+            }}
+          >
+            claude auth login
+          </pre>
+        </Endorsement>
+      );
+    }
+
     return (
-      <Endorsement tone="refused">
+      <Endorsement tone="refused" es={es}>
         <strong>{es ? "Error:" : "Error:"}</strong> {state.message}
       </Endorsement>
     );
@@ -143,12 +187,12 @@ export default function Bureau({
 
   return (
     <article className="pmd-page pmd-page-in">
-      <div className="px-7 pb-9 pt-10 sm:px-10 sm:pb-11 sm:pt-12">
-        <p className="pmd-legend pmd-legend--secondary">
+      <div className="relative px-7 pb-9 pt-10 sm:px-10 sm:pb-11 sm:pt-12">
+        <p className="pmd-legend pmd-legend--secondary absolute right-7 top-5 sm:right-10 sm:top-6">
           {es ? "Autoridad emisora" : "Issuing bureau"}
         </p>
         <h2
-          className="mt-1.5 font-sans leading-none"
+          className="font-sans leading-none"
           style={{ fontSize: "clamp(21px, 3.1vw, 29px)", fontWeight: 700, fontStretch: "104%" }}
         >
           {es ? "Quién guarda el fichero" : "Who holds the file"}

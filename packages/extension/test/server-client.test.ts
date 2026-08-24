@@ -34,6 +34,7 @@ const store = new Map<string, unknown>();
 };
 
 let server: typeof import("../lib/server-client.ts").server;
+let ServerError: typeof import("../lib/server-client.ts").ServerError;
 let settings: typeof import("../lib/settings.ts").settings;
 let stop: () => Promise<void>;
 let realToken: string;
@@ -47,12 +48,25 @@ before(async () => {
   stop = running.close;
   realToken = await loadOrCreateToken();
 
-  ({ server } = await import("../lib/server-client.ts"));
+  ({ server, ServerError } = await import("../lib/server-client.ts"));
   ({ settings } = await import("../lib/settings.ts"));
   await settings.setPort(running.port);
+
+  /*
+   * Pin the CLI session state for the whole file.
+   *
+   * /health now reports it, so without this every connection assertion would
+   * quietly depend on whether the machine running the tests happens to be
+   * signed in to Claude - which is exactly the flakiness this suite exists to
+   * catch elsewhere. "unknown" is the neutral value: it changes no outcome.
+   */
+  const { setClaudeAuthForTests } = await import("../../server/src/claude-auth.ts");
+  setClaudeAuthForTests({ state: "unknown", reason: "pinned by the test suite", checkedAt: Date.now() });
 });
 
 after(async () => {
+  const { setClaudeAuthForTests } = await import("../../server/src/claude-auth.ts");
+  setClaudeAuthForTests(null);
   await stop();
   delete process.env["PERSONAL_MD_HOME"];
 });
@@ -74,6 +88,31 @@ describe("connection states are distinguishable", () => {
     await settings.setToken(realToken);
     const state = await server.connection();
     assert.equal(state.kind, "ok");
+  });
+
+  it("reports claude_signed_out when the CLI session has lapsed", async () => {
+    // The state exists so this is visible *before* an answer is typed into a
+    // form and lost to a 502. Everything else here is healthy on purpose: the
+    // point is that a lapsed session is its own state, not a generic error.
+    const { setClaudeAuthForTests } = await import("../../server/src/claude-auth.ts");
+    await settings.setToken(realToken);
+    setClaudeAuthForTests({ state: "out", checkedAt: Date.now() });
+    try {
+      assert.equal((await server.connection()).kind, "claude_signed_out");
+    } finally {
+      setClaudeAuthForTests({ state: "unknown", reason: "pinned by the test suite", checkedAt: Date.now() });
+    }
+  });
+
+  it("stays ok when the session cannot be checked, rather than crying wolf", async () => {
+    const { setClaudeAuthForTests } = await import("../../server/src/claude-auth.ts");
+    await settings.setToken(realToken);
+    setClaudeAuthForTests({ state: "unknown", reason: "no cli", checkedAt: Date.now() });
+    try {
+      assert.equal((await server.connection()).kind, "ok");
+    } finally {
+      setClaudeAuthForTests({ state: "unknown", reason: "pinned by the test suite", checkedAt: Date.now() });
+    }
   });
 
   it("reports server_down when nothing is listening", async () => {
@@ -169,5 +208,47 @@ describe("the mirror is what makes filling work with the server down", () => {
     );
 
     await settings.setPort(goodPort);
+  });
+});
+
+describe("a signed-out CLI is recoverable, not a dead end", () => {
+  it("refuses a draft as its own state, so the caller can hold the request", async () => {
+    // No quota is spent: the server checks the session before it invokes the
+    // CLI, which is the whole point of the precheck existing.
+    const { setClaudeAuthForTests } = await import("../../server/src/claude-auth.ts");
+    await settings.setToken(realToken);
+    setClaudeAuthForTests({ state: "out", checkedAt: Date.now() });
+    try {
+      await assert.rejects(
+        () =>
+          server.draftAnswer({
+            question: "Why do you want to work here?",
+            canonicalKey: null,
+            language: "en",
+            genre: "job_application",
+            maxWords: null,
+            maxChars: null,
+            registerHint: "a job application form",
+          }),
+        (err: unknown) => {
+          assert.ok(err instanceof ServerError);
+          assert.equal(err.state.kind, "claude_signed_out");
+          assert.match(err.message, /claude auth login/);
+          return true;
+        },
+      );
+    } finally {
+      setClaudeAuthForTests({ state: "unknown", reason: "pinned by the test suite", checkedAt: Date.now() });
+    }
+  });
+
+  it("reports /health so the badge can be painted before a draft is asked for", async () => {
+    const { setClaudeAuthForTests } = await import("../../server/src/claude-auth.ts");
+    setClaudeAuthForTests({ state: "out", checkedAt: Date.now() });
+    try {
+      assert.equal((await server.healthReport()).claude, "out");
+    } finally {
+      setClaudeAuthForTests({ state: "unknown", reason: "pinned by the test suite", checkedAt: Date.now() });
+    }
   });
 });

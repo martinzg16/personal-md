@@ -11,6 +11,7 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 
 import { bearerFrom, loadOrCreateToken, tokenMatches } from "./auth.ts";
+import { claudeAuth } from "./claude-auth.ts";
 import type { AnswerInput } from "./store.ts";
 import { handleDraft, type DraftRequest } from "./draft-route.ts";
 import { handleMatch, type MatchRequest } from "./match-route.ts";
@@ -257,9 +258,16 @@ const routes: Record<string, Handler> = {
       // they need completely different things from the user.
       const message = err instanceof Error ? err.message : "unknown error";
       const blocked = err instanceof Error && err.name === "EgressBlockedError";
+      // A signed-out CLI is its own stage, not a generic model failure: the
+      // extension holds the request and retries it once the session is back,
+      // which it can only do if it can tell this case apart by shape rather
+      // than by matching on the wording of a message.
+      const signedOut =
+        err instanceof Error && err.name === "ClaudeError" &&
+        (err as { kind?: string }).kind === "unauthenticated";
       json(res, blocked ? 422 : 502, {
         error: message,
-        stage: blocked ? "egress-blocked" : "draft",
+        stage: blocked ? "egress-blocked" : signedOut ? "claude-signed-out" : "draft",
         ...(blocked ? { hits: (err as { hits?: unknown }).hits } : {}),
       });
     }
@@ -297,7 +305,18 @@ export async function start(port = DEFAULT_PORT): Promise<RunningServer> {
       // Unauthenticated liveness check, so the extension can tell "server down"
       // from "wrong token" and show the right message.
       if (key === "GET /health") {
-        return json(res, 200, { ok: true, service: "personal-md", root: paths.root });
+        // The CLI session is reported here, on the one unauthenticated route,
+        // so the extension learns a lapsed login from the poll it already does
+        // - before a draft is typed, rather than by losing one. Only the yes/no
+        // travels: /health needs no token, so the account it belongs to is not
+        // its business.
+        const auth = await claudeAuth();
+        return json(res, 200, {
+          ok: true,
+          service: "personal-md",
+          root: paths.root,
+          claude: { signedIn: auth.state, checkedAt: auth.checkedAt },
+        });
       }
 
       if (!tokenMatches(token, bearerFrom(req.headers.authorization))) {

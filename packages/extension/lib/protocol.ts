@@ -58,9 +58,35 @@ export type Request =
       genre: Genre;
     };
 
-export type Response<T = unknown> = { ok: true; data: T } | { ok: false; error: string };
+/**
+ * Why a request failed, when the reason changes what the caller should do.
+ *
+ * Only one so far, and it earns its place: a signed-out CLI is recoverable
+ * without losing the request, so the surface that asked needs to recognise it
+ * rather than read a message. Everything else is still just an error string.
+ */
+export type FailureReason = "claude_signed_out";
 
-export type { DraftResponse, ImportProposal, MatchQuestionResponse };
+export type Response<T = unknown> =
+  | { ok: true; data: T }
+  | { ok: false; error: string; reason?: FailureReason };
+
+/** An error that survived the trip across the message bridge with its reason. */
+export class BridgeError extends Error {
+  readonly reason: FailureReason | undefined;
+  constructor(message: string, reason?: FailureReason) {
+    super(message);
+    this.name = "BridgeError";
+    this.reason = reason;
+  }
+}
+
+/** Is this the recoverable "sign in again and it will work" failure? */
+export function isSignedOut(err: unknown): boolean {
+  return err instanceof BridgeError && err.reason === "claude_signed_out";
+}
+
+export type { ConnectionState, DraftResponse, ImportProposal, MatchQuestionResponse };
 
 export interface MirrorPayload {
   mirror: ProfileMirror | null;
@@ -71,7 +97,7 @@ export interface MirrorPayload {
 export async function send<T>(request: Request): Promise<T> {
   const res = (await chrome.runtime.sendMessage(request)) as Response<T> | undefined;
   if (!res) throw new Error("no response from the extension background worker");
-  if (!res.ok) throw new Error(res.error);
+  if (!res.ok) throw new BridgeError(res.error, res.reason);
   return res.data;
 }
 

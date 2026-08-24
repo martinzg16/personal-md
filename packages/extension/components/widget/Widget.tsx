@@ -23,7 +23,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { DraftResponse } from "../../lib/protocol.ts";
 import type { AnswerSuggestion, FieldSuggestion } from "../../lib/match/deterministic.ts";
 import { batchSize, type PendingBatch, type PendingFact } from "../../lib/learn/pending.ts";
-import { Arrow, Check, Chevron, Dismiss, Draft, Gap, Insert, Mark, Reveal, Undo, Withheld } from "./icons.tsx";
+import { Arrow, Brand, Check, Chevron, Dismiss, Draft, Gap, Insert, Mark, Reveal, Undo, Withheld } from "./icons.tsx";
 
 export type Lang = "es" | "en";
 
@@ -44,7 +44,13 @@ export type Row =
       question: string;
       maxWords: number | null;
       draft: DraftResponse | null;
-      state: "idle" | "drafting" | "ready" | "error";
+      /**
+       * "waiting_session" is a held request, not a failure: the CLI is signed
+       * out, the draft has not been thrown away, and it resumes on its own once
+       * the session is back. Losing typed intent to a recoverable outage is the
+       * thing this state exists to prevent.
+       */
+      state: "idle" | "drafting" | "waiting_session" | "ready" | "error";
       error?: string;
       applied: boolean;
       fillError?: string;
@@ -109,7 +115,7 @@ const t = {
     pillSave: (n: number) => (n === 1 ? "1 thing to save" : `${n} things to save`),
     pillDone: "all applied",
     title: "Your file, here",
-    subtitle: (d: string) => `applied to ${d}`,
+    subtitle: (d: string) => `${d} · nothing submitted`,
     region: (d: string) => `Your stored answers, applied to ${d}`,
     into: "into",
     from: "from",
@@ -121,6 +127,8 @@ const t = {
     redraft: "Redraft",
     drafting: "Drafting",
     draftingNote: "about ten seconds",
+    sessionLapsed: "Waiting for your Claude session",
+    sessionLapsedNote: "sign in and this carries on by itself",
     filled: "Filled",
     inserted: "Inserted",
     undo: (n: number) => `Undo ${n}`,
@@ -172,7 +180,7 @@ const t = {
     pillSave: (n: number) => (n === 1 ? "1 cosa por guardar" : `${n} cosas por guardar`),
     pillDone: "todo aplicado",
     title: "Tu fichero, aquí",
-    subtitle: (d: string) => `aplicado a ${d}`,
+    subtitle: (d: string) => `${d} · no se envía nada`,
     region: (d: string) => `Tus respuestas guardadas, aplicadas a ${d}`,
     into: "en",
     from: "de",
@@ -184,6 +192,8 @@ const t = {
     redraft: "Rehacer",
     drafting: "Redactando",
     draftingNote: "unos diez segundos",
+    sessionLapsed: "Esperando tu sesión de Claude",
+    sessionLapsedNote: "entra y esto sigue solo",
     filled: "Hecho",
     inserted: "Insertado",
     undo: (n: number) => `Deshacer ${n}`,
@@ -249,11 +259,11 @@ const mask = (value: string): string => {
 
 /** Shared focus treatment. A tool that avoids focus must still be reachable. */
 const FOCUS =
-  "outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900";
+  "outline-none focus-visible:ring-2 focus-visible:ring-brio-500 focus-visible:ring-offset-2 focus-visible:ring-offset-ink-900";
 
 /** Small caps label. Monospace here is for data and measurement, not costume. */
 function Label({ children }: { children: React.ReactNode }) {
-  return <span className="pmd-mono text-[10px] tracking-[0.06em] text-slate-400">{children}</span>;
+  return <span className="pmd-mono text-[10px] tracking-[0.06em] text-graphite-300">{children}</span>;
 }
 
 function Action({
@@ -269,8 +279,8 @@ function Action({
 }) {
   const styles =
     tone === "primary"
-      ? "bg-slate-100 text-slate-900 hover:bg-white disabled:bg-slate-700 disabled:text-slate-500"
-      : "text-slate-300 hover:text-white hover:bg-slate-700/60 disabled:text-slate-600";
+      ? "bg-paper-050 text-graphite-900 hover:bg-white disabled:bg-ink-700 disabled:text-graphite-300"
+      : "text-paper-400 hover:text-white hover:bg-ink-700 disabled:text-ink-600";
   return (
     <button
       type="button"
@@ -295,11 +305,11 @@ function Action({
  */
 function Caution({ children, quote }: { children: React.ReactNode; quote?: string }) {
   return (
-    <span className="inline-flex max-w-full flex-wrap items-center gap-x-1.5 gap-y-0.5 rounded border border-orange-400/50 bg-orange-950/60 px-2 py-1 text-[12px] font-medium leading-snug text-orange-100">
+    <span className="inline-flex max-w-full flex-wrap items-center gap-x-1.5 gap-y-0.5 rounded border border-amber-300/45 bg-amber-950 px-2 py-1 text-[12px] font-medium leading-snug text-amber-100">
       <Gap className="h-3.5 w-3.5 shrink-0" />
       <span>{children}</span>
       {quote && (
-        <span className="pmd-mono rounded bg-orange-400/15 px-1 text-[11px] text-orange-50">
+        <span className="pmd-mono rounded bg-amber-300/15 px-1 text-[11px] text-amber-100">
           {quote}
         </span>
       )}
@@ -310,7 +320,7 @@ function Caution({ children, quote }: { children: React.ReactNode; quote?: strin
 /** A thing that went wrong on this row. Rose, and it names the recovery. */
 function Failure({ children }: { children: React.ReactNode }) {
   return (
-    <p className="mt-1.5 flex items-start gap-1.5 text-[11px] text-rose-300">
+    <p className="mt-1.5 flex items-start gap-1.5 text-[11px] text-brio-400">
       <Gap className="mt-0.5 h-3 w-3 shrink-0" />
       <span>{children}</span>
     </p>
@@ -326,8 +336,8 @@ function Failure({ children }: { children: React.ReactNode }) {
  */
 function Destination({ label, lang }: { label: string; lang: Lang }) {
   return (
-    <span className="pmd-mono inline-flex min-w-0 items-start gap-1 text-[10px] leading-relaxed tracking-[0.06em] text-slate-300">
-      <Arrow className="mt-[3px] h-3 w-3 shrink-0 text-slate-500" />
+    <span className="pmd-mono inline-flex min-w-0 items-start gap-1 text-[10px] leading-relaxed tracking-[0.06em] text-paper-400">
+      <Arrow className="mt-[3px] h-3 w-3 shrink-0 text-graphite-300" />
       {/*
         Wraps; never truncates. At 390px a truncating destination clipped the
         very thing the user has to read before committing - "en Expectativa
@@ -345,7 +355,7 @@ function Destination({ label, lang }: { label: string; lang: Lang }) {
 function Quoted({ children, lead }: { children: React.ReactNode; lead?: boolean }) {
   return (
     <p
-      className={`rounded-sm border-l border-slate-300 bg-slate-50 px-2 py-1 leading-snug text-slate-900 ${
+      className={`rounded-sm border-l border-ink-600 bg-ink-800 px-2 py-1 leading-snug text-paper-050 ${
         lead ? "text-[14px]" : "text-[13px]"
       }`}
     >
@@ -388,10 +398,10 @@ function FactRow({
           */}
           {hidden ? (
             <>
-              <p className="text-[13px] font-medium leading-snug text-slate-100">
+              <p className="text-[13px] font-medium leading-snug text-paper-050">
                 {s.label || s.category}
               </p>
-              <p className="pmd-mono mt-1 text-[11px] tracking-[0.08em] text-slate-300">
+              <p className="pmd-mono mt-1 text-[11px] tracking-[0.08em] text-paper-400">
                 {mask(s.value)}
               </p>
             </>
@@ -399,12 +409,12 @@ function FactRow({
             <Quoted lead>{s.value}</Quoted>
           )}
           <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
-            <span className="pmd-mono max-w-full break-words text-[10px] leading-relaxed tracking-[0.06em] text-slate-400">
+            <span className="pmd-mono max-w-full break-words text-[10px] leading-relaxed tracking-[0.06em] text-graphite-300">
               {s.derivedFrom ? `${c.derivedFrom} ${s.derivedFrom}` : `${c.from} ${s.sourceKey}`}
             </span>
             {!hidden && <Destination label={s.label || s.category} lang={lang} />}
             {s.localOnly && (
-              <span className="inline-flex items-center gap-1 rounded bg-slate-700/70 px-1.5 py-0.5 text-[10px] text-slate-200">
+              <span className="inline-flex items-center gap-1 rounded bg-ink-700 px-1.5 py-0.5 text-[10px] text-paper-200">
                 <Withheld className="h-3 w-3" />
                 {c.localOnly}
               </span>
@@ -413,7 +423,7 @@ function FactRow({
               <button
                 type="button"
                 onClick={() => setShown(!shown)}
-                className={`inline-flex items-center gap-1 rounded px-1 text-[10px] text-slate-300 hover:text-white ${FOCUS}`}
+                className={`inline-flex items-center gap-1 rounded px-1 text-[10px] text-paper-400 hover:text-white ${FOCUS}`}
               >
                 <Reveal className="h-3 w-3" />
                 {shown ? c.hide : c.reveal}
@@ -429,7 +439,7 @@ function FactRow({
         </div>
 
         {row.applied ? (
-          <span className="inline-flex shrink-0 items-center gap-1 px-1 pt-1 text-xs text-emerald-300">
+          <span className="inline-flex shrink-0 items-center gap-1 px-1 pt-1 text-xs text-jade-300">
             <Check className="h-3.5 w-3.5" />
             {c.filled}
           </span>
@@ -473,7 +483,7 @@ function AnswerRow({
               <button
                 type="button"
                 onClick={() => setOpen(!open)}
-                className={`inline-flex items-center gap-0.5 rounded px-1 text-[10px] text-slate-300 hover:text-white ${FOCUS}`}
+                className={`inline-flex items-center gap-0.5 rounded px-1 text-[10px] text-paper-400 hover:text-white ${FOCUS}`}
               >
                 <Chevron className={`h-3 w-3 transition-transform ${open ? "rotate-90" : ""}`} />
                 {open ? c.less : c.more}
@@ -484,7 +494,7 @@ function AnswerRow({
         </div>
 
         {row.applied ? (
-          <span className="inline-flex shrink-0 items-center gap-1 px-1 pt-1 text-xs text-emerald-300">
+          <span className="inline-flex shrink-0 items-center gap-1 px-1 pt-1 text-xs text-jade-300">
             <Check className="h-3.5 w-3.5" />
             {c.inserted}
           </span>
@@ -543,7 +553,7 @@ function UnansweredRow({
             three row kinds and promoted it on this one. Subordinate to the
             title, still the subject of its own row.
           */}
-          <p className="text-[12px] font-medium leading-snug text-slate-200">{row.question}</p>
+          <p className="text-[12px] font-medium leading-snug text-paper-200">{row.question}</p>
           {/*
             Only while idle. This line explains why the row offers Draft instead
             of Fill - but rendered unconditionally it sat directly above "based
@@ -565,10 +575,26 @@ function UnansweredRow({
       </div>
 
       {row.state === "drafting" && (
-        <div className="mt-2 flex items-center gap-2 text-xs text-slate-300">
-          <span className="pmd-pulse h-1.5 w-1.5 rounded-full bg-sky-400" />
+        <div className="mt-2 flex items-center gap-2 text-xs text-paper-400">
+          <span className="pmd-pulse h-1.5 w-1.5 rounded-full bg-brio-500" />
           {c.drafting}
-          <span className="text-slate-400">- {c.draftingNote}</span>
+          <span className="text-graphite-300">- {c.draftingNote}</span>
+        </div>
+      )}
+
+      {row.state === "waiting_session" && (
+        <div className="mt-2 text-xs text-paper-400">
+          <div className="flex items-center gap-2">
+            <span className="pmd-pulse h-1.5 w-1.5 rounded-full bg-brio-500" />
+            {c.sessionLapsed}
+            <span className="text-graphite-300">- {c.sessionLapsedNote}</span>
+          </div>
+          <code
+            className="mt-1.5 inline-block px-1.5 py-0.5 font-mono text-[11px]"
+            style={{ background: "var(--color-graphite-100, rgba(0,0,0,.05))" }}
+          >
+            claude auth login
+          </code>
         </div>
       )}
 
@@ -586,7 +612,7 @@ function UnansweredRow({
                   <span
                     key={p.canonicalKey + p.askedAs}
                     title={p.excerpt}
-                    className="rounded bg-slate-700/70 px-1.5 py-0.5 text-[10px] text-slate-200"
+                    className="rounded bg-ink-700 px-1.5 py-0.5 text-[10px] text-paper-200"
                   >
                     {p.askedAs || p.canonicalKey}
                     {p.writtenAt ? ` · ${p.writtenAt}` : ""}
@@ -599,13 +625,13 @@ function UnansweredRow({
             value={text}
             onChange={(e) => setEdited(e.target.value)}
             rows={6}
-            className={`w-full resize-y rounded-sm border border-slate-300 bg-slate-50 p-2 text-[13px] leading-relaxed text-slate-900 ${FOCUS} focus-visible:border-sky-500`}
+            className={`w-full resize-y rounded-sm border border-ink-600 bg-ink-800 p-2 text-[13px] leading-relaxed text-paper-050 ${FOCUS} focus-visible:border-brio-500`}
           />
 
           <div className="mt-1.5 flex flex-wrap items-center justify-between gap-2">
-            <span className={`pmd-mono text-[10px] ${over ? "text-orange-200" : "text-slate-400"}`}>
+            <span className={`pmd-mono text-[10px] ${over ? "text-amber-300" : "text-graphite-300"}`}>
               {wordCount(text)} {c.words}
-              {limit !== null && <span className="text-slate-400/70"> / {limit}</span>}
+              {limit !== null && <span className="text-graphite-300"> / {limit}</span>}
             </span>
             <div className="flex items-center gap-1.5">
               <Action onClick={() => onDraft(instruction || undefined)} tone="quiet">
@@ -613,7 +639,7 @@ function UnansweredRow({
                 {c.redraft}
               </Action>
               {row.applied ? (
-                <span className="inline-flex items-center gap-1 px-2 text-xs text-emerald-300">
+                <span className="inline-flex items-center gap-1 px-2 text-xs text-jade-300">
                   <Check className="h-3.5 w-3.5" />
                   {c.inserted}
                 </span>
@@ -629,8 +655,8 @@ function UnansweredRow({
           {row.draft.informationGaps.length > 0 && (
             <ul className="mt-2 space-y-1">
               {row.draft.informationGaps.map((g) => (
-                <li key={g.missing} className="flex gap-1.5 text-[11px] text-slate-300">
-                  <Gap className="mt-0.5 h-3 w-3 shrink-0 text-orange-300" />
+                <li key={g.missing} className="flex gap-1.5 text-[11px] text-paper-400">
+                  <Gap className="mt-0.5 h-3 w-3 shrink-0 text-amber-300" />
                   <span>{g.questionForUser || g.missing}</span>
                 </li>
               ))}
@@ -647,7 +673,7 @@ function UnansweredRow({
             value={instruction}
             onChange={(e) => setInstruction(e.target.value)}
             placeholder={c.tellIt}
-            className={`pmd-mono mt-2 w-full rounded-sm border border-slate-700 bg-slate-800/60 px-2 py-1 text-[11px] text-slate-200 placeholder:text-slate-400 ${FOCUS} focus-visible:border-sky-500`}
+            className={`pmd-mono mt-2 w-full rounded-sm border border-ink-700 bg-ink-850 px-2 py-1 text-[11px] text-paper-200 placeholder:text-graphite-300 ${FOCUS} focus-visible:border-brio-500`}
           />
         </div>
       )}
@@ -678,19 +704,19 @@ function PendingFactRow({
   return (
     <li className="flex items-start gap-2 px-4 py-2.5">
       <div className="min-w-0 flex-1">
-        <p className="text-[12px] font-medium leading-snug text-slate-200">{item.label}</p>
+        <p className="text-[12px] font-medium leading-snug text-paper-200">{item.label}</p>
         <input
           value={item.value}
           onChange={(e) => onEdit(e.target.value)}
           aria-label={item.label}
-          className={`mt-1 w-full rounded-sm border border-slate-300 bg-slate-50 px-1.5 py-1 text-[13px] text-slate-900 ${FOCUS} focus-visible:border-sky-500`}
+          className={`mt-1 w-full rounded-sm border border-ink-600 bg-ink-800 px-1.5 py-1 text-[13px] text-paper-050 ${FOCUS} focus-visible:border-brio-500`}
         />
-        <p className="pmd-mono mt-1 text-[10px] tracking-[0.06em] text-slate-400">
+        <p className="pmd-mono mt-1 text-[10px] tracking-[0.06em] text-graphite-300">
           {item.key}
           {item.replaces && (
             <>
               {" · "}
-              <span className="text-orange-200">
+              <span className="text-amber-300">
                 {c.replaces} {item.replaces}
               </span>
             </>
@@ -702,7 +728,7 @@ function PendingFactRow({
         onClick={onDecline}
         aria-label={`${c.saveNone}: ${item.label}`}
         title={c.saveNone}
-        className={`mt-5 shrink-0 rounded p-1 text-slate-400 transition-colors duration-150 hover:bg-slate-700/60 hover:text-white ${FOCUS}`}
+        className={`mt-5 shrink-0 rounded p-1 text-graphite-300 transition-colors duration-150 hover:bg-ink-700 hover:text-white ${FOCUS}`}
       >
         <Dismiss className="h-3.5 w-3.5" />
       </button>
@@ -828,9 +854,9 @@ export default function Widget(props: WidgetProps) {
           justOpened.current = true;
           setOpen(true);
         }}
-        className={`pmd-enter pointer-events-auto flex items-center gap-2 whitespace-nowrap rounded-full bg-slate-900 py-2 pl-2.5 pr-3.5 text-[13px] font-medium text-slate-100 shadow-[0_6px_20px_-4px_rgba(15,23,42,0.5)] ring-1 ring-slate-700/80 transition-colors duration-150 hover:bg-slate-800 ${FOCUS}`}
+        className={`pmd-enter pointer-events-auto flex items-center gap-2.5 whitespace-nowrap rounded-full bg-ink-900 py-2.5 pl-3.5 pr-4.5 text-[14px] font-semibold text-paper-050 shadow-[0_12px_30px_-10px_rgba(18,18,16,0.6)] transition-colors duration-150 hover:bg-ink-850 ${FOCUS}`}
       >
-        <Mark className="h-4 w-4 text-slate-400" />
+        <Brand size={22} />
         {toSave > 0 ? c.pillSave(toSave) : unapplied > 0 ? c.pill(unapplied) : c.pillDone}
       </button>
     );
@@ -840,14 +866,14 @@ export default function Widget(props: WidgetProps) {
     <div
       role="region"
       aria-label={c.region(domain)}
-      className="pmd-enter pointer-events-auto flex max-h-[min(84vh,760px)] w-[min(420px,calc(100vw-2rem))] flex-col overflow-hidden rounded-lg bg-slate-900 shadow-[0_16px_48px_-12px_rgba(15,23,42,0.6)] ring-1 ring-slate-700/80"
+      className="pmd-enter pointer-events-auto flex max-h-[min(76vh,620px)] w-[min(392px,calc(100vw-2rem))] flex-col overflow-hidden rounded-[14px] bg-ink-900 shadow-[0_24px_60px_-18px_rgba(18,18,16,0.7)]"
     >
-      <header className="flex items-start justify-between gap-3 border-b border-slate-700/70 px-4 py-3">
-        <div className="flex min-w-0 items-center gap-2">
-          <Mark className="h-4 w-4 shrink-0 text-slate-400" />
+      <header className="flex items-start justify-between gap-3 border-b border-ink-700 px-4 py-3">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <Brand size={26} />
           <div className="min-w-0">
-            <h2 className="text-[13px] font-semibold leading-tight text-slate-100">{c.title}</h2>
-            <p className="truncate text-[11px] leading-tight text-slate-400">
+            <h2 className="text-[14px] font-semibold leading-tight text-paper-050">{c.title}</h2>
+            <p className="pmd-mono mt-0.5 truncate text-[10.5px] leading-tight text-graphite-300">
               {c.subtitle(domain)}
             </p>
           </div>
@@ -860,7 +886,7 @@ export default function Widget(props: WidgetProps) {
           onClick={() => setOpen(false)}
           aria-label={c.collapse}
           title={c.collapse}
-          className={`-mr-1 -mt-1 rounded p-1 text-slate-400 transition-colors hover:bg-slate-700/60 hover:text-slate-100 ${FOCUS}`}
+          className={`-mr-1 -mt-1 rounded p-1 text-graphite-300 transition-colors hover:bg-ink-700 hover:text-paper-050 ${FOCUS}`}
         >
           {/*
             A chevron, pointing down at the pill it collapses into. A bare X
@@ -872,15 +898,15 @@ export default function Widget(props: WidgetProps) {
       </header>
 
       {!serverUp && (
-        <p className="flex items-center gap-2 border-b border-amber-500/20 bg-amber-500/10 px-4 py-2 text-[11px] text-amber-200">
+        <p className="flex items-center gap-2 border-b border-amber-300/25 bg-amber-950 px-4 py-2 text-[11px] text-amber-300">
           {c.serverDown}
         </p>
       )}
 
       {view === "ledger" && props.importOffer && props.onImport && (
-        <div className="border-b border-slate-700/70 bg-slate-800/40 px-4 py-3">
-          <p className="text-[12px] font-medium leading-snug text-slate-100">{c.importTitle}</p>
-          <p className="mt-1 text-[11px] leading-relaxed text-slate-400">{c.importBody}</p>
+        <div className="border-b border-ink-700 bg-ink-850 px-4 py-3">
+          <p className="text-[12px] font-medium leading-snug text-paper-050">{c.importTitle}</p>
+          <p className="mt-1 text-[11px] leading-relaxed text-graphite-300">{c.importBody}</p>
           {props.importOffer.state === "error" && (
             <div className="mt-2">
               <Failure>{props.importOffer.error ?? c.importFailed}</Failure>
@@ -893,10 +919,10 @@ export default function Widget(props: WidgetProps) {
           ) : null}
           <div className="mt-2 flex justify-end">
             {props.importOffer.state === "reading" ? (
-              <span className="inline-flex items-center gap-2 text-xs text-slate-300">
-                <span className="pmd-pulse h-1.5 w-1.5 rounded-full bg-sky-400" />
+              <span className="inline-flex items-center gap-2 text-xs text-paper-400">
+                <span className="pmd-pulse h-1.5 w-1.5 rounded-full bg-brio-500" />
                 {c.importReading}
-                <span className="text-slate-400">- {c.draftingNote}</span>
+                <span className="text-graphite-300">- {c.draftingNote}</span>
               </span>
             ) : (
               <Action onClick={() => props.onImport?.()}>
@@ -909,9 +935,9 @@ export default function Widget(props: WidgetProps) {
       )}
 
       {view === "ledger" && bulk.length >= 2 && props.onFillAll && (
-        <div className="flex items-center justify-between gap-3 border-b border-slate-700/70 bg-slate-800/40 px-4 py-2">
+        <div className="flex items-center justify-between gap-3 border-b border-ink-700 bg-ink-850 px-4 py-2">
           <div className="min-w-0">
-            <p className="text-[11px] leading-snug text-slate-300">
+            <p className="text-[11px] leading-snug text-paper-400">
               {guarded > 0 ? c.fillAllGuard(guarded) : c.fillAllNote}
             </p>
           </div>
@@ -924,18 +950,18 @@ export default function Widget(props: WidgetProps) {
 
       {view === "confirm" && batch ? (
         <>
-          <div className="border-b border-slate-700/70 px-4 py-3">
-            <p className="text-[13px] font-semibold leading-snug text-slate-100">
+          <div className="border-b border-ink-700 px-4 py-3">
+            <p className="text-[13px] font-semibold leading-snug text-paper-050">
               {c.confirmTitle(toSave)}
             </p>
-            <p className="mt-1 text-[11px] leading-relaxed text-slate-400">{c.confirmNote}</p>
+            <p className="mt-1 text-[11px] leading-relaxed text-graphite-300">{c.confirmNote}</p>
           </div>
 
           <div className="relative flex min-h-0 flex-1 flex-col">
           <ul
             ref={listRef}
             onScroll={measureOverflow}
-            className="min-h-0 flex-1 divide-y divide-slate-700/50 overflow-y-auto overscroll-contain"
+            className="min-h-0 flex-1 divide-y divide-ink-700 overflow-y-auto overscroll-contain"
           >
             {batch.facts.map((item) => (
               <PendingFactRow
@@ -948,11 +974,11 @@ export default function Widget(props: WidgetProps) {
             ))}
             {batch.answers.map((item) => (
               <li key={item.canonicalKey} className="px-4 py-2.5">
-                <p className="text-[12px] font-medium leading-snug text-slate-200">
+                <p className="text-[12px] font-medium leading-snug text-paper-200">
                   {c.answerFor} {item.question}
                 </p>
                 <Quoted>{item.text}</Quoted>
-                <p className="pmd-mono mt-1 text-[10px] tracking-[0.06em] text-slate-400">
+                <p className="pmd-mono mt-1 text-[10px] tracking-[0.06em] text-graphite-300">
                   {item.canonicalKey}
                 </p>
               </li>
@@ -963,7 +989,7 @@ export default function Widget(props: WidgetProps) {
               aria-hidden
               className="pmd-more pointer-events-none absolute inset-x-0 bottom-0 flex h-7 items-end justify-center pb-1"
             >
-              <Chevron className="h-3.5 w-3.5 rotate-90 text-slate-400" />
+              <Chevron className="h-3.5 w-3.5 rotate-90 text-graphite-300" />
             </div>
           )}
           </div>
@@ -974,12 +1000,12 @@ export default function Widget(props: WidgetProps) {
             </p>
           )}
 
-          <div className="flex items-center justify-between gap-3 border-t border-slate-700/70 px-4 py-2.5">
+          <div className="flex items-center justify-between gap-3 border-t border-ink-700 px-4 py-2.5">
             <Action onClick={() => setView("ledger")} tone="quiet">
               {c.back}
             </Action>
             {saved ? (
-              <span className="inline-flex items-center gap-1 text-xs text-emerald-300">
+              <span className="inline-flex items-center gap-1 text-xs text-jade-300">
                 <Check className="h-3.5 w-3.5" />
                 {c.saved}
               </span>
@@ -1005,7 +1031,7 @@ export default function Widget(props: WidgetProps) {
               >
                 {saving ? (
                   <>
-                    <span className="pmd-pulse h-1.5 w-1.5 rounded-full bg-sky-400" />
+                    <span className="pmd-pulse h-1.5 w-1.5 rounded-full bg-brio-500" />
                     {c.saving}
                   </>
                 ) : (
@@ -1020,8 +1046,8 @@ export default function Widget(props: WidgetProps) {
         </>
       ) : rows.length === 0 ? (
         <div className="px-6 py-10 text-center">
-          <p className="text-[13px] text-slate-200">{c.empty}</p>
-          <p className="mx-auto mt-1.5 max-w-[34ch] text-[12px] leading-relaxed text-slate-400">
+          <p className="text-[13px] text-paper-200">{c.empty}</p>
+          <p className="mx-auto mt-1.5 max-w-[34ch] text-[12px] leading-relaxed text-graphite-300">
             {c.emptyHelp}
           </p>
         </div>
@@ -1030,7 +1056,7 @@ export default function Widget(props: WidgetProps) {
         <ul
           ref={listRef}
           onScroll={measureOverflow}
-          className="min-h-0 flex-1 divide-y divide-slate-700/50 overflow-y-auto overscroll-contain"
+          className="min-h-0 flex-1 divide-y divide-ink-700 overflow-y-auto overscroll-contain"
         >
           {rows.map((row) =>
             row.kind === "fact" ? (
@@ -1055,7 +1081,7 @@ export default function Widget(props: WidgetProps) {
             aria-hidden
             className="pmd-more pointer-events-none absolute inset-x-0 bottom-0 flex h-7 items-end justify-center pb-1"
           >
-            <Chevron className="h-3.5 w-3.5 rotate-90 text-slate-400" />
+            <Chevron className="h-3.5 w-3.5 rotate-90 text-graphite-300" />
           </div>
         )}
         </div>
@@ -1071,17 +1097,17 @@ export default function Widget(props: WidgetProps) {
         <button
           type="button"
           onClick={() => setView("confirm")}
-          className={`flex items-center justify-between gap-3 border-t border-slate-700/70 bg-slate-800/60 px-4 py-2 text-left transition-colors duration-150 hover:bg-slate-800 ${FOCUS}`}
+          className={`flex items-center justify-between gap-3 border-t border-ink-700 bg-ink-850 px-4 py-2 text-left transition-colors duration-150 hover:bg-ink-850 ${FOCUS}`}
         >
-          <span className="text-[12px] text-slate-200">{c.reviewLead(toSave)}</span>
-          <span className="inline-flex shrink-0 items-center gap-1 text-[12px] font-medium text-slate-100">
+          <span className="text-[12px] text-paper-200">{c.reviewLead(toSave)}</span>
+          <span className="inline-flex shrink-0 items-center gap-1 text-[12px] font-medium text-paper-050">
             {c.review}
             <Chevron className="h-3.5 w-3.5" />
           </span>
         </button>
       )}
 
-      <footer className="flex items-center justify-between gap-3 border-t border-slate-700/70 px-4 py-2">
+      <footer className="flex items-center justify-between gap-3 border-t border-ink-700 px-4 py-2">
         {undoCount > 0 ? (
           <Action onClick={props.onUndo} tone="quiet">
             <Undo className="h-3.5 w-3.5" />
@@ -1093,7 +1119,7 @@ export default function Widget(props: WidgetProps) {
         <button
           type="button"
           onClick={props.onDismissSite}
-          className={`rounded px-1 text-[11px] text-slate-400 transition-colors hover:text-slate-200 ${FOCUS}`}
+          className={`rounded px-1 text-[11px] text-graphite-300 transition-colors hover:text-paper-200 ${FOCUS}`}
         >
           {c.never}
         </button>

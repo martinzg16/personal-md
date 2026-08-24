@@ -23,17 +23,75 @@ import {
 } from "../../lib/learn/pending.ts";
 import { buildScanResult, findByStamp, scanFields } from "../../lib/scan/scanner.ts";
 import type { ScannedField } from "../../lib/scan/types.ts";
-import { send } from "../../lib/protocol.ts";
+import { isSignedOut, send } from "../../lib/protocol.ts";
 import {
   extractLinkedInProfile,
   isEmptyProfile,
   isOwnProfile,
   isProfilePage,
 } from "../../lib/linkedin/extract.ts";
-import type { DraftResponse, ImportProposal, MirrorPayload } from "../../lib/protocol.ts";
+import type { ConnectionState, DraftResponse, ImportProposal, MirrorPayload } from "../../lib/protocol.ts";
 import { settings, storageKeys } from "../../lib/settings.ts";
 import Widget, { type Row } from "../../components/widget/Widget.tsx";
 import "./widget.css";
+
+/**
+ * The panel's two faces, declared inside the shadow root.
+ *
+ * They cannot live in widget.css with the rest of the styling. A `url()` in a
+ * stylesheet resolves against that stylesheet's own origin, and this one is
+ * injected into a shadow root on somebody else's page — so `/fonts/x.woff2`
+ * would ask *their* server for our font, get their 404 page, and fall back
+ * silently. `runtime.getURL` is the only thing that names the extension's own
+ * origin from in here.
+ *
+ * Latin and latin-ext only, and no mono: every monospaced string in the panel is
+ * a key or a count, and the system mono renders those exactly as well as a
+ * bundled face would while costing nothing on every page load.
+ */
+function brandFaces(doc: Document): HTMLStyleElement {
+  const LATIN =
+    "U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD";
+  const LATIN_EXT =
+    "U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF";
+
+  const face = (family: string, url: string, weight: string, range: string) =>
+    `@font-face{font-family:"${family}";font-style:normal;font-weight:${weight};` +
+    `font-display:swap;src:url("${url}") format("woff2");unicode-range:${range}}`;
+
+  // Spelled out rather than built from a template: WXT types `getURL` against a
+  // union of the paths that actually exist in `public/`, so a computed path is
+  // rejected — and that check is worth keeping, because a font URL that 404s
+  // fails silently into a fallback face.
+  const style = doc.createElement("style");
+  style.textContent = [
+    face(
+      "Instrument Sans",
+      browser.runtime.getURL("/fonts/instrumentsans-latin.woff2"),
+      "400 700",
+      LATIN,
+    ),
+    face(
+      "Instrument Sans",
+      browser.runtime.getURL("/fonts/instrumentsans-latin-ext.woff2"),
+      "400 700",
+      LATIN_EXT,
+    ),
+    face(
+      "Instrument Serif",
+      browser.runtime.getURL("/fonts/instrumentserif-latin.woff2"),
+      "400",
+      LATIN,
+    ),
+    face(
+      "Instrument Serif",
+      browser.runtime.getURL("/fonts/instrumentserif-latin-ext.woff2"),
+      "400",
+      LATIN_EXT,
+    ),
+  ].join("");
+  return style;
+}
 
 export default defineContentScript({
   matches: ["<all_urls>"],
@@ -259,6 +317,8 @@ export default defineContentScript({
         noOption: "None of that field's options match your stored value.",
         disabled: "That field is disabled or read-only.",
         notFillable: "That field cannot be filled.",
+        notAccepted: "That field would not take your stored value. Fill it yourself.",
+        sessionGaveUp: "The Claude session did not come back. Press Draft again once it has.",
       },
       es: {
         notYours: "Este perfil es de otra persona. Solo se importa el tuyo.",
@@ -269,6 +329,8 @@ export default defineContentScript({
         noOption: "Ninguna opción de ese campo coincide con tu valor guardado.",
         disabled: "Ese campo está desactivado o es de solo lectura.",
         notFillable: "Ese campo no se puede rellenar.",
+        notAccepted: "Ese campo no acepta tu valor guardado. Rellénalo tú.",
+        sessionGaveUp: "La sesión de Claude no volvió. Vuelve a pulsar Redactar cuando esté.",
       },
     } as const;
 
@@ -281,7 +343,9 @@ export default defineContentScript({
           ? translate("noOption")
           : reason === "disabled"
             ? translate("disabled")
-            : translate("notFillable");
+            : reason === "value-not-accepted"
+              ? translate("notAccepted")
+              : translate("notFillable");
 
     const setRowError = (id: string, message: string): void => {
       rows = rows.map((r) => (r.id === id ? { ...r, fillError: message } : r));
@@ -326,7 +390,34 @@ export default defineContentScript({
       render();
     }
 
-    async function draft(row: Row, instruction?: string): Promise<void> {
+    /**
+     * Wait for the CLI session to come back, then say whether it did.
+     *
+     * Polled rather than pushed because there is nothing to push: signing in
+     * happens in a terminal, outside anything the browser can observe. Four
+     * seconds is frequent enough to feel immediate after `claude auth login`
+     * and rare enough to be free; five minutes is where waiting stops being
+     * help and starts being a hang.
+     */
+    async function waitForSession(): Promise<boolean> {
+      const deadline = Date.now() + 5 * 60_000;
+      while (Date.now() < deadline) {
+        await new Promise((r) => setTimeout(r, 4_000));
+        try {
+          const state = await send<ConnectionState>({ kind: "getConnection" });
+          if (state.kind === "ok") return true;
+          if (state.kind === "claude_signed_out") continue;
+          // Server down or token trouble: a different problem with a different
+          // fix, and not one this wait can resolve.
+          return false;
+        } catch {
+          return false;
+        }
+      }
+      return false;
+    }
+
+    async function draft(row: Row, instruction?: string, resumed = false): Promise<void> {
       if (row.kind !== "unanswered") return;
       patch(row.id, { state: "drafting" });
 
@@ -346,6 +437,24 @@ export default defineContentScript({
         });
         patch(row.id, { draft: result, state: "ready" });
       } catch (err) {
+        /*
+         * A signed-out CLI is the one failure worth holding the request for.
+         * Nothing was spent, the profile is untouched, and the only missing
+         * ingredient comes back with one command in a terminal - so the row
+         * waits and finishes itself instead of making someone press Draft again
+         * and hope they remember what they were asking for.
+         *
+         * Resumed once, never in a loop: if the very next attempt is refused
+         * again, that is a different problem and it gets shown as one.
+         */
+        if (isSignedOut(err) && !resumed) {
+          patch(row.id, { state: "waiting_session" });
+          render();
+          if (await waitForSession()) return draft(row, instruction, true);
+          patch(row.id, { state: "error", error: translate("sessionGaveUp") });
+          render();
+          return;
+        }
         patch(row.id, {
           state: "error",
           error: err instanceof Error ? err.message : "could not draft this",
@@ -365,10 +474,12 @@ export default defineContentScript({
         // source. See the header of Widget.tsx.
         container.prepend(
           doc.createComment(
-            " personal-md widget · source-first ledger · seed a21341ab · " +
+            " Brío panel · source-first ledger · seed a21341ab · " +
               "your file, projected onto someone else's form ",
           ),
         );
+
+        container.append(brandFaces(doc));
 
         const host = doc.createElement("div");
         host.className = "pmd-root";

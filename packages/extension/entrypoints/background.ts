@@ -12,9 +12,9 @@
 
 import { normaliseQuestion } from "@personal-md/core";
 
-import { server, type ConnectionState } from "../lib/server-client.ts";
+import { server, ServerError, type ConnectionState } from "../lib/server-client.ts";
 import { settings, type ProfileMirror } from "../lib/settings.ts";
-import type { Request, Response } from "../lib/protocol.ts";
+import type { FailureReason, Request, Response } from "../lib/protocol.ts";
 
 /** Fetch from the server and refresh the mirror. Returns the fresh mirror. */
 async function refreshMirror(): Promise<ProfileMirror> {
@@ -23,6 +23,7 @@ async function refreshMirror(): Promise<ProfileMirror> {
     profile: res.profile,
     withheldKeys: res.withheldKeys,
     siteMemory: res.siteMemory,
+    ledger: res.ledger,
     fetchedAt: new Date().toISOString(),
   };
   await settings.setMirror(mirror);
@@ -148,15 +149,77 @@ async function handle(request: Request): Promise<unknown> {
   }
 }
 
+/**
+ * The extension icon as a session light.
+ *
+ * A lapsed CLI session used to be invisible until a draft died on it. The badge
+ * is the cheapest surface that reaches someone who is not looking: it needs no
+ * panel open and no form in front of them. Deliberately quiet - one mark, no
+ * notification - because nothing is broken except drafting.
+ */
+async function paintSessionBadge(signedIn: "in" | "out" | "unknown"): Promise<void> {
+  const out = signedIn === "out";
+  try {
+    await chrome.action.setBadgeText({ text: out ? "!" : "" });
+    if (out) await chrome.action.setBadgeBackgroundColor({ color: "#9a3412" });
+    await chrome.action.setTitle({
+      title: out
+        ? "Brío · la sesión de Claude ha caducado; ejecuta claude auth login\nBrío · the Claude session has lapsed; run claude auth login"
+        : "Brío",
+    });
+  } catch {
+    // An icon that cannot be painted is not a reason to fail anything.
+  }
+}
+
+/** Look, and show what was found. Safe to call from anywhere. */
+async function checkSession(): Promise<void> {
+  const report = await server.healthReport();
+  // A server that is down says nothing about the session: clearing the badge
+  // would be a lie, keeping it would be too, so only a definite answer paints.
+  if (report.up) await paintSessionBadge(report.claude);
+}
+
+/**
+ * The watch interval.
+ *
+ * Five minutes is the trade: the worker is woken rarely, and the worst case is
+ * knowing five minutes late rather than at the next draft. An alarm rather than
+ * a timer because MV3 tears this worker down whenever it is idle.
+ */
+const SESSION_ALARM = "claude-session";
+
+function watchSession(): void {
+  void chrome.alarms.create(SESSION_ALARM, { periodInMinutes: 5 });
+  void checkSession();
+}
+
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === SESSION_ALARM) void checkSession();
+});
+
+/** The reason, if this failure is one a surface can act on rather than just report. */
+function reasonFor(err: unknown): FailureReason | undefined {
+  if (err instanceof ServerError && err.state.kind === "claude_signed_out") {
+    // Paint immediately: waiting for the next alarm would leave the icon
+    // claiming everything is fine while a draft has just been refused.
+    void paintSessionBadge("out");
+    return "claude_signed_out";
+  }
+  return undefined;
+}
+
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   void (async () => {
     try {
       const data = await handle(message as Request);
       sendResponse({ ok: true, data } satisfies Response);
     } catch (err) {
+      const reason = reasonFor(err);
       sendResponse({
         ok: false,
         error: err instanceof Error ? err.message : "unknown error",
+        ...(reason ? { reason } : {}),
       } satisfies Response);
     }
   })();
@@ -166,9 +229,16 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
 // Warm the mirror on install and on browser start, so the first form the user
 // opens does not have to wait on a network round trip.
-chrome.runtime.onInstalled.addListener(() => void refreshQuietly());
-chrome.runtime.onStartup.addListener(() => void refreshQuietly());
+chrome.runtime.onInstalled.addListener(() => {
+  void refreshQuietly();
+  watchSession();
+});
+chrome.runtime.onStartup.addListener(() => {
+  void refreshQuietly();
+  watchSession();
+});
 
 export default defineBackground(() => {
   void refreshQuietly();
+  watchSession();
 });

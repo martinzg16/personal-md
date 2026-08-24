@@ -36,6 +36,7 @@
 
 import { execFile } from "node:child_process";
 
+import { claudeAuth, forgetClaudeAuth } from "./claude-auth.ts";
 import { assertSafeToSend } from "./egress.ts";
 import { isolatedFiles, paths } from "./paths.ts";
 
@@ -69,7 +70,7 @@ export interface ClaudeResult {
 }
 
 export class ClaudeError extends Error {
-  readonly kind: "not_installed" | "timeout" | "failed" | "unparseable";
+  readonly kind: "not_installed" | "unauthenticated" | "timeout" | "failed" | "unparseable";
   readonly detail: string;
   constructor(kind: ClaudeError["kind"], message: string, detail = "") {
     super(message);
@@ -106,6 +107,7 @@ interface CliJson {
   is_error?: boolean;
   result?: string;
   subtype?: string;
+  terminal_reason?: string;
   total_cost_usd?: number;
   duration_ms?: number;
   usage?: {
@@ -114,6 +116,40 @@ interface CliJson {
     cache_creation_input_tokens?: number;
     cache_read_input_tokens?: number;
   };
+}
+
+/**
+ * What the CLI itself said about the failure.
+ *
+ * A failed call still prints its result JSON on stdout: an expired OAuth
+ * session exits 1 with an empty stderr and the reason in `result`. Reporting
+ * only the exit status collapsed every one of those into the same opaque
+ * "claude exited with an error", so the message is dug out of stdout first.
+ */
+export function cliMessage(stdout: string): string {
+  try {
+    const parsed = JSON.parse(stdout) as CliJson;
+    return typeof parsed.result === "string" ? parsed.result.trim() : "";
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * Authentication is the one failure here with a fix the user can act on, so it
+ * gets its own kind and carries the remedy in the message. Matched on the text
+ * because the CLI reports it as an ordinary non-zero exit.
+ */
+export function authFailure(said: string): ClaudeError | null {
+  if (!/failed to authenticate|oauth|invalid api key|unauthorized/i.test(said)) return null;
+  // The probe said "in" recently enough to be trusted, and it was wrong. Throw
+  // the answer away so the status light and the next call both re-measure.
+  forgetClaudeAuth();
+  return new ClaudeError(
+    "unauthenticated",
+    `claude is not authenticated (${said}); run \`claude auth login\` and try again`,
+    said,
+  );
 }
 
 const execFileAsync = (file: string, args: string[], opts: { cwd: string; timeout: number }) =>
@@ -140,6 +176,19 @@ export async function ask(opts: AskOptions): Promise<ClaudeResult> {
   // Layer 2 of the egress guard. Runs on the exact bytes about to leave the
   // machine, not on the pieces that were used to build them.
   if (!opts.skipEgressCheck) assertSafeToSend(`${opts.system}\n${opts.prompt}`);
+
+  // Refuse before spending, not after. A lapsed session is the one failure that
+  // is knowable in advance for ~0.24s and no quota, and finding out afterwards
+  // costs a draft the user has already waited for - twice over, since the JSON
+  // repair path would retry into the same dead session.
+  const auth = await claudeAuth();
+  if (auth.state === "out") {
+    throw new ClaudeError(
+      "unauthenticated",
+      "claude is signed out; run `claude auth login` and try again",
+      auth.account ? `last signed in as ${auth.account}` : "",
+    );
+  }
 
   const args = [
     "-p",
@@ -173,7 +222,7 @@ export async function ask(opts: AskOptions): Promise<ClaudeResult> {
       timeout: opts.timeoutMs ?? 120_000,
     }));
   } catch (err) {
-    const e = err as NodeJS.ErrnoException & { killed?: boolean; stderr?: string };
+    const e = err as NodeJS.ErrnoException & { killed?: boolean; stdout?: string; stderr?: string };
     if (e.code === "ENOENT") {
       throw new ClaudeError(
         "not_installed",
@@ -183,7 +232,14 @@ export async function ask(opts: AskOptions): Promise<ClaudeResult> {
     if (e.killed) {
       throw new ClaudeError("timeout", `claude did not respond within the timeout`);
     }
-    throw new ClaudeError("failed", "claude exited with an error", (e.stderr ?? "").slice(0, 2000));
+    const said = cliMessage(e.stdout ?? "");
+    const auth = authFailure(said);
+    if (auth) throw auth;
+    throw new ClaudeError(
+      "failed",
+      said ? `claude exited with an error: ${said}` : "claude exited with an error",
+      (said || e.stderr || "").slice(0, 2000),
+    );
   }
 
   let parsed: CliJson;
@@ -194,7 +250,16 @@ export async function ask(opts: AskOptions): Promise<ClaudeResult> {
   }
 
   if (parsed.is_error || typeof parsed.result !== "string") {
-    throw new ClaudeError("failed", `claude reported an error (${parsed.subtype ?? "unknown"})`);
+    const said = typeof parsed.result === "string" ? parsed.result.trim() : "";
+    const auth = authFailure(said);
+    if (auth) throw auth;
+    throw new ClaudeError(
+      "failed",
+      said
+        ? `claude reported an error: ${said}`
+        : `claude reported an error (${parsed.terminal_reason ?? parsed.subtype ?? "unknown"})`,
+      said,
+    );
   }
 
   const u = parsed.usage ?? {};
