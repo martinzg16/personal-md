@@ -33,7 +33,12 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
+      # Not `npm ci`: the lockfile only carries the darwin-arm64 rolldown
+      # binding, because npm prunes optional platform deps to the machine that
+      # wrote it, so a Linux runner would install no binary at all. `npm
+      # install` resolves the right one here. --ignore-scripts skips the
+      # extension's `wxt prepare`, which the landing does not need.
+      - run: npm install --ignore-scripts --no-audit --no-fund
       - run: npm run build:site
         env:
           BASE_PATH: /personal-md/
