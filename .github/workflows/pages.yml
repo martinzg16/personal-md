@@ -33,12 +33,20 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      # Not `npm ci`: the lockfile only carries the darwin-arm64 rolldown
-      # binding, because npm prunes optional platform deps to the machine that
-      # wrote it, so a Linux runner would install no binary at all. `npm
-      # install` resolves the right one here. --ignore-scripts skips the
-      # extension's `wxt prepare`, which the landing does not need.
-      - run: npm install --ignore-scripts --no-audit --no-fund
+      # Not `npm ci`, and not `npm install` over the committed lock either.
+      # This lockfile carries only darwin-arm64 native binaries — rolldown,
+      # oxide, lightningcss — because npm prunes optional platform deps to the
+      # machine that wrote it, and it will not add a Linux runner's variants on
+      # top of an existing lock (npm/cli#4828). Either way the runner ends up
+      # with no Vite to run: Vite 8 is rolldown. Resolving from scratch is the
+      # documented way out, and the landing's dependency surface is React, Vite
+      # and Tailwind, so the drift it allows is small and visible in one page.
+      # --ignore-scripts skips the extension's `wxt prepare`, which needs
+      # rolldown too and which the landing does not need.
+      - name: Install, resolving native binaries for this runner
+        run: |
+          rm -f package-lock.json
+          npm install --ignore-scripts --no-audit --no-fund
       - run: npm run build:site
         env:
           BASE_PATH: /personal-md/
