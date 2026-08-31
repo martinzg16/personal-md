@@ -278,7 +278,8 @@ packages/brand       Brío: palette, faces, motion — declared once for every s
 packages/core        the PERSONAL.md format: types, parse, serialise
 packages/server      companion process, claude bridge, egress guard
 packages/extension   Chrome MV3 extension (WXT + React + Tailwind)
-packages/site        the landing page (Vite + React)
+packages/site        the landing page (Vite + React), live at
+                     https://martinzg16.github.io/personal-md/
 ```
 
 ## Brío
