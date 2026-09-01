@@ -27,10 +27,11 @@ export type { IdStore, Tracker, TrackerOptions } from "./tracker.ts";
 export { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL, isConfigured } from "./config.ts";
 
 export {
+  PROVIDER,
   SIGN_IN_MESSAGES,
   createBrioClient,
-  looksLikeEmail,
-  requestCode,
-  submitCode,
+  finishSignIn,
+  labelFor,
+  startSignIn,
 } from "./account.ts";
-export type { ClientOptions, CodeCheck, CodeRequest, SessionStore } from "./account.ts";
+export type { ClientOptions, SessionStore, SignInFinish, SignInStart } from "./account.ts";

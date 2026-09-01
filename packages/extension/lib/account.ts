@@ -18,10 +18,12 @@
 
 import {
   type SessionStore,
+  type SignInFinish,
   createBrioClient,
+  finishSignIn,
   isConfigured,
-  requestCode,
-  submitCode,
+  labelFor,
+  startSignIn,
 } from "@personal-md/identity";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -54,9 +56,16 @@ export function accountClient(): SupabaseClient | null {
 export type AccountState =
   | { kind: "unconfigured" }
   | { kind: "signed_out" }
-  | { kind: "signed_in"; accountId: string; email: string; /** Whether the vault can be opened right now. */ unlocked: boolean }
+  | {
+      kind: "signed_in";
+      accountId: string;
+      /** The GitHub handle where possible, an address otherwise. Never a token. */
+      label: string;
+      /** Whether the vault can be opened right now. */
+      unlocked: boolean;
+    }
   /** Signed in, but the network said no. Distinct because the remedy is to wait, not to sign in again. */
-  | { kind: "offline"; email: string }
+  | { kind: "offline"; label: string }
   | { kind: "error"; message: string };
 
 export async function accountState(): Promise<AccountState> {
@@ -70,7 +79,7 @@ export async function accountState(): Promise<AccountState> {
     return {
       kind: "signed_in",
       accountId: session.user.id,
-      email: session.user.email ?? "",
+      label: labelFor(session.user),
       unlocked: (await readPassphrase()) !== null,
     };
   } catch (error) {
@@ -78,16 +87,36 @@ export async function accountState(): Promise<AccountState> {
   }
 }
 
-export async function askForCode(email: string) {
+/**
+ * The whole round trip, in one call, because there is nothing for the user to
+ * do in the middle.
+ *
+ * `launchWebAuthFlow` opens a window Chrome owns, waits for the redirect to
+ * https://<extension-id>.chromiumapp.org/, and hands it back as a string. That
+ * is the only way an extension can finish OAuth: it has no page of its own for
+ * a provider to redirect to. Closing that window rejects, and a closed window
+ * is a decision, not a fault - so it comes back as `abandoned`.
+ */
+export async function signIn(): Promise<SignInFinish> {
   const supabase = accountClient();
-  if (!supabase) return { kind: "error" as const, message: "accounts are not switched on in this build" };
-  return requestCode(supabase, email);
-}
+  if (!supabase) {
+    return { kind: "error", message: "accounts are not switched on in this build" };
+  }
 
-export async function enterCode(email: string, code: string) {
-  const supabase = accountClient();
-  if (!supabase) return { kind: "error" as const, message: "accounts are not switched on in this build" };
-  return submitCode(supabase, email, code);
+  const start = await startSignIn(supabase, chrome.identity.getRedirectURL());
+  if (start.kind !== "go") {
+    return start.kind === "offline" ? { kind: "offline" } : { kind: "error", message: start.message };
+  }
+
+  let callback: string | undefined;
+  try {
+    callback = await chrome.identity.launchWebAuthFlow({ url: start.url, interactive: true });
+  } catch {
+    return { kind: "abandoned" };
+  }
+  if (!callback) return { kind: "abandoned" };
+
+  return finishSignIn(supabase, callback);
 }
 
 export async function signOut(): Promise<void> {

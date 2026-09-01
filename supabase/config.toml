@@ -161,7 +161,14 @@ site_url = "https://martinzg16.github.io/personal-md/"
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
 # The landing is the only place a signup starts. The extension uses the OTP
 # code, not a redirect, so it needs no entry here.
-additional_redirect_urls = ["https://martinzg16.github.io/personal-md/", "http://127.0.0.1:5602"]
+# The third one is the extension. `launchWebAuthFlow` sends the provider back to
+# https://<extension-id>.chromiumapp.org/, and that id is pinned by the `key` in
+# wxt.config.ts - change the key and this line has to change with it.
+additional_redirect_urls = [
+  "https://martinzg16.github.io/personal-md/",
+  "http://127.0.0.1:5602",
+  "https://fglclehopgofkenebijghenjmhhgkgjk.chromiumapp.org/",
+]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600
 # JWT issuer URL. If not set, defaults to auth.external_url.
@@ -247,18 +254,10 @@ otp_expiry = 600
 # admin_email = "admin@email.com"
 # sender_name = "Admin"
 
-# The code, not a link: see the template's own comment.
-#
-# COMMENTED OUT, and it has to stay that way until this project sends its own
-# mail. Supabase rejects the push outright on the free tier with the built-in
-# provider: "Email template modification is not available for free tier
-# projects using the default email provider." Uncomment the moment
-# [auth.email.smtp] below is filled in — until then the whole auth config push
-# fails, not just this block.
-#
-# [auth.email.template.magic_link]
-# subject = "Your Brío code"
-# content_path = "./supabase/templates/magic-link.html"
+# No template here, and none needed: Brío signs in through GitHub and this
+# project sends no mail at all. That is not a preference — the built-in provider
+# refuses template edits on the free tier and is rate limited to a couple of
+# messages an hour, so a six-digit code by email was never going to work.
 
 # Uncomment to customize email template
 # [auth.email.template.invite]
@@ -336,6 +335,20 @@ max_frequency = "5s"
 # Use an external OAuth provider. The full list of providers are: `apple`, `azure`, `bitbucket`,
 # `discord`, `facebook`, `github`, `gitlab`, `google`, `keycloak`, `linkedin_oidc`, `notion`, `twitch`,
 # `twitter`, `x`, `slack`, `spotify`, `workos`, `zoom`.
+# GitHub, and only GitHub.
+#
+# Chosen because it sends no email: the built-in mail provider cannot render a
+# six-digit code on the free tier and is rate limited to a couple of messages an
+# hour, and OAuth sidesteps both. The audience fits too - this landing links its
+# own source in the header.
+#
+# The secret is never written here. Export it before pushing:
+#   export SUPABASE_AUTH_EXTERNAL_GITHUB_SECRET=...
+[auth.external.github]
+enabled = true
+client_id = "env(SUPABASE_AUTH_EXTERNAL_GITHUB_CLIENT_ID)"
+secret = "env(SUPABASE_AUTH_EXTERNAL_GITHUB_SECRET)"
+
 [auth.external.apple]
 enabled = false
 client_id = ""

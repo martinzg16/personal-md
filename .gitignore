@@ -27,3 +27,8 @@ packages/extension/test/personal-md-demo.html
 # the canonical copy is the one in packages/brand and these cannot drift.
 packages/site/public/fonts/
 packages/extension/public/fonts/instrument*.woff2
+
+# The private half of the extension signing key. Fixes the extension id, and
+# with it the OAuth redirect URL. Keep it; it is not recoverable.
+.brio-extension-key.pem
+.brio-extension-pubkey.txt

@@ -18,6 +18,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 let client: SupabaseClient | null = null;
 
 export function landingClient(): SupabaseClient {
-  client ??= createBrioClient({ detectSessionInUrl: false });
+  // True here, unlike in the extension: GitHub redirects back to this page and
+  // the `?code=` in the URL is the session. Nothing else picks it up.
+  client ??= createBrioClient({ detectSessionInUrl: true });
   return client;
 }

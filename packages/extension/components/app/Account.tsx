@@ -8,10 +8,10 @@
  * feature that is meant to be removable across four files.
  *
  * The passphrase is asked for separately from the sign-in, and after it, on
- * purpose. They are different secrets with different consequences: the code in
- * your inbox proves who you are and can be sent again, the passphrase decrypts
- * the profile and cannot be reset by anyone. Asking for both on one screen
- * invites treating them as one thing.
+ * purpose. They are different secrets with different consequences: GitHub
+ * proves who you are and can always prove it again, the passphrase decrypts the
+ * profile and cannot be reset by anyone. Asking for both on one screen invites
+ * treating them as one thing.
  */
 
 import { useCallback, useEffect, useState } from "react";
@@ -22,10 +22,9 @@ import type { Lang } from "@personal-md/core";
 import {
   type AccountState,
   accountState,
-  askForCode,
-  enterCode,
   forgetPassphrase,
   rememberPassphrase,
+  signIn,
   signOut,
 } from "../../lib/account.ts";
 import { DEFAULT_VAULT, type SyncResult, pullVault, pushVault } from "../../lib/vault.ts";
@@ -36,13 +35,8 @@ const t = {
     title: "Tu cuenta",
     off: "Esta compilación no lleva cuentas. Rellenar y redactar funcionan igual.",
     lead: "Opcional. Lleva tu perfil a otra máquina y separa el del trabajo del personal.",
-    email: "Correo",
-    sendCode: "Enviar código",
-    sending: "Enviando…",
-    code: "Código",
-    signIn: "Entrar",
-    checking: "Comprobando…",
-    sentTo: (email: string) => `enviado a ${email}`,
+    signIn: "Entrar con GitHub",
+    opening: "Abriendo GitHub…",
     signedInAs: "Dentro como",
     signOut: "Salir",
     passphrase: "Frase de paso",
@@ -70,13 +64,8 @@ const t = {
     title: "Your account",
     off: "This build ships without accounts. Filling and drafting work the same.",
     lead: "Optional. Carries your profile to another machine, and keeps work apart from personal.",
-    email: "Email",
-    sendCode: "Send a code",
-    sending: "Sending…",
-    code: "Code",
-    signIn: "Sign in",
-    checking: "Checking…",
-    sentTo: (email: string) => `sent to ${email}`,
+    signIn: "Continue with GitHub",
+    opening: "Opening GitHub…",
     signedInAs: "Signed in as",
     signOut: "Sign out",
     passphrase: "Passphrase",
@@ -105,9 +94,6 @@ const t = {
 export default function Account({ lang }: { lang: Lang }) {
   const c = t[lang];
   const [state, setState] = useState<AccountState>({ kind: "unconfigured" });
-  const [email, setEmail] = useState("");
-  const [code, setCode] = useState("");
-  const [awaitingCode, setAwaitingCode] = useState<string | null>(null);
   const [passphrase, setPassphrase] = useState("");
   const [vault, setVault] = useState(DEFAULT_VAULT);
   const [busy, setBusy] = useState(false);
@@ -139,82 +125,33 @@ export default function Account({ lang }: { lang: Lang }) {
   }
 
   return (
-    <Card title={c.title} meta={state.kind === "signed_in" ? state.email : undefined}>
+    <Card title={c.title} meta={state.kind === "signed_in" ? state.label : undefined}>
       <p className="border-b border-rule-100 px-4.5 py-3 text-[13.5px] leading-relaxed text-graphite-600 text-pretty">
         {c.lead}
       </p>
 
       {state.kind !== "signed_in" ? (
         <div className="flex flex-wrap items-center gap-2.5 px-4.5 py-3.5">
-          {awaitingCode === null ? (
-            <>
-              <input
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                type="email"
-                autoComplete="email"
-                aria-label={c.email}
-                placeholder="you@example.com"
-                className={`${input} w-[240px]`}
-              />
-              <button
-                type="button"
-                disabled={busy}
-                className={solid}
-                onClick={async () => {
-                  setBusy(true);
-                  setNote("");
-                  const result = await askForCode(email);
-                  setBusy(false);
-                  if (result.kind === "sent") {
-                    setAwaitingCode(result.email);
-                    return;
-                  }
-                  setNote(
-                    result.kind === "error" ? result.message : SIGN_IN_MESSAGES[result.kind],
-                  );
-                }}
-              >
-                {busy ? c.sending : c.sendCode}
-              </button>
-            </>
-          ) : (
-            <>
-              <input
-                value={code}
-                onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                maxLength={6}
-                aria-label={c.code}
-                placeholder="000000"
-                className={`${input} w-[110px] text-center tracking-[0.3em]`}
-              />
-              <button
-                type="button"
-                disabled={busy || code.length < 6}
-                className={solid}
-                onClick={async () => {
-                  setBusy(true);
-                  setNote("");
-                  const result = await enterCode(awaitingCode, code);
-                  setBusy(false);
-                  if (result.kind === "signed_in") {
-                    setAwaitingCode(null);
-                    setCode("");
-                    await refresh();
-                    return;
-                  }
-                  setNote(
-                    result.kind === "error" ? result.message : SIGN_IN_MESSAGES[result.kind],
-                  );
-                }}
-              >
-                {busy ? c.checking : c.signIn}
-              </button>
-              <Mono>{c.sentTo(awaitingCode)}</Mono>
-            </>
-          )}
+          <button
+            type="button"
+            disabled={busy}
+            className={solid}
+            onClick={async () => {
+              setBusy(true);
+              setNote("");
+              const result = await signIn();
+              setBusy(false);
+              if (result.kind === "signed_in") {
+                await refresh();
+                return;
+              }
+              setNote(
+                result.kind === "error" ? result.message : SIGN_IN_MESSAGES[result.kind],
+              );
+            }}
+          >
+            {busy ? c.opening : c.signIn}
+          </button>
         </div>
       ) : (
         <>
@@ -288,7 +225,7 @@ export default function Account({ lang }: { lang: Lang }) {
 
           <div className="flex items-center justify-between gap-3 border-t border-rule-200 bg-bone-100 px-4.5 py-3">
             <Mono>
-              {c.signedInAs} {state.email}
+              {c.signedInAs} {state.label}
             </Mono>
             <button
               type="button"

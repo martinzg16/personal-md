@@ -1,86 +1,64 @@
 /**
- * The signup, which is also the sign-in: there is no password to tell them apart.
+ * The signup, which is also the sign-in: there is nothing to tell them apart.
  *
- * Two fields, one at a time — an address, then the six digits it receives. The
- * screen never claims more than it does: this creates the account that lets one
- * profile reach a second machine, and it says in the same breath that the
- * profile leaves encrypted and that the passphrase is not recoverable. Burying
- * that until after signup would be the one dishonest moment on the page.
+ * One button. The provider redirects back here with a `?code=`, the client
+ * picks it up on load, and by the time this component renders again there is a
+ * session — so the "you are in" state is not something this form navigates to,
+ * it is something it wakes up in.
+ *
+ * The screen never claims more than it does: it says in the same breath that
+ * the account exists to move a profile between machines, that the profile
+ * leaves encrypted, and that the passphrase is not recoverable. Burying that
+ * until after signup would be the one dishonest moment on the page.
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
-import {
-  SIGN_IN_MESSAGES,
-  isConfigured,
-  looksLikeEmail,
-  requestCode,
-  submitCode,
-} from "@personal-md/identity";
+import { SIGN_IN_MESSAGES, isConfigured, startSignIn } from "@personal-md/identity";
+import type { User } from "@supabase/supabase-js";
 
 import { identify, track } from "./analytics.ts";
 import { landingClient } from "./client.ts";
 
-type Stage =
-  | { kind: "email" }
-  | { kind: "sending" }
-  | { kind: "code"; email: string }
-  | { kind: "checking"; email: string }
-  | { kind: "done" };
-
-// Shared with the tracker: see client.ts for why two would be a bug.
 const client = isConfigured() ? landingClient() : null;
 
+function GitHubMark() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+      <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.42 7.42 0 0 1 2-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z" />
+    </svg>
+  );
+}
+
 export default function Signup() {
-  const [stage, setStage] = useState<Stage>({ kind: "email" });
-  const [email, setEmail] = useState("");
-  const [code, setCode] = useState("");
+  const [user, setUser] = useState<User | null>(null);
+  const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
 
-  const busy = stage.kind === "sending" || stage.kind === "checking";
-
-  async function askForCode(event: React.FormEvent) {
-    event.preventDefault();
+  /*
+   * The session may already be there — either from a previous visit or from the
+   * redirect this very load is completing — so ask once, and then listen, because
+   * detectSessionInUrl finishes after the first render.
+   */
+  useEffect(() => {
     if (!client) return;
-    setProblem(null);
-    if (!looksLikeEmail(email)) {
-      setProblem(SIGN_IN_MESSAGES.bad_email);
-      return;
-    }
-    track("signup_started", { placement: "sync" });
-    setStage({ kind: "sending" });
-
-    const result = await requestCode(client, email);
-    if (result.kind === "sent") {
-      track("signup_email_sent");
-      setStage({ kind: "code", email: result.email });
-      return;
-    }
-    setStage({ kind: "email" });
-    setProblem(
-      result.kind === "error" ? result.message : SIGN_IN_MESSAGES[result.kind],
-    );
-  }
-
-  async function checkCode(event: React.FormEvent) {
-    event.preventDefault();
-    if (!client || stage.kind !== "code") return;
-    const address = stage.email;
-    setProblem(null);
-    setStage({ kind: "checking", email: address });
-
-    const result = await submitCode(client, address, code);
-    if (result.kind === "signed_in") {
-      // Bind this browser's whole anonymous history to the account before the
-      // event, so the conversion is attributed to the visit that caused it.
-      identify(result.accountId);
-      track("signup_verified");
-      setStage({ kind: "done" });
-      return;
-    }
-    setStage({ kind: "code", email: address });
-    setProblem(result.kind === "error" ? result.message : SIGN_IN_MESSAGES[result.kind]);
-  }
+    let live = true;
+    void client.auth.getUser().then(({ data }) => {
+      if (live && data.user) setUser(data.user);
+    });
+    const { data: sub } = client.auth.onAuthStateChange((_event, session) => {
+      if (!live) return;
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        identify(session.user.id);
+        track("signup_verified");
+      }
+    });
+    return () => {
+      live = false;
+      sub.subscription.unsubscribe();
+    };
+  }, []);
 
   if (!client) {
     return (
@@ -90,81 +68,55 @@ export default function Signup() {
     );
   }
 
-  if (stage.kind === "done") {
+  if (user) {
     return (
       <div className="rounded-xl border border-jade-300 bg-jade-100 px-6 py-5">
         <p className="font-display text-[22px] leading-tight text-jade-950">You are in.</p>
-        <p className="mt-2 max-w-[52ch] text-[14px] leading-relaxed text-graphite-700 text-pretty">
-          Install the extension and sign in with the same address. It will ask you for a
-          passphrase once — that is the key your profile is encrypted with, and it never leaves
-          your machine, so nobody here can reset it for you.
+        <p className="mt-2 max-w-[54ch] text-[14px] leading-relaxed text-graphite-700 text-pretty">
+          Install the extension and sign in with the same GitHub account. It will ask you for a
+          passphrase once — that is the key your profile is encrypted with, it never leaves your
+          machine, and nobody here can reset it for you.
         </p>
       </div>
     );
   }
 
-  const field =
-    "w-full rounded-full border border-rule-500 bg-bone-050 px-5 py-3.5 text-[15px] text-graphite-900 outline-none transition-colors placeholder:text-graphite-400 focus:border-graphite-900";
-  const submit =
-    "inline-flex shrink-0 items-center rounded-full bg-lapis-500 px-6 py-3.5 text-[15px] font-semibold text-white transition-colors duration-150 hover:bg-brio-500 disabled:opacity-60";
+  async function go() {
+    if (!client) return;
+    setProblem(null);
+    setBusy(true);
+    track("signup_started", { placement: "sync" });
+
+    const result = await startSignIn(client, window.location.href);
+    if (result.kind === "go") {
+      // Leaving the page, so the busy state is never cleared on this path.
+      window.location.assign(result.url);
+      return;
+    }
+    setBusy(false);
+    setProblem(result.kind === "error" ? result.message : SIGN_IN_MESSAGES.offline);
+  }
 
   return (
     <div>
-      {stage.kind === "email" || stage.kind === "sending" ? (
-        <form onSubmit={askForCode} className="flex flex-wrap items-center gap-3">
-          <label htmlFor="signup-email" className="sr-only">
-            Email address
-          </label>
-          <input
-            id="signup-email"
-            type="email"
-            autoComplete="email"
-            inputMode="email"
-            value={email}
-            disabled={busy}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
-            className={`${field} sm:max-w-[22rem]`}
-          />
-          <button type="submit" disabled={busy} className={submit}>
-            {busy ? "Sending…" : "Send me a code"}
-          </button>
-        </form>
-      ) : (
-        <form onSubmit={checkCode} className="flex flex-wrap items-center gap-3">
-          <label htmlFor="signup-code" className="sr-only">
-            The six-digit code
-          </label>
-          <input
-            id="signup-code"
-            // Not type="number": leading zeros survive, and so does the keypad.
-            type="text"
-            inputMode="numeric"
-            autoComplete="one-time-code"
-            maxLength={6}
-            value={code}
-            disabled={busy}
-            onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
-            placeholder="000000"
-            className={`${field} max-w-[9rem] text-center font-mono tracking-[0.35em]`}
-          />
-          <button type="submit" disabled={busy || code.length < 6} className={submit}>
-            {busy ? "Checking…" : "Sign in"}
-          </button>
-          <span className="brio-mono text-[11.5px] text-graphite-400">
-            sent to {stage.email}
-          </span>
-        </form>
-      )}
+      <button
+        type="button"
+        onClick={go}
+        disabled={busy}
+        className="inline-flex items-center gap-2.5 rounded-full bg-ink-900 px-6 py-3.5 text-[15px] font-semibold text-bone-050 transition-colors duration-150 hover:bg-brio-500 disabled:opacity-60"
+      >
+        <GitHubMark />
+        {busy ? "Opening GitHub…" : "Continue with GitHub"}
+      </button>
 
       {problem ? (
-        <p role="alert" className="mt-3 max-w-[52ch] text-[13.5px] text-brio-700 text-pretty">
+        <p role="alert" className="mt-3 max-w-[54ch] text-[13.5px] text-brio-700 text-pretty">
           {problem}
         </p>
       ) : (
-        <p className="mt-3 max-w-[52ch] text-[13px] text-graphite-400 text-pretty">
-          No password. A six-digit code by email, and the profile itself leaves your machine
-          encrypted with a passphrase only you hold.
+        <p className="mt-3 max-w-[54ch] text-[13px] text-graphite-400 text-pretty">
+          No password, and no email to wait for. Brío reads your GitHub handle and nothing else;
+          the profile itself leaves your machine encrypted with a passphrase only you hold.
         </p>
       )}
     </div>

@@ -15,8 +15,8 @@
  * Since accounts existed there is a third thing, and it is on this screen for
  * the same reason as the other two: a page called "what has ever left this
  * machine" that quietly omits a category is worse than no page. An account
- * sends an email address, keeps a session, and pushes a vault - and the vault
- * is the interesting one, because it leaves sealed and the server has no key.
+ * names you to GitHub, keeps a session, and pushes a vault - and the vault is
+ * the interesting one, because it leaves sealed and the server has no key.
  *
  * The ledger underneath is what the companion has actually spent. It is an
  * aggregate, which is what the file holds: `PERSONAL.md` counts calls and cost,
@@ -54,7 +54,7 @@ const t = {
     accountOut: "No has entrado. Nada de esto ha salido todavía.",
     accountIn: "Has entrado, así que esto sí ha salido:",
     sends: [
-      ["Tu correo", "Para mandarte el código. Lo guarda el servicio de identidad, no una tabla nuestra."],
+      ["Tu cuenta de GitHub", "Solo tu identificador y tu handle, para saber que eres tú. Los guarda el servicio de identidad, no una tabla nuestra. No se manda ningún correo."],
       ["Una sesión", "Vive en esta extensión. No la ve ninguna página."],
       ["El perfil, cifrado", "Solo si le das a Subir. Se sella aquí con tu frase de paso, que no se envía nunca: lo que se guarda allí no se puede abrir allí."],
     ] as const,
@@ -81,7 +81,7 @@ const t = {
     accountOut: "You are not signed in. None of this has left yet.",
     accountIn: "You are signed in, so these have left:",
     sends: [
-      ["Your email", "To send you the code. The identity service holds it; no table of ours copies it."],
+      ["Your GitHub account", "Your id and handle, so it knows you are you. The identity service holds them; no table of ours copies them. No email is sent at all."],
       ["A session", "Lives in this extension. No page ever sees it."],
       ["The profile, sealed", "Only when you press Push. It is sealed here with your passphrase, which is never sent: what is stored there cannot be opened there."],
     ] as const,
