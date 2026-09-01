@@ -238,3 +238,33 @@ begin
 exception when insufficient_privilege then
   perform pg_temp.report(true, 'an anonymous id cannot be bound to another account');
 end $$;
+
+-- 18. the grants themselves, not just the policies.
+--     A Supabase project hands anon SELECT on every new public table, so "no
+--     SELECT policy" was doing all the work on its own. These assert the second
+--     layer is back: the privilege is absent, so a policy added by mistake
+--     later still cannot open the table.
+do $$
+declare bad text := '';
+begin
+  if has_table_privilege('anon', 'public.events', 'SELECT') then bad := bad || ' anon-select-events'; end if;
+  if has_table_privilege('authenticated', 'public.events', 'SELECT') then bad := bad || ' auth-select-events'; end if;
+  if has_table_privilege('anon', 'public.vaults', 'SELECT') then bad := bad || ' anon-select-vaults'; end if;
+  if has_table_privilege('anon', 'public.accounts', 'SELECT') then bad := bad || ' anon-select-accounts'; end if;
+  if has_table_privilege('anon', 'public.identities', 'SELECT') then bad := bad || ' anon-select-identities'; end if;
+  if has_table_privilege('authenticated', 'public.identities', 'UPDATE') then bad := bad || ' auth-update-identities'; end if;
+  if has_table_privilege('authenticated', 'public.accounts', 'UPDATE') then bad := bad || ' auth-update-accounts'; end if;
+  perform pg_temp.report(bad = '', 'no role holds a privilege it was never meant to have:' || coalesce(nullif(bad, ''), ' none'));
+end $$;
+
+-- 19. and the ones the app genuinely needs are still there
+do $$
+declare missing text := '';
+begin
+  if not has_table_privilege('anon', 'public.events', 'INSERT') then missing := missing || ' anon-insert-events'; end if;
+  if not has_table_privilege('anon', 'public.event_names', 'SELECT') then missing := missing || ' anon-select-names'; end if;
+  if not has_table_privilege('authenticated', 'public.vaults', 'UPDATE') then missing := missing || ' auth-update-vaults'; end if;
+  if not has_table_privilege('authenticated', 'public.accounts', 'SELECT') then missing := missing || ' auth-select-accounts'; end if;
+  if not has_table_privilege('authenticated', 'public.identities', 'INSERT') then missing := missing || ' auth-insert-identities'; end if;
+  perform pg_temp.report(missing = '', 'every privilege the app needs is present:' || coalesce(nullif(missing, ''), ' all'));
+end $$;
