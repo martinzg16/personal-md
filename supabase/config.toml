@@ -248,9 +248,17 @@ otp_expiry = 600
 # sender_name = "Admin"
 
 # The code, not a link: see the template's own comment.
-[auth.email.template.magic_link]
-subject = "Your Brío code"
-content_path = "./supabase/templates/magic-link.html"
+#
+# COMMENTED OUT, and it has to stay that way until this project sends its own
+# mail. Supabase rejects the push outright on the free tier with the built-in
+# provider: "Email template modification is not available for free tier
+# projects using the default email provider." Uncomment the moment
+# [auth.email.smtp] below is filled in — until then the whole auth config push
+# fails, not just this block.
+#
+# [auth.email.template.magic_link]
+# subject = "Your Brío code"
+# content_path = "./supabase/templates/magic-link.html"
 
 # Uncomment to customize email template
 # [auth.email.template.invite]
