@@ -96,9 +96,12 @@ let building: Promise<Tracker | null> | null = null;
 function tracker(): Promise<Tracker | null> {
   building ??= (async () => {
     if (!isConfigured()) return null;
-    const { createBrioClient, createTracker } = await import("@personal-md/identity");
+    const [{ createTracker }, { landingClient }] = await Promise.all([
+      import("@personal-md/identity"),
+      import("./client.ts"),
+    ]);
     return createTracker({
-      client: createBrioClient({ detectSessionInUrl: false }),
+      client: landingClient(),
       source: "landing",
       store,
       // Silent in production; the console is enough while building.

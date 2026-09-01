@@ -12,7 +12,6 @@ import { useState } from "react";
 
 import {
   SIGN_IN_MESSAGES,
-  createBrioClient,
   isConfigured,
   looksLikeEmail,
   requestCode,
@@ -20,6 +19,7 @@ import {
 } from "@personal-md/identity";
 
 import { identify, track } from "./analytics.ts";
+import { landingClient } from "./client.ts";
 
 type Stage =
   | { kind: "email" }
@@ -28,7 +28,8 @@ type Stage =
   | { kind: "checking"; email: string }
   | { kind: "done" };
 
-const client = isConfigured() ? createBrioClient({ detectSessionInUrl: false }) : null;
+// Shared with the tracker: see client.ts for why two would be a bug.
+const client = isConfigured() ? landingClient() : null;
 
 export default function Signup() {
   const [stage, setStage] = useState<Stage>({ kind: "email" });

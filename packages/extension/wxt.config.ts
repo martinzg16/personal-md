@@ -26,11 +26,14 @@ export default defineConfig({
      * in, and pushing a profile that was encrypted before it got here. There is
      * still no API key in this extension.
      *
-     * TODO: narrow to https://<project-ref>.supabase.co/* once the project ref
-     * is known. The wildcard is wider than this extension needs and the install
-     * prompt says so.
+     * The host is the one project, not `*.supabase.co`: the install prompt
+     * should name what this extension can actually reach, and a wildcard over
+     * every Supabase project on the internet is not that.
      */
-    host_permissions: ["http://127.0.0.1/*", "https://*.supabase.co/*"],
+    host_permissions: [
+      "http://127.0.0.1/*",
+      "https://xkeynsenbnopbavyofxn.supabase.co/*",
+    ],
     options_ui: { open_in_tab: true },
     /*
      * The panel's two faces, and nothing else.

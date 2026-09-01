@@ -18,8 +18,8 @@
  * that never needed a server.
  */
 
-export const SUPABASE_URL = "";
-export const SUPABASE_PUBLISHABLE_KEY = "";
+export const SUPABASE_URL = "https://xkeynsenbnopbavyofxn.supabase.co";
+export const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_4W800PfOeDetYgWapijdeQ_vq-sgusH";
 
 export function isConfigured(): boolean {
   return SUPABASE_URL.length > 0 && SUPABASE_PUBLISHABLE_KEY.length > 0;

@@ -1,8 +1,13 @@
 /**
- * The account layer's promises, checked where they can be checked without a
- * live project: that an unconfigured build never reaches for the network, that
- * the passphrase and the session are kept in two different places on purpose,
- * and that every refusal is a named state rather than a thrown error.
+ * The account layer's promises, checked where they can be checked without
+ * signing anybody in: that a signed-out build refuses every sync with a named
+ * state instead of throwing or hanging, and that the passphrase and the session
+ * are kept in two different places on purpose.
+ *
+ * These once asserted the *unconfigured* build - no project, no client. That
+ * path still exists and still matters, but it is now driven by two constants
+ * that are filled in, so a test cannot reach it without faking the module. What
+ * ships is the signed-out path, so that is what is asserted.
  *
  * What is deliberately not here: anything that needs Supabase Auth to answer.
  * Sealing itself is covered in `@personal-md/identity`, and the schema's
@@ -49,20 +54,23 @@ beforeEach(() => {
   session.clear();
 });
 
-describe("a build with no backend configured", () => {
-  it("has no client at all, rather than a broken one", () => {
-    assert.equal(accountClient(), null);
+describe("a configured build with nobody signed in", () => {
+  it("has a client", () => {
+    assert.notEqual(accountClient(), null);
   });
 
-  it("reports itself unconfigured instead of signed out", async () => {
-    // The difference matters on screen: "sign in" is the wrong instruction when
-    // there is nothing to sign into.
-    assert.deepEqual(await accountState(), { kind: "unconfigured" });
+  it("reports itself signed out, and answers without a round trip", async () => {
+    // No session in storage means no network call: reading this state must work
+    // on a plane, because the screen that shows it is not optional.
+    const before = Date.now();
+    assert.deepEqual(await accountState(), { kind: "signed_out" });
+    assert.ok(Date.now() - before < 1000, "answering took long enough to have asked a server");
   });
 
   it("refuses to sync with a named state, never an exception", async () => {
-    assert.deepEqual(await pushVault(), { kind: "unconfigured" });
-    assert.deepEqual(await pullVault(), { kind: "unconfigured" });
+    // Named, so the card can say "sign in first" rather than "something failed".
+    assert.deepEqual(await pushVault(), { kind: "signed_out" });
+    assert.deepEqual(await pullVault(), { kind: "signed_out" });
   });
 
   it("lists no profiles rather than failing", async () => {
