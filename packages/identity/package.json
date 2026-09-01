@@ -1,0 +1,15 @@
+{
+  "name": "@personal-md/identity",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The account, the encrypted vault, and the funnel. Shared by the landing and the extension so both speak the same event names.",
+  "main": "./src/index.ts",
+  "exports": { ".": "./src/index.ts" },
+  "scripts": {
+    "test": "node --test --experimental-strip-types test/*.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": { "@supabase/supabase-js": "2.112.4" },
+  "devDependencies": { "typescript": "^5.8.0", "@types/node": "^22.0.0" }
+}
