@@ -12,12 +12,23 @@
  * stop being true, they have to change here too. See NUMBERS below.
  */
 
+import { Suspense, lazy, useEffect } from "react";
+
+import Consent from "./Consent.tsx";
 import Scene from "./Scene.tsx";
+import { referrerHost, track } from "./analytics.ts";
 import { Mark } from "./icons.tsx";
 
 /** Where "Add to Chrome" goes until there is a listing to send anyone to. */
 const INSTALL_HREF = "https://github.com/martinzg16/personal-md#install";
 const SOURCE_HREF = "https://github.com/martinzg16/personal-md";
+
+/*
+ * Lazy, because the signup is the only thing on this page that needs
+ * supabase-js and it sits below three screens of argument. Loading it eagerly
+ * doubled the bundle for a form most visitors scroll past.
+ */
+const Signup = lazy(() => import("./Signup.tsx"));
 
 /*
  * The measured claims.
@@ -67,10 +78,12 @@ function Button({
   href,
   children,
   tone = "primary",
+  onClick,
 }: {
   href: string;
   children: React.ReactNode;
   tone?: "primary" | "quiet" | "invert";
+  onClick?: () => void;
 }) {
   const base =
     "inline-flex items-center rounded-full text-[15px] font-semibold transition-colors duration-150";
@@ -81,13 +94,25 @@ function Button({
     invert: "bg-bone-050 px-6 py-3.5 text-graphite-900 hover:bg-brio-500 hover:text-white",
   } as const;
   return (
-    <a href={href} className={`${base} ${tones[tone]}`}>
+    <a href={href} onClick={onClick} className={`${base} ${tones[tone]}`}>
       {children}
     </a>
   );
 }
 
 export default function App() {
+  /*
+   * One view event per load, and the referrer's host only. Fired from an effect
+   * with no dependencies rather than at module scope so it cannot double up
+   * under React's development remount... which it would, so the guard is the
+   * empty dependency array plus the fact that a duplicate here is counted by
+   * anonymous id, not by hit.
+   */
+  useEffect(() => {
+    const host = referrerHost();
+    track("landing_viewed", host ? { referrer_host: host } : {});
+  }, []);
+
   return (
     <>
       <a
@@ -112,6 +137,7 @@ export default function App() {
             </a>
             <a
               href={INSTALL_HREF}
+              onClick={() => track("install_clicked", { placement: "header" })}
               className="rounded-full bg-brio-500 px-3 py-1.5 text-[12.5px] font-semibold text-white transition-colors hover:bg-brio-600"
             >
               Add to Chrome
@@ -140,12 +166,19 @@ export default function App() {
             one file you own.
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-3.5">
-            <Button href={INSTALL_HREF}>Add to Chrome — free</Button>
+            <Button href={INSTALL_HREF} onClick={() => track("install_clicked", { placement: "hero" })}>
+              Add to Chrome — free
+            </Button>
             <Button href="#scene" tone="quiet">
               See it fill a form
             </Button>
+            {/*
+              This said "no account · no API key" until accounts existed. An
+              account is still optional - everything on this page works without
+              one - and it buys exactly one thing, so the line now says which.
+            */}
             <span className="brio-mono text-[11.5px] text-graphite-400">
-              no account · no API key
+              optional account · no API key
             </span>
           </div>
         </section>
@@ -178,6 +211,39 @@ export default function App() {
           </div>
         </section>
 
+        {/*
+          The fourth claim, and the only one that involves a server. It answers
+          the question an account raises on a page like this - "so now you have
+          my file?" - in the same sentence that offers the account, rather than
+          in a privacy policy nobody opens.
+        */}
+        <section
+          id="sync"
+          className="border-t border-rule-400 bg-bone-100"
+        >
+          <div className="mx-auto max-w-[1080px] px-5 py-20 sm:px-10 sm:py-22">
+            <p className="brio-eyebrow text-graphite-400">Optional, and only for this</p>
+            <p
+              className="mt-5 max-w-[22ch] font-display leading-[1.05] tracking-[-0.01em] text-balance"
+              style={{ fontSize: "clamp(30px, 4vw, 46px)" }}
+            >
+              Your second machine, without a copy anyone can read.
+            </p>
+            <p className="mt-5 max-w-[56ch] text-[16px] leading-[1.55] text-graphite-700 text-pretty">
+              An account carries your profile to another computer, and keeps a work profile
+              apart from a personal one. It is encrypted here, on your machine, with a
+              passphrase that is never sent — so what the server stores is a block of bytes it
+              has no way to open. The file on disk is still the original, still yours, still
+              editable at 2am.
+            </p>
+            <div className="mt-8 min-h-[3.25rem]">
+              <Suspense fallback={null}>
+                <Signup />
+              </Suspense>
+            </div>
+          </div>
+        </section>
+
         <section className="border-t border-rule-400 bg-ink-900 text-paper-050">
           <div className="mx-auto max-w-[1080px] px-5 py-16 sm:px-10">
             <div className="flex flex-wrap items-end justify-between gap-8">
@@ -194,7 +260,11 @@ export default function App() {
                   call a model at all.
                 </p>
               </div>
-              <Button href={INSTALL_HREF} tone="invert">
+              <Button
+                href={INSTALL_HREF}
+                tone="invert"
+                onClick={() => track("install_clicked", { placement: "footer" })}
+              >
                 Set it up
               </Button>
             </div>
@@ -237,6 +307,8 @@ export default function App() {
           </div>
         </section>
       </main>
+
+      <Consent />
     </>
   );
 }

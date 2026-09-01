@@ -1,0 +1,130 @@
+/**
+ * The account, from inside the extension.
+ *
+ * Everything here is optional. Brío fills forms with no account at all, and the
+ * only thing signing in buys is carrying a profile to another machine and
+ * keeping a work one apart from a personal one. So every function degrades
+ * rather than throws when the build has no backend configured, and no code path
+ * on the filling side is allowed to await any of it.
+ *
+ * Two storage rules that are not interchangeable:
+ *
+ *   - The *session* goes in `chrome.storage.local`, because a sign-in that
+ *     evaporated every time the MV3 worker was killed would be worthless.
+ *   - The *passphrase* goes in `chrome.storage.session`, which is memory-backed
+ *     and dies with the browser. It is the key to the vault; writing it next to
+ *     the thing it unlocks would make the encryption theatre.
+ */
+
+import {
+  type SessionStore,
+  createBrioClient,
+  isConfigured,
+  requestCode,
+  submitCode,
+} from "@personal-md/identity";
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+const SESSION_PREFIX = "account.session.";
+const PASSPHRASE_KEY = "account.passphrase";
+
+/** supabase-js writes one key; the prefix keeps it out of the settings namespace. */
+export const chromeSessionStore: SessionStore = {
+  async getItem(key) {
+    const bag = await chrome.storage.local.get(SESSION_PREFIX + key);
+    return (bag[SESSION_PREFIX + key] as string | undefined) ?? null;
+  },
+  async setItem(key, value) {
+    await chrome.storage.local.set({ [SESSION_PREFIX + key]: value });
+  },
+  async removeItem(key) {
+    await chrome.storage.local.remove(SESSION_PREFIX + key);
+  },
+};
+
+let client: SupabaseClient | null = null;
+
+/** Null when this build has no backend, which is a supported state, not a fault. */
+export function accountClient(): SupabaseClient | null {
+  if (!isConfigured()) return null;
+  client ??= createBrioClient({ storage: chromeSessionStore, detectSessionInUrl: false });
+  return client;
+}
+
+export type AccountState =
+  | { kind: "unconfigured" }
+  | { kind: "signed_out" }
+  | { kind: "signed_in"; accountId: string; email: string; /** Whether the vault can be opened right now. */ unlocked: boolean }
+  /** Signed in, but the network said no. Distinct because the remedy is to wait, not to sign in again. */
+  | { kind: "offline"; email: string }
+  | { kind: "error"; message: string };
+
+export async function accountState(): Promise<AccountState> {
+  const supabase = accountClient();
+  if (!supabase) return { kind: "unconfigured" };
+  try {
+    const { data, error } = await supabase.auth.getSession();
+    if (error) return { kind: "error", message: error.message };
+    const session = data.session;
+    if (!session?.user) return { kind: "signed_out" };
+    return {
+      kind: "signed_in",
+      accountId: session.user.id,
+      email: session.user.email ?? "",
+      unlocked: (await readPassphrase()) !== null,
+    };
+  } catch (error) {
+    return { kind: "error", message: error instanceof Error ? error.message : String(error) };
+  }
+}
+
+export async function askForCode(email: string) {
+  const supabase = accountClient();
+  if (!supabase) return { kind: "error" as const, message: "accounts are not switched on in this build" };
+  return requestCode(supabase, email);
+}
+
+export async function enterCode(email: string, code: string) {
+  const supabase = accountClient();
+  if (!supabase) return { kind: "error" as const, message: "accounts are not switched on in this build" };
+  return submitCode(supabase, email, code);
+}
+
+export async function signOut(): Promise<void> {
+  await forgetPassphrase();
+  await accountClient()?.auth.signOut();
+}
+
+/*
+ * The passphrase.
+ *
+ * chrome.storage.session is memory-backed and cleared when the browser closes,
+ * which is exactly the lifetime wanted: unlock once per browser session, never
+ * persist to disk. On the rare build where it is unavailable, the passphrase
+ * simply is not remembered - the vault still works, it just asks again.
+ */
+
+export async function rememberPassphrase(passphrase: string): Promise<void> {
+  try {
+    await chrome.storage.session.set({ [PASSPHRASE_KEY]: passphrase });
+  } catch {
+    // Not remembered. Correct behaviour, not an error to surface.
+  }
+}
+
+export async function readPassphrase(): Promise<string | null> {
+  try {
+    const bag = await chrome.storage.session.get(PASSPHRASE_KEY);
+    return (bag[PASSPHRASE_KEY] as string | undefined) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export async function forgetPassphrase(): Promise<void> {
+  try {
+    await chrome.storage.session.remove(PASSPHRASE_KEY);
+  } catch {
+    // Nothing to forget.
+  }
+}

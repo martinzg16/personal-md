@@ -16,9 +16,21 @@ export default defineConfig({
       // MV3 stops any timer with the worker, so this has to be an alarm.
       "alarms",
     ],
-    // Only the companion process on loopback. No remote hosts at all: there is
-    // no API key in this extension and nothing it needs to reach on the web.
-    host_permissions: ["http://127.0.0.1/*"],
+    /*
+     * The companion on loopback, and - only since accounts existed - the
+     * project that holds them.
+     *
+     * This comment used to say "no remote hosts at all", and that was the
+     * honest description of a build that had none. It has one now, and Chrome
+     * shows it at install time, so the line has to say what it is for: signing
+     * in, and pushing a profile that was encrypted before it got here. There is
+     * still no API key in this extension.
+     *
+     * TODO: narrow to https://<project-ref>.supabase.co/* once the project ref
+     * is known. The wildcard is wider than this extension needs and the install
+     * prompt says so.
+     */
+    host_permissions: ["http://127.0.0.1/*", "https://*.supabase.co/*"],
     options_ui: { open_in_tab: true },
     /*
      * The panel's two faces, and nothing else.
