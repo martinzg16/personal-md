@@ -27,6 +27,8 @@ import {
 } from "@personal-md/identity";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { identify, track } from "./events.ts";
+
 const SESSION_PREFIX = "account.session.";
 const PASSPHRASE_KEY = "account.passphrase";
 
@@ -116,7 +118,13 @@ export async function signIn(): Promise<SignInFinish> {
   }
   if (!callback) return { kind: "abandoned" };
 
-  return finishSignIn(supabase, callback);
+  const done = await finishSignIn(supabase, callback);
+  if (done.kind === "signed_in") {
+    // Bind first, so the step is attributed to the install that reached it.
+    identify(done.accountId);
+    track("extension_signed_in", { extension_version: chrome.runtime.getManifest().version });
+  }
+  return done;
 }
 
 export async function signOut(): Promise<void> {

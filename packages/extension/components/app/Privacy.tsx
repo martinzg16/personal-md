@@ -34,7 +34,7 @@ import { Card, Eyebrow, Mono, PageHead, Pill } from "./primitives.tsx";
 const t = {
   es: {
     title: "Qué ha salido de esta máquina",
-    lead: "Redactar es lo único que envía contenido, y solo estas claves pueden ir. Una cuenta añade tres cosas más, abajo. Todo lo demás se rellena aquí.",
+    lead: "Redactar es lo único que envía contenido, y solo estas claves pueden ir. Una cuenta añade cuatro cosas más, abajo. Todo lo demás se rellena aquí.",
     sendable: "Puede enviarse",
     withheld: "Nunca se envía",
     withheldNote:
@@ -56,12 +56,13 @@ const t = {
     sends: [
       ["Tu cuenta de GitHub", "Solo tu identificador y tu handle, para saber que eres tú. Los guarda el servicio de identidad, no una tabla nuestra. No se manda ningún correo."],
       ["Una sesión", "Vive en esta extensión. No la ve ninguna página."],
+      ["Un identificador de medición", "Un id anónimo y ocho nombres de evento, para saber dónde se atasca la gente. Nunca un valor, ni un campo, ni una URL: solo cuántos."],
       ["El perfil, cifrado", "Solo si le das a Subir. Se sella aquí con tu frase de paso, que no se envía nunca: lo que se guarda allí no se puede abrir allí."],
     ] as const,
   },
   en: {
     title: "What has ever left this machine",
-    lead: "Drafting is the only thing that sends content, and only these keys are ever eligible. An account adds three more, below. Everything else is filled locally.",
+    lead: "Drafting is the only thing that sends content, and only these keys are ever eligible. An account adds four more, below. Everything else is filled locally.",
     sendable: "Sendable",
     withheld: "Withheld, always",
     withheldNote:
@@ -83,6 +84,7 @@ const t = {
     sends: [
       ["Your GitHub account", "Your id and handle, so it knows you are you. The identity service holds them; no table of ours copies them. No email is sent at all."],
       ["A session", "Lives in this extension. No page ever sees it."],
+      ["A measurement id", "An anonymous id and eight event names, to see where people get stuck. Never a value, a field or a URL — only how many."],
       ["The profile, sealed", "Only when you press Push. It is sealed here with your passphrase, which is never sent: what is stored there cannot be opened there."],
     ] as const,
   },
