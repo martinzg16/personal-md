@@ -36,6 +36,31 @@ export default function Signup() {
   const [problem, setProblem] = useState<string | null>(null);
 
   /*
+   * A failed round trip comes back as query and fragment parameters on this
+   * page, and nothing else reads them — so without this the provider could
+   * refuse, and the screen would show the same button as if nothing had
+   * happened. The commonest one is a code that has already been spent: GitHub
+   * issues them for a single use and a handful of seconds, so a reload of the
+   * returning URL fails where the first load succeeded.
+   */
+  useEffect(() => {
+    const search = new URLSearchParams(window.location.search);
+    const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+    const code = search.get("error_code") ?? hash.get("error_code");
+    if (!code) return;
+
+    const described = search.get("error_description") ?? hash.get("error_description") ?? "";
+    setProblem(
+      /exchange external code/i.test(described)
+        ? "GitHub would not complete that sign-in. If you reloaded this page, the code had already been used — start again from the button."
+        : described.replace(/\+/g, " ") || "Sign-in did not complete.",
+    );
+
+    // Scrub it, so a refresh does not replay a failure that is already over.
+    window.history.replaceState({}, "", window.location.pathname);
+  }, []);
+
+  /*
    * The session may already be there — either from a previous visit or from the
    * redirect this very load is completing — so ask once, and then listen, because
    * detectSessionInUrl finishes after the first render.
