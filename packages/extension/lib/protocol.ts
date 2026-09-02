@@ -14,6 +14,12 @@ import type { ProfileMirror } from "./settings.ts";
 export type Request =
   /** Re-fetch from the server and refresh the mirror. */
   | { kind: "refresh" }
+  /*
+   * A fill happened. Sent for measurement only, and deliberately from here
+   * rather than from the content script: a request fired from a third-party
+   * page is observable by that page. `count`, never which fields.
+   */
+  | { kind: "filled"; count: number }
   /** Cheap read of whatever the mirror already holds; works with the server down. */
   | { kind: "getMirror" }
   | { kind: "getConnection" }

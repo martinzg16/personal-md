@@ -495,6 +495,8 @@ export default defineContentScript({
               undoCount: pendingUndoCount(),
               serverUp,
               onFill: (row: Row) => {
+                // Measurement only, and never awaited: a fill must not wait on it.
+                void send({ kind: "filled", count: 1 }).catch(() => {});
                 beginBatch();
                 if (row.kind === "fact") {
                   apply(row.suggestion.fieldId, row.suggestion.value, row.id);
@@ -514,6 +516,7 @@ export default defineContentScript({
                  * defence in apply.ts refuses, reports its own failure on its own
                  * row rather than failing the batch silently.
                  */
+                void send({ kind: "filled", count: batchRows.length }).catch(() => {});
                 beginBatch();
                 let last: string | null = null;
                 for (const row of batchRows) {

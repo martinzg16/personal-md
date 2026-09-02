@@ -24,6 +24,7 @@ import {
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { accountClient, readPassphrase } from "./account.ts";
+import { trackOnce } from "./events.ts";
 import { type ProfileMirror, settings } from "./settings.ts";
 
 /** The label the user gives a profile. "personal", "freelance", whatever they like. */
@@ -88,6 +89,8 @@ export async function pushVault(name = DEFAULT_VAULT): Promise<SyncResult> {
       .from("vaults")
       .upsert(row, { onConflict: "owner,name" });
     if (error) return offline(error) ? { kind: "offline" } : { kind: "error", message: error.message };
+    // Once: the funnel step is "this install started syncing", not "pushed again".
+    void trackOnce("vault_created");
     return { kind: "pushed", at: row.updated_at };
   } catch (error) {
     if (offline(error)) return { kind: "offline" };

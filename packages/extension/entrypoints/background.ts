@@ -12,6 +12,7 @@
 
 import { normaliseQuestion } from "@personal-md/core";
 
+import { trackOnce } from "../lib/events.ts";
 import { server, ServerError, type ConnectionState } from "../lib/server-client.ts";
 import { settings, type ProfileMirror } from "../lib/settings.ts";
 import type { FailureReason, Request, Response } from "../lib/protocol.ts";
@@ -84,6 +85,11 @@ async function classifyOnce(
 
 async function handle(request: Request): Promise<unknown> {
   switch (request.kind) {
+    case "filled": {
+      void trackOnce("first_fill", { field_count: request.count });
+      return null;
+    }
+
     case "refresh":
       return refreshMirror();
 
