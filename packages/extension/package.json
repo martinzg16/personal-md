@@ -18,6 +18,7 @@
   "dependencies": {
     "@personal-md/brand": "*",
     "@personal-md/core": "*",
+    "@personal-md/identity": "*",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },

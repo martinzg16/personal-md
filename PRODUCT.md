@@ -31,16 +31,27 @@ months ago. This keeps both, and reuses them.
 
 ## Operating Context
 
-Three pieces, because a browser extension cannot execute local commands:
+Four pieces. Three of them because a browser extension cannot execute local
+commands; the fourth is optional and off unless the user signs in:
 
 - A Chrome MV3 extension that scans and fills forms on arbitrary third-party
   pages, and mirrors the profile into `chrome.storage.local`.
 - A localhost companion process that owns `PERSONAL.md` on disk.
 - The `claude` CLI, authenticated with the user's own Claude account.
+- A Supabase project holding accounts, encrypted profile vaults and funnel
+  events. **It cannot read a vault**: the profile is sealed in the extension
+  with a passphrase-derived key that is never sent, and the table has no
+  plaintext column to put one in. Everything above works with no account at
+  all; an account buys carrying a profile to a second machine and keeping a
+  work profile apart from a personal one.
 
 **Recognising and filling a field already filled before must work with the
 companion process stopped.** Only drafting needs it running. That is why the
 extension keeps its own mirror.
+
+Signing in is the only part of Brío that needs a network at all, and the only
+thing in the extension that reaches a host other than loopback. A forgotten
+passphrase is a lost vault: any escrow that could recover it could also read it.
 
 There is no Anthropic API key anywhere in the project. Inference runs through the
 CLI, so tokens draw on the same subscription quota as the user's own coding work.

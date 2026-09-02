@@ -12,20 +12,29 @@
  * anything. It refuses outright rather than redacting, because a partially
  * redacted prompt teaches nothing and may still leak.
  *
+ * Since accounts existed there is a third thing, and it is on this screen for
+ * the same reason as the other two: a page called "what has ever left this
+ * machine" that quietly omits a category is worse than no page. An account
+ * names you to GitHub, keeps a session, and pushes a vault - and the vault is
+ * the interesting one, because it leaves sealed and the server has no key.
+ *
  * The ledger underneath is what the companion has actually spent. It is an
  * aggregate, which is what the file holds: `PERSONAL.md` counts calls and cost,
  * it does not keep a line per call. Saying "4 calls, $0.09" and nothing more is
  * the whole truth; a fabricated table of individual sends would not be.
  */
 
+import { useEffect, useState } from "react";
+
 import { SENDABLE_KEYS, classifyEgress, type Fact, type Lang } from "@personal-md/core";
 
+import { type AccountState, accountState } from "../../lib/account.ts";
 import { Card, Eyebrow, Mono, PageHead, Pill } from "./primitives.tsx";
 
 const t = {
   es: {
     title: "Qué ha salido de esta máquina",
-    lead: "Solo redactar envía algo, y solo estas claves pueden ir. Todo lo demás se rellena aquí, así que no tiene ningún motivo para viajar.",
+    lead: "Redactar es lo único que envía contenido, y solo estas claves pueden ir. Una cuenta añade tres cosas más, abajo. Todo lo demás se rellena aquí.",
     sendable: "Puede enviarse",
     withheld: "Nunca se envía",
     withheldNote:
@@ -40,10 +49,19 @@ const t = {
     never: "Todavía no se ha redactado nada, así que no ha salido nada.",
     refuses:
       "Un envío que contiene un valor retenido se rechaza entero, no se tacha. Bloquear una redacción tiene arreglo; enviar un DNI, no.",
+    account: "Tu cuenta",
+    accountOff: "No hay cuenta en esta compilación, así que nada de esto ha salido.",
+    accountOut: "No has entrado. Nada de esto ha salido todavía.",
+    accountIn: "Has entrado, así que esto sí ha salido:",
+    sends: [
+      ["Tu cuenta de GitHub", "Solo tu identificador y tu handle, para saber que eres tú. Los guarda el servicio de identidad, no una tabla nuestra. No se manda ningún correo."],
+      ["Una sesión", "Vive en esta extensión. No la ve ninguna página."],
+      ["El perfil, cifrado", "Solo si le das a Subir. Se sella aquí con tu frase de paso, que no se envía nunca: lo que se guarda allí no se puede abrir allí."],
+    ] as const,
   },
   en: {
     title: "What has ever left this machine",
-    lead: "Only drafting sends anything, and only these keys are ever eligible. Everything else is filled locally, so it has no reason to travel.",
+    lead: "Drafting is the only thing that sends content, and only these keys are ever eligible. An account adds three more, below. Everything else is filled locally.",
     sendable: "Sendable",
     withheld: "Withheld, always",
     withheldNote:
@@ -58,6 +76,15 @@ const t = {
     never: "Nothing has been drafted yet, so nothing has left.",
     refuses:
       "A payload that contains a withheld value is refused outright, not redacted. Blocking a draft is recoverable; sending a national ID is not.",
+    account: "Your account",
+    accountOff: "There is no account in this build, so none of this has left.",
+    accountOut: "You are not signed in. None of this has left yet.",
+    accountIn: "You are signed in, so these have left:",
+    sends: [
+      ["Your GitHub account", "Your id and handle, so it knows you are you. The identity service holds them; no table of ours copies them. No email is sent at all."],
+      ["A session", "Lives in this extension. No page ever sees it."],
+      ["The profile, sealed", "Only when you press Push. It is sealed here with your passphrase, which is never sent: what is stored there cannot be opened there."],
+    ] as const,
   },
 } as const;
 
@@ -86,6 +113,11 @@ export default function Privacy({
   ledger: { calls: number; inputTokens: number; outputTokens: number; costUsd: number };
 }) {
   const c = t[lang];
+
+  const [account, setAccount] = useState<AccountState>({ kind: "unconfigured" });
+  useEffect(() => {
+    void accountState().then(setAccount);
+  }, []);
 
   const held = facts.filter((f) => f.value.trim());
   const yoursSendable = held.filter((f) => !withheld.has(f.key)).map((f) => f.key).sort();
@@ -148,6 +180,39 @@ export default function Privacy({
           </div>
         </Card>
       )}
+
+      {/*
+        Always rendered, signed in or not. "Nothing has left" is a claim worth
+        making explicitly; showing this list only once it applies would mean the
+        screen was silent about a whole category right up until it mattered.
+      */}
+      <Card title={c.account}>
+        <p className="border-b border-rule-100 px-4.5 py-3 text-[13.5px] text-graphite-400 text-pretty">
+          {account.kind === "unconfigured"
+            ? c.accountOff
+            : account.kind === "signed_in"
+              ? c.accountIn
+              : c.accountOut}
+        </p>
+        <ul className="divide-y divide-rule-100">
+          {c.sends.map(([label, detail]) => (
+            <li key={label} className="flex flex-col gap-1 px-4.5 py-3">
+              <span className="flex items-center gap-2 text-[13.5px] font-medium text-graphite-900">
+                <span
+                  aria-hidden="true"
+                  className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+                    account.kind === "signed_in" ? "bg-brio-500" : "bg-rule-500"
+                  }`}
+                />
+                {label}
+              </span>
+              <span className="pl-3.5 text-[12.5px] leading-relaxed text-graphite-400 text-pretty">
+                {detail}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </Card>
 
       <div>
         <Eyebrow>{c.ledger}</Eyebrow>

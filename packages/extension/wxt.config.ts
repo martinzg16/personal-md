@@ -8,6 +8,19 @@ export default defineConfig({
     description:
       "Recognises form questions you have answered before and drafts new answers in your own voice, from a PERSONAL.md you own.",
     version: "0.1.0",
+    /*
+     * Pins the extension id, and with it the OAuth redirect.
+     *
+     * Signing in opens the provider and comes back to
+     * https://<extension-id>.chromiumapp.org/, which has to be on Supabase's
+     * redirect allow-list - so the id cannot be allowed to change. Without this
+     * Chrome derives it from the install path, which differs per machine and
+     * per unpacked reload, and every one of those would need its own entry.
+     *
+     * This is the public half. The private key is not in the repository; it
+     * lives outside it, and losing it means a new id and a new allow-list entry.
+     */
+    key: "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAzjCEcmpy2g94gbIRvT82YejLExKCHQhVI61EdwGctmY/74XZkrDJGDk4FXc7EgnhgD+R11EW6VvMHGFvNI68xLm8w9iT2ITzgbSpTDTaAphzrVYxB/SxwsQ18syHfzoSQwQfoshyW1E3B1Tne8hI9Yf5MLcEtNbmkEJuDR0LPpZ/J07sWcoGMeleUCSChkPA0t+v5qYHrHTdrOSgQ7LOeWQMTCofrnvthbQ6IGoIb/ai7sYFZLFk0jWKS6Ll91CleP09RpZaDL2ywxLh0SFPgnDXaXrSQWXLJG+ZZ8vtmodZETpR+loYbfwTdUcQmbwLgMA94NVjAA4jKE0LS78ETwIDAQAB",
     permissions: [
       // The profile mirror, the server token, and per-site dismissals.
       "storage",
@@ -15,10 +28,32 @@ export default defineConfig({
       // one shows on the icon instead of being discovered by a failed draft.
       // MV3 stops any timer with the worker, so this has to be an alarm.
       "alarms",
+      /*
+       * Signing in. `launchWebAuthFlow` opens the provider in a window Chrome
+       * owns and hands back the redirect, which is the only way an extension
+       * can complete an OAuth round trip: there is no page for a provider to
+       * redirect to, and no inbox to read a code out of.
+       */
+      "identity",
     ],
-    // Only the companion process on loopback. No remote hosts at all: there is
-    // no API key in this extension and nothing it needs to reach on the web.
-    host_permissions: ["http://127.0.0.1/*"],
+    /*
+     * The companion on loopback, and - only since accounts existed - the
+     * project that holds them.
+     *
+     * This comment used to say "no remote hosts at all", and that was the
+     * honest description of a build that had none. It has one now, and Chrome
+     * shows it at install time, so the line has to say what it is for: signing
+     * in, and pushing a profile that was encrypted before it got here. There is
+     * still no API key in this extension.
+     *
+     * The host is the one project, not `*.supabase.co`: the install prompt
+     * should name what this extension can actually reach, and a wildcard over
+     * every Supabase project on the internet is not that.
+     */
+    host_permissions: [
+      "http://127.0.0.1/*",
+      "https://xkeynsenbnopbavyofxn.supabase.co/*",
+    ],
     options_ui: { open_in_tab: true },
     /*
      * The panel's two faces, and nothing else.

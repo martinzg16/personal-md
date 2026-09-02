@@ -12,6 +12,7 @@
 import type { Lang } from "@personal-md/core";
 
 import type { ConnectionState } from "../../lib/server-client.ts";
+import Account from "./Account.tsx";
 import { Card, Mono, PageHead, RING } from "./primitives.tsx";
 
 const t = {
@@ -192,6 +193,8 @@ export default function Settings({
           </button>
         </div>
       </Card>
+
+      <Account lang={lang} />
 
       <Card>
         <Setting

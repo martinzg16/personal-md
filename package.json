@@ -6,6 +6,7 @@
   "workspaces": [
     "packages/brand",
     "packages/core",
+    "packages/identity",
     "packages/server",
     "packages/extension",
     "packages/site"
@@ -16,7 +17,8 @@
     "start": "npm start --workspace @personal-md/server",
     "site": "npm run dev --workspace @personal-md/site",
     "build": "npm run build --workspace @personal-md/extension",
-    "build:site": "npm run build --workspace @personal-md/site"
+    "build:site": "npm run build --workspace @personal-md/site",
+    "test:db": "./supabase/tests/run.sh"
   },
   "engines": {
     "node": ">=20"
