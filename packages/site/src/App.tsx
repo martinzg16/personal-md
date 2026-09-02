@@ -173,12 +173,15 @@ export default function App() {
               See it fill a form
             </Button>
             {/*
-              This said "no account · no API key" until accounts existed. An
-              account is still optional - everything on this page works without
-              one - and it buys exactly one thing, so the line now says which.
+              Third version of this line, and each one was true when written.
+              "No account" until accounts existed; "optional account" until
+              drafting started asking for one. Filling is still account-free and
+              still the thing most people do most of the time, but a line that
+              says "optional" while a button says "sign in" is the kind of small
+              lie this page cannot afford.
             */}
             <span className="brio-mono text-[11.5px] text-graphite-400">
-              optional account · no API key
+              free account to draft · no API key
             </span>
           </div>
         </section>
@@ -222,7 +225,7 @@ export default function App() {
           className="border-t border-rule-400 bg-bone-100"
         >
           <div className="mx-auto max-w-[1080px] px-5 py-20 sm:px-10 sm:py-22">
-            <p className="brio-eyebrow text-graphite-400">Optional, and only for this</p>
+            <p className="brio-eyebrow text-graphite-400">What the account is for</p>
             <p
               className="mt-5 max-w-[22ch] font-display leading-[1.05] tracking-[-0.01em] text-balance"
               style={{ fontSize: "clamp(30px, 4vw, 46px)" }}
@@ -230,11 +233,12 @@ export default function App() {
               Your second machine, without a copy anyone can read.
             </p>
             <p className="mt-5 max-w-[56ch] text-[16px] leading-[1.55] text-graphite-700 text-pretty">
-              An account carries your profile to another computer, and keeps a work profile
-              apart from a personal one. It is encrypted here, on your machine, with a
-              passphrase that is never sent — so what the server stores is a block of bytes it
-              has no way to open. The file on disk is still the original, still yours, still
-              editable at 2am.
+              Two things. It carries your profile to another computer and keeps a work profile
+              apart from a personal one — encrypted here, on your machine, with a passphrase
+              that is never sent, so what the server stores is a block of bytes it has no way
+              to open. And it is what drafting asks for: writing a new answer needs an account,
+              while filling one you have written before never will. The file on disk is still
+              the original, still yours, still editable at 2am.
             </p>
             <div className="mt-8 min-h-[3.25rem]">
               <Suspense fallback={null}>
