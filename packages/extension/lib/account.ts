@@ -127,6 +127,21 @@ export async function signIn(): Promise<SignInFinish> {
   return done;
 }
 
+/**
+ * Whether this install may draft.
+ *
+ * Lives here rather than inline in the background worker so the rule can be
+ * exercised without a browser: "no account, no drafting" is a product promise
+ * and a promise nobody can run is a comment.
+ *
+ * Filling is not asked about anywhere. It is deterministic, local, and works
+ * with the companion stopped — that half never needs an account and this
+ * function is never consulted about it.
+ */
+export async function mayDraft(): Promise<boolean> {
+  return (await accountState()).kind === "signed_in";
+}
+
 export async function signOut(): Promise<void> {
   await forgetPassphrase();
   await accountClient()?.auth.signOut();

@@ -12,7 +12,7 @@
 
 import { normaliseQuestion } from "@personal-md/core";
 
-import { accountState } from "../lib/account.ts";
+import { mayDraft } from "../lib/account.ts";
 import { trackOnce } from "../lib/events.ts";
 import { server, ServerError, type ConnectionState } from "../lib/server-client.ts";
 import { settings, type ProfileMirror } from "../lib/settings.ts";
@@ -116,8 +116,7 @@ async function handle(request: Request): Promise<unknown> {
       return classifyOnce(request);
 
     case "draftAnswer": {
-      const account = await accountState();
-      if (account.kind !== "signed_in") throw new AccountRequired();
+      if (!(await mayDraft())) throw new AccountRequired();
 
       const draft = await server.draftAnswer({
         question: request.question,
