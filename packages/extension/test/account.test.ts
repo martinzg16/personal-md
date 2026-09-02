@@ -44,6 +44,7 @@ const {
   accountState,
   chromeSessionStore,
   forgetPassphrase,
+  mayDraft,
   readPassphrase,
   rememberPassphrase,
 } = await import("../lib/account.ts");
@@ -132,5 +133,38 @@ describe("the session store handed to supabase-js", () => {
 
   it("returns null for a key it has never seen", async () => {
     assert.equal(await chromeSessionStore.getItem("nothing"), null);
+  });
+});
+
+/*
+ * The gate, which is the whole of "limit AI to people with an account".
+ *
+ * Asserted here rather than clicked in a browser because it is a product
+ * promise in both directions, and the second direction is the one that would
+ * break quietly: gating a draft is visible the moment it happens, gating a fill
+ * would only show up as Brío mysteriously doing less than it used to.
+ */
+describe("drafting asks for an account", () => {
+  it("refuses while signed out", async () => {
+    assert.equal(await mayDraft(), false);
+  });
+
+  it("does not consult it for anything but drafting", async () => {
+    // Filling is deterministic, local, and works with the companion stopped.
+    // Nothing on that path may depend on an account, so nothing on that path
+    // may import this. A grep is a blunt instrument and exactly the right one:
+    // it fails if somebody wires the gate into the wrong half.
+    const { readFileSync } = await import("node:fs");
+    const { fileURLToPath } = await import("node:url");
+    const { dirname, join } = await import("node:path");
+    const here = dirname(fileURLToPath(import.meta.url));
+
+    for (const file of ["../lib/fill/apply.ts", "../lib/match/deterministic.ts"]) {
+      const source = readFileSync(join(here, file), "utf8");
+      assert.ok(
+        !/mayDraft|accountState|account\.ts/.test(source),
+        `${file} reaches for the account, and the filling path must not`,
+      );
+    }
   });
 });
