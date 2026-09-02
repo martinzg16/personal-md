@@ -34,7 +34,7 @@ const t = {
   es: {
     title: "Tu cuenta",
     off: "Esta compilación no lleva cuentas. Rellenar y redactar funcionan igual.",
-    lead: "Opcional. Lleva tu perfil a otra máquina y separa el del trabajo del personal.",
+    lead: "Lleva tu perfil a otra máquina, separa el del trabajo del personal, y es lo que pide redactar. Rellenar lo que ya has rellenado nunca la necesita.",
     signIn: "Entrar con GitHub",
     opening: "Abriendo GitHub…",
     signedInAs: "Dentro como",
@@ -63,7 +63,7 @@ const t = {
   en: {
     title: "Your account",
     off: "This build ships without accounts. Filling and drafting work the same.",
-    lead: "Optional. Carries your profile to another machine, and keeps work apart from personal.",
+    lead: "Carries your profile to another machine, keeps work apart from personal, and is what drafting asks for. Filling what you have filled before never needs it.",
     signIn: "Continue with GitHub",
     opening: "Opening GitHub…",
     signedInAs: "Signed in as",

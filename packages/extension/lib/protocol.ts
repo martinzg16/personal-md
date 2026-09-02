@@ -67,11 +67,13 @@ export type Request =
 /**
  * Why a request failed, when the reason changes what the caller should do.
  *
- * Only one so far, and it earns its place: a signed-out CLI is recoverable
- * without losing the request, so the surface that asked needs to recognise it
- * rather than read a message. Everything else is still just an error string.
+ * Two, and both earn their place. A signed-out CLI is recoverable without
+ * losing the request, so the surface that asked can hold it and finish itself.
+ * A missing account is recoverable too, but somewhere else entirely - the
+ * options page - so the panel has to offer that rather than print a sentence
+ * about it. Everything else is still just an error string.
  */
-export type FailureReason = "claude_signed_out";
+export type FailureReason = "claude_signed_out" | "account_required";
 
 export type Response<T = unknown> =
   | { ok: true; data: T }
@@ -90,6 +92,11 @@ export class BridgeError extends Error {
 /** Is this the recoverable "sign in again and it will work" failure? */
 export function isSignedOut(err: unknown): boolean {
   return err instanceof BridgeError && err.reason === "claude_signed_out";
+}
+
+/** Is this "drafting needs a Brío account", which is fixed in the options page? */
+export function isAccountRequired(err: unknown): boolean {
+  return err instanceof BridgeError && err.reason === "account_required";
 }
 
 export type { ConnectionState, DraftResponse, ImportProposal, MatchQuestionResponse };

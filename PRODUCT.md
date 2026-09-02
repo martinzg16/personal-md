@@ -41,9 +41,17 @@ commands; the fourth is optional and off unless the user signs in:
 - A Supabase project holding accounts, encrypted profile vaults and funnel
   events. **It cannot read a vault**: the profile is sealed in the extension
   with a passphrase-derived key that is never sent, and the table has no
-  plaintext column to put one in. Everything above works with no account at
-  all; an account buys carrying a profile to a second machine and keeping a
-  work profile apart from a personal one.
+  plaintext column to put one in.
+
+An account does two things: it carries a profile to a second machine and keeps a
+work profile apart from a personal one, and it is what drafting asks for.
+Recognising and filling a field never asks, and never will — that half is
+deterministic, local, and the reason the mirror exists. The draft gate lives in
+the extension's background worker, on the user's own machine, so it is an
+incentive rather than a lock: anybody can edit it out, and building it as though
+it were enforceable would only make it more annoying without making it harder to
+skip. Nothing about it protects a bill, either — inference runs on the user's own
+subscription.
 
 **Recognising and filling a field already filled before must work with the
 companion process stopped.** Only drafting needs it running. That is why the

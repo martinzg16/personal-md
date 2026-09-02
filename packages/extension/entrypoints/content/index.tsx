@@ -23,7 +23,7 @@ import {
 } from "../../lib/learn/pending.ts";
 import { buildScanResult, findByStamp, scanFields } from "../../lib/scan/scanner.ts";
 import type { ScannedField } from "../../lib/scan/types.ts";
-import { isSignedOut, send } from "../../lib/protocol.ts";
+import { isAccountRequired, isSignedOut, send } from "../../lib/protocol.ts";
 import {
   extractLinkedInProfile,
   isEmptyProfile,
@@ -319,6 +319,8 @@ export default defineContentScript({
         notFillable: "That field cannot be filled.",
         notAccepted: "That field would not take your stored value. Fill it yourself.",
         sessionGaveUp: "The Claude session did not come back. Press Draft again once it has.",
+        accountRequired:
+          "Drafting needs a Brío account. Open Brío's options and sign in under Settings — filling what you have filled before keeps working without one.",
       },
       es: {
         notYours: "Este perfil es de otra persona. Solo se importa el tuyo.",
@@ -331,6 +333,8 @@ export default defineContentScript({
         notFillable: "Ese campo no se puede rellenar.",
         notAccepted: "Ese campo no acepta tu valor guardado. Rellénalo tú.",
         sessionGaveUp: "La sesión de Claude no volvió. Vuelve a pulsar Redactar cuando esté.",
+        accountRequired:
+          "Redactar necesita una cuenta de Brío. Ábrela en las opciones de Brío, en Ajustes — rellenar lo que ya has rellenado sigue funcionando sin ella.",
       },
     } as const;
 
@@ -452,6 +456,13 @@ export default defineContentScript({
           render();
           if (await waitForSession()) return draft(row, instruction, true);
           patch(row.id, { state: "error", error: translate("sessionGaveUp") });
+          render();
+          return;
+        }
+        if (isAccountRequired(err)) {
+          // Not held and not retried: unlike a signed-out CLI, nothing here
+          // resolves itself, and the fix is on a different page.
+          patch(row.id, { state: "error", error: translate("accountRequired") });
           render();
           return;
         }

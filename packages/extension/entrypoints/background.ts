@@ -12,6 +12,7 @@
 
 import { normaliseQuestion } from "@personal-md/core";
 
+import { accountState } from "../lib/account.ts";
 import { trackOnce } from "../lib/events.ts";
 import { server, ServerError, type ConnectionState } from "../lib/server-client.ts";
 import { settings, type ProfileMirror } from "../lib/settings.ts";
@@ -115,6 +116,9 @@ async function handle(request: Request): Promise<unknown> {
       return classifyOnce(request);
 
     case "draftAnswer": {
+      const account = await accountState();
+      if (account.kind !== "signed_in") throw new AccountRequired();
+
       const draft = await server.draftAnswer({
         question: request.question,
         canonicalKey: request.canonicalKey,
@@ -204,8 +208,29 @@ chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === SESSION_ALARM) void checkSession();
 });
 
+/**
+ * Drafting is the one thing that needs an account.
+ *
+ * Filling a field you have filled before is deterministic and local and works
+ * with no account and no companion, and that does not change. Writing something
+ * new does: it is the part of Brío worth signing up for, so it asks.
+ *
+ * The check is here, at the single point every draft passes through, rather
+ * than in each surface that offers one. And it is honest about what it is: the
+ * code runs on the user's machine, and anybody who wants to can edit it out.
+ * This is an incentive, not a lock, and building it as if it were a lock would
+ * only make it more annoying without making it any harder to skip.
+ */
+class AccountRequired extends Error {
+  constructor() {
+    super("drafting needs a Brío account");
+    this.name = "AccountRequired";
+  }
+}
+
 /** The reason, if this failure is one a surface can act on rather than just report. */
 function reasonFor(err: unknown): FailureReason | undefined {
+  if (err instanceof AccountRequired) return "account_required";
   if (err instanceof ServerError && err.state.kind === "claude_signed_out") {
     // Paint immediately: waiting for the next alarm would leave the icon
     // claiming everything is fine while a draft has just been refused.
